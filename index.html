@@ -357,12 +357,6 @@ html[dir="rtl"] .dash-main{margin-right:260px;margin-left:0}
   .bigben{background-position:63% center!important;background-size:cover!important;opacity:.92!important;}
 }
 </style>
-
-<style id="bright-bigben-final">
-.hero{background:#ead6b8!important;}
-.bigben,.hero-bg-bigben{opacity:.90!important;filter:brightness(1.16) saturate(1.14) contrast(1.04)!important;background-color:transparent!important;}
-@media(max-width:700px){.bigben,.hero-bg-bigben{opacity:.88!important;filter:brightness(1.18) saturate(1.12) contrast(1.03)!important;background-position:center center!important;background-size:cover!important;}}
-</style>
 </head>
 <body>
 <div id="languageSwitcher" aria-label="Language"><button id="langEN" type="button" onclick="setPlatformLanguage('en')">English</button><button id="langAR" type="button" onclick="setPlatformLanguage('ar')">العربية</button></div>
@@ -1003,20 +997,27 @@ document.addEventListener('click',function(e){
    // Restore to English first so switching back and forth is lossless.
    if(lang==='en') translateNode(document.body,R); else { if(old==='ar') translateNode(document.body,R); translateNode(document.body,T); }
    localStorage.setItem('platformLanguage',lang); applyDirection(lang);
- } 
- function applyDirection(lang){
-   const isArabic=lang==='ar';
-   document.documentElement.lang=isArabic?'ar':'en';
-   document.documentElement.dir=isArabic?'rtl':'ltr';
-   document.body.classList.toggle('rtl-mode',isArabic);
-   const en=document.getElementById('langEN'), ar=document.getElementById('langAR');
-   if(en) en.setAttribute('aria-pressed',String(!isArabic));
-   if(ar) ar.setAttribute('aria-pressed',String(isArabic));
- }
- window.setPlatformLanguage=setPlatformLanguage;
- window.applyDirection=applyDirection;
- const initialLang=localStorage.getItem('platformLanguage')==='ar'?'ar':'en';
- localStorage.setItem('platformLanguage',initialLang);
- if(initialLang==='ar') translateNode(document.body,T);
- applyDirection(initialLang);
+ 
+<script id="language-toggle-fix">
+(function(){
+  function bindLanguageButtons(){
+    const en=document.getElementById('langEN'), ar=document.getElementById('langAR');
+    if(!en||!ar)return;
+    [en,ar].forEach((btn,lang)=>{
+      btn.type='button'; btn.style.pointerEvents='auto';
+      btn.onclick=function(e){e.preventDefault();e.stopPropagation();
+        try{ window.setPlatformLanguage(lang===0?'en':'ar'); }
+        catch(err){ console.error('Language switch error',err); document.documentElement.lang=lang===0?'en':'ar'; document.documentElement.dir=lang===0?'ltr':'rtl'; localStorage.setItem('platformLanguage',lang===0?'en':'ar'); }
+      };
+    });
+    const box=document.getElementById('languageSwitcher');
+    if(box){box.style.zIndex='99999';box.style.pointerEvents='auto';}
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bindLanguageButtons);else bindLanguageButtons();
 })();
+</script>
+<style id="language-toggle-fix-css">
+#languageSwitcher{z-index:99999!important;pointer-events:auto!important;}
+#languageSwitcher button{pointer-events:auto!important;cursor:pointer!important;position:relative!important;z-index:100000!important;}
+</style>
+}
