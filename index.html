@@ -1051,3 +1051,24 @@ document.addEventListener('click',function(e){
   new MutationObserver(fix).observe(document.body,{childList:true,subtree:true});
 })();
 </script>
+
+<script id="pronunciation-new-practice-fix">
+(function(){
+  function openNewPracticeFixed(){
+    try{
+      const html='<h2>New Speaking Practice</h2>'+
+        '<div class="form-grid">'+
+        '<input id="pr_title" class="input" placeholder="Practice Title">'+
+        '<input id="pr_course" class="input" placeholder="Foundation & Speaking">'+
+        '<input id="pr_level" class="input" placeholder="Level">'+
+        '<textarea id="pr_text" class="input full" style="height:100px" placeholder="Target sentence the student should pronounce"></textarea>'+
+        '</div>'+
+        '<button type="button" class="submit" id="createPronunciationPracticeBtn">Create Practice →</button>';
+      show(html);
+      const btn=document.getElementById('createPronunciationPracticeBtn');
+      if(btn) btn.onclick=function(){ if(typeof window.savePronunciationAssignment==='function') window.savePronunciationAssignment(); };
+    }catch(e){ console.error('New pronunciation practice error:',e); alert('تعذر فتح تدريب جديد. جرّبي مرة أخرى.'); }
+  }
+  window.openPronunciationAssignment=openNewPracticeFixed;
+})();
+</script>
