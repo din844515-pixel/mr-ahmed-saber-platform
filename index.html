@@ -1003,4 +1003,20 @@ document.addEventListener('click',function(e){
    // Restore to English first so switching back and forth is lossless.
    if(lang==='en') translateNode(document.body,R); else { if(old==='ar') translateNode(document.body,R); translateNode(document.body,T); }
    localStorage.setItem('platformLanguage',lang); applyDirection(lang);
+ } 
+ function applyDirection(lang){
+   const isArabic=lang==='ar';
+   document.documentElement.lang=isArabic?'ar':'en';
+   document.documentElement.dir=isArabic?'rtl':'ltr';
+   document.body.classList.toggle('rtl-mode',isArabic);
+   const en=document.getElementById('langEN'), ar=document.getElementById('langAR');
+   if(en) en.setAttribute('aria-pressed',String(!isArabic));
+   if(ar) ar.setAttribute('aria-pressed',String(isArabic));
  }
+ window.setPlatformLanguage=setPlatformLanguage;
+ window.applyDirection=applyDirection;
+ const initialLang=localStorage.getItem('platformLanguage')==='ar'?'ar':'en';
+ localStorage.setItem('platformLanguage',initialLang);
+ if(initialLang==='ar') translateNode(document.body,T);
+ applyDirection(initialLang);
+})();
