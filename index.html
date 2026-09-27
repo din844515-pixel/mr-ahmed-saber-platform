@@ -471,7 +471,14 @@ html[dir="rtl"] .dash-main{margin-right:260px;margin-left:0}
 <script>
 const SUPABASE_URL="https://gfzzuxzrvysuodehjkyq.supabase.co";
 const SUPABASE_KEY="sb_publishable_rb8JsRCgD3ry78YabOfDkQ_G4VCKFko";
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    storageKey: 'mr-ahmed-saber-auth'
+  }
+});
 
 const modal=document.getElementById('modal'), box=document.getElementById('modalBox');
 function show(html){box.innerHTML='<button class="close" onclick="closeModal()">×</button>'+html;modal.classList.add('show')}
@@ -998,3 +1005,23 @@ document.addEventListener('click',function(e){
     main.innerHTML=`<div class="welcome"><div><h1>Payment Requests</h1><p>راجعي بيانات الطالب وصورة الدفع ثم اقبلي أو ارفضي الطلب.</p></div><button class="dash-action" onclick="refreshTeacher()">Refresh</button></div>
       <section class="panel"><div class="dash-toolbar"><span class="badge-soft">طلبات معلقة: ${pending.length}</span></div>
       ${pending.map(r=>`<div class="payment-request-card pending"><div class="payment-request-head"><div><h3 style="margin:0 0 5px;font-size:14px">${safe(r.full_name||r.student_name||'Student')}</h3><div class="payment-request-meta">${r.student_id?'إعادة اشتراك':'اشتراك جديد'} • ${safe(r.course_name||'')} • ${safe(r.payment_method||'')}<br>ولي الأمر: ${safe(r.parent_phone||'—')} • المبلغ: ${safe(r.amount||0)} جنيه</div></div><span class="pill wait">Pending</span></div>${r.receipt_path?`<img class="payment-proof" src="${r.receipt_path}" alt="Payment proof" onclick="window.open(this.src,'_blank')">`:''}<div class="dash-toolbar" style="margin:0"><button class="dash-action gold" onclick="approvePaymentRequest(${Number(r.id)})">✅ موافقة وتفعيل</button><button class="dash-action" style="background:#b33a3a" onclick="rejectPaymentRequest(${Number(r.id)})">رفض الطلب</button></div></div>`).join('')||'<div class="result">لا توجد طلبات دفع معلقة حاليًا.</div>'}</section>
+<script id="teacher-session-restore">
+(function(){
+  let restoring=false;
+  async function restoreTeacherSession(){
+    if(restoring || document.getElementById('teacherDashboard')) return;
+    restoring=true;
+    try{
+      const {data:{session}}=await sb.auth.getSession();
+      const user=session?.user;
+      if(user && user.app_metadata?.role==='teacher') await loadTeacherDashboard();
+    }catch(e){ console.error('Teacher session restore failed:',e); }
+    finally{ restoring=false; }
+  }
+  sb.auth.onAuthStateChange((event, session)=>{
+    if(event==='SIGNED_IN' && session?.user?.app_metadata?.role==='teacher') setTimeout(restoreTeacherSession,0);
+  });
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>setTimeout(restoreTeacherSession,0),{once:true});
+  else setTimeout(restoreTeacherSession,0);
+})();
+</script>
