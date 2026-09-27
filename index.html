@@ -357,6 +357,10 @@ html[dir="rtl"] .dash-main{margin-right:260px;margin-left:0}
   .bigben{background-position:63% center!important;background-size:cover!important;opacity:.92!important;}
 }
 </style>
+<style id="language-switcher-final-fix">
+#languageSwitcher{position:relative!important;z-index:99999!important;pointer-events:auto!important}
+#languageSwitcher button{position:relative!important;z-index:100000!important;pointer-events:auto!important;cursor:pointer!important;touch-action:manipulation!important}
+</style>
 </head>
 <body>
 <div id="languageSwitcher" aria-label="Language"><button id="langEN" type="button" onclick="setPlatformLanguage('en')">English</button><button id="langAR" type="button" onclick="setPlatformLanguage('ar')">العربية</button></div>
@@ -992,32 +996,5 @@ document.addEventListener('click',function(e){
    node.childNodes.forEach(ch=>translateNode(ch,dict));
  }
  function setPlatformLanguage(lang){
-   const old=localStorage.getItem('platformLanguage')||'en';
-   if(old===lang){applyDirection(lang);return;}
-   // Restore to English first so switching back and forth is lossless.
-   if(lang==='en') translateNode(document.body,R); else { if(old==='ar') translateNode(document.body,R); translateNode(document.body,T); }
-   localStorage.setItem('platformLanguage',lang); applyDirection(lang);
- 
-<script id="language-toggle-fix">
-(function(){
-  function bindLanguageButtons(){
-    const en=document.getElementById('langEN'), ar=document.getElementById('langAR');
-    if(!en||!ar)return;
-    [en,ar].forEach((btn,lang)=>{
-      btn.type='button'; btn.style.pointerEvents='auto';
-      btn.onclick=function(e){e.preventDefault();e.stopPropagation();
-        try{ window.setPlatformLanguage(lang===0?'en':'ar'); }
-        catch(err){ console.error('Language switch error',err); document.documentElement.lang=lang===0?'en':'ar'; document.documentElement.dir=lang===0?'ltr':'rtl'; localStorage.setItem('platformLanguage',lang===0?'en':'ar'); }
-      };
-    });
-    const box=document.getElementById('languageSwitcher');
-    if(box){box.style.zIndex='99999';box.style.pointerEvents='auto';}
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bindLanguageButtons);else bindLanguageButtons();
-})();
-</script>
-<style id="language-toggle-fix-css">
-#languageSwitcher{z-index:99999!important;pointer-events:auto!important;}
-#languageSwitcher button{pointer-events:auto!important;cursor:pointer!important;position:relative!important;z-index:100000!important;}
-</style>
-}
+   try{
+     // Always normalize to English first, then apply the requested language.
