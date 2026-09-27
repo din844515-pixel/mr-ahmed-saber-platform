@@ -1013,16 +1013,17 @@ document.addEventListener('click',function(e){
     restoring=true;
     try{
       const {data:{session}}=await sb.auth.getSession();
-      const user=session?.user;
-      if(user && user.app_metadata?.role==='teacher') await loadTeacherDashboard();
+      if(session?.user){
+        await loadTeacherDashboard();
+      }
     }catch(e){ console.error('Teacher session restore failed:',e); }
     finally{ restoring=false; }
   }
   sb.auth.onAuthStateChange((event, session)=>{
-    if(event==='SIGNED_IN' && session?.user?.app_metadata?.role==='teacher') setTimeout(restoreTeacherSession,0);
+    if((event==='SIGNED_IN'||event==='INITIAL_SESSION') && session?.user) setTimeout(restoreTeacherSession,0);
   });
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>setTimeout(restoreTeacherSession,0),{once:true});
-  else setTimeout(restoreTeacherSession,0);
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>setTimeout(restoreTeacherSession,50),{once:true});
+  else setTimeout(restoreTeacherSession,50);
 })();
 </script>
 
