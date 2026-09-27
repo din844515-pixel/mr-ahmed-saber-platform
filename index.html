@@ -361,9 +361,89 @@ html[dir="rtl"] .dash-main{margin-right:260px;margin-left:0}
 #languageSwitcher{position:relative!important;z-index:99999!important;pointer-events:auto!important}
 #languageSwitcher button{position:relative!important;z-index:100000!important;pointer-events:auto!important;cursor:pointer!important;touch-action:manipulation!important}
 </style>
+<style id="bright-bigben-final-v2">
+.bigben,.hero-bg-bigben{opacity:.96!important;filter:brightness(1.18) saturate(1.14) contrast(1.04)!important}
+</style>
 </head>
 <body>
 <div id="languageSwitcher" aria-label="Language"><button id="langEN" type="button" onclick="setPlatformLanguage('en')">English</button><button id="langAR" type="button" onclick="setPlatformLanguage('ar')">العربية</button></div>
+<script id="language-switcher-fix">
+(function(){
+  const T={
+  "Home":"الرئيسية","اختبار المستوى":"اختبار المستوى","Free Lessons":"دروس مجانية","Our Courses":"الكورسات","About":"عن المنصة","Contact":"تواصل معنا",
+  "Student Login":"دخول الطالب","Teacher Login":"دخول المستر","Subscribe Now →":"اشترك الآن ←","Subscribe Now":"اشترك الآن",
+  "Welcome Back!":"مرحبًا بعودتك!","Teacher Login":"دخول المستر","Student Login":"دخول الطالب",
+  "Enter your student code to access your account.":"أدخل كود الطالب للدخول إلى حسابك.",
+  "Sign in to manage students, tests, courses and support.":"سجّل الدخول لإدارة الطلاب والاختبارات والكورسات والدعم.",
+  "Student Code":"كود الطالب","Email Address":"البريد الإلكتروني","Password":"كلمة المرور","Login →":"دخول ←",
+  "Back":"رجوع","Please enter your email and password.":"من فضلك أدخل البريد الإلكتروني وكلمة المرور.",
+  "Dashboard":"لوحة التحكم","Students":"الطلاب","Subscriptions":"الاشتراكات","Levels & Prices":"المراحل والأسعار","Exams":"الامتحانات","Video Lessons":"فيديوهات الشرح","Announcements":"الإعلانات","Attendance":"الحضور والغياب","Reports":"التقارير","Settings":"الإعدادات","Customer Support":"خدمة العملاء","Student Reviews":"آراء الطلاب",
+  "Search for a student, code, or exam...":"ابحث عن طالب أو كود أو امتحان...","Quick Actions":"إجراءات سريعة","Welcome Back, Mr. Ahmed Saber! 👋":"مرحبًا بك، مستر أحمد صابر! 👋","Here’s what’s happening with your platform today.":"إليك آخر ما يحدث في منصتك اليوم.",
+  "Total Students":"إجمالي الطلاب","Active Subscriptions":"الاشتراكات النشطة","Exams Created":"الامتحانات المنشأة","Video Lessons":"فيديوهات الشرح","Total Revenue":"إجمالي الإيرادات",
+  "Student Growth":"نمو الطلاب","This Month":"هذا الشهر","Subscription by Level":"الاشتراكات حسب المرحلة","Recent Activity":"آخر النشاطات","View All":"عرض الكل","Latest Students":"أحدث الطلاب",
+  "Name":"الاسم","Code":"الكود","Level":"المرحلة","Status":"الحالة","Join Date":"تاريخ الاشتراك","Paid":"تم السداد","Unpaid":"لم يتم السداد",
+  "Add Student":"إضافة طالب","Edit Student":"تعديل طالب","Student Name":"اسم الطالب","Student Code (leave empty to auto-generate)":"كود الطالب (اتركه فارغًا للتوليد تلقائيًا)",
+  "Stage / Course":"المرحلة / الكورس","Parent Phone":"رقم ولي الأمر","Student Phone":"رقم الطالب","Email":"البريد الإلكتروني","Male":"ذكر","Female":"أنثى",
+  "Normal student (payment required)":"طالب عادي (الاشتراك مطلوب)","Exempt (free access)":"معفى (دخول مجاني)","Notes":"ملاحظات","Save Student →":"حفظ الطالب ←","Could not save":"تعذر الحفظ","Student saved. Login code:":"تم حفظ الطالب. كود الدخول:",
+  "Delete this student and related records?":"هل تريد حذف هذا الطالب وكل السجلات المرتبطة به؟","Delete failed":"فشل الحذف","Update failed":"فشل التحديث",
+  "Create Exam":"إنشاء امتحان","Exam Title":"عنوان الامتحان","Minutes":"الدقائق","Hide Answers":"إخفاء الإجابات","Show Answers":"إظهار الإجابات","Create Exam →":"إنشاء الامتحان ←",
+  "Import PDF → Exam":"استيراد PDF ← امتحان","Exam Title":"عنوان الامتحان","Read PDF & Build Exam →":"قراءة PDF وإنشاء الامتحان ←","Save Draft Exam →":"حفظ الامتحان كمسودة ←",
+  "Exam Results":"نتائج الامتحانات","Score":"الدرجة","Evaluation":"التقييم","Note":"ملاحظة","No results yet.":"لا توجد نتائج بعد.",
+  "No support messages.":"لا توجد رسائل دعم.","No reviews yet.":"لا توجد آراء بعد.","Approved":"تمت الموافقة","Pending approval":"في انتظار الموافقة",
+  "Speaking & Pronunciation":"التحدث والنطق","Separate activities for Foundation, Speaking and General English.":"أنشطة منفصلة للفونديشن والمحادثة والإنجليزية العامة.","+ New Practice":"+ تدريب جديد","Practice":"التدريب","Course":"الكورس","Target":"النص المستهدف","Attempts":"المحاولات","No pronunciation practices yet.":"لا توجد تدريبات نطق بعد.",
+  "Video Lessons":"فيديوهات الشرح","Existing video system stays connected. Use the Videos section already in your platform to upload and manage lessons.":"نظام الفيديوهات الحالي متصل بالفعل. استخدم قسم الفيديوهات لرفع وإدارة الدروس.",
+  "Announcements":"الإعلانات","Existing announcements system stays connected.":"نظام الإعلانات الحالي متصل بالفعل.",
+  "Attendance":"الحضور والغياب","Existing attendance records stay connected.":"سجلات الحضور الحالية متصلة بالفعل.",
+  "Teacher account:":"حساب المستر:","Teacher phones:":"أرقام المستر:","Project:":"المشروع:","Design:":"التصميم:","Approved V25":"V25 المعتمد",
+  "No students yet.":"لا يوجد طلاب بعد.","No subscriptions yet.":"لا توجد اشتراكات بعد.","No payment requests yet.":"لا توجد طلبات دفع بعد.",
+  "Payment Requests":"طلبات الدفع","Payment proof":"إثبات الدفع","Approve":"موافقة","Reject":"رفض","Renewal":"إعادة الاشتراك","Subscription Start":"بداية الاشتراك","Renewal Date":"موعد إعادة الاشتراك",
+  "Please wait...":"برجاء الانتظار...","Loading...":"جاري التحميل...","Save":"حفظ","Cancel":"إلغاء","Close":"إغلاق","Logout":"تسجيل الخروج",
+  "All Students":"كل الطلاب","1st Preparatory":"أولى إعدادي","2nd Preparatory":"ثانية إعدادي","3rd Preparatory":"ثالثة إعدادي","1st Secondary":"أولى ثانوي","2nd Secondary":"ثانية ثانوي","3rd Secondary":"ثالثة ثانوي","Courses":"كورسات","Unassigned":"غير محدد","students":"طلاب","All Exams":"كل الامتحانات","No students in this list yet.":"لا يوجد طلاب في هذه القائمة بعد.","No exams in this list yet.":"لا توجد امتحانات في هذه القائمة بعد.","Student records from the platform are kept here. Each stage has its own list, with a separate Courses list for students who join a course.":"كل سجلات الطلاب الموجودة في المنصة محفوظة هنا. كل مرحلة لها قائمة مستقلة، مع قائمة منفصلة للكورسات.","Create as many exams as you need. Exams are stored separately by stage/course and there is no dashboard cap.":"أنشئ العدد الذي تحتاجه من الامتحانات. يتم حفظ الامتحانات بشكل منفصل حسب المرحلة أو الكورس بدون حد أقصى في لوحة التحكم.","Stage / Course":"المرحلة / الكورس","Courses":"كورسات"
+ };
+  const R=Object.fromEntries(Object.entries(T).map(([a,b])=>[b,a]));
+  const attrs=['placeholder','title','aria-label'];
+  function walk(node,dict){
+    if(!node || node.id==='languageSwitcher' || node.nodeName==='SCRIPT' || node.nodeName==='STYLE') return;
+    if(node.nodeType===3){
+      let s=node.nodeValue;
+      if(!s || !s.trim()) return;
+      for(const [from,to] of Object.entries(dict)) if(s.includes(from)) s=s.split(from).join(to);
+      node.nodeValue=s; return;
+    }
+    if(node.nodeType!==1) return;
+    for(const a of attrs){
+      let v=node.getAttribute(a);
+      if(v){ for(const [from,to] of Object.entries(dict)) if(v.includes(from)) v=v.split(from).join(to); node.setAttribute(a,v); }
+    }
+    for(const ch of [...node.childNodes]) walk(ch,dict);
+  }
+  function apply(lang){
+    lang=lang==='ar'?'ar':'en';
+    const old=document.documentElement.dir==='rtl'?'ar':'en';
+    if(old!==lang) walk(document.body, lang==='ar'?T:R);
+    localStorage.setItem('platformLanguage',lang);
+    document.documentElement.lang=lang;
+    document.documentElement.dir=lang==='ar'?'rtl':'ltr';
+    const en=document.getElementById('langEN'), ar=document.getElementById('langAR');
+    if(en) en.classList.toggle('active',lang==='en');
+    if(ar) ar.classList.toggle('active',lang==='ar');
+  }
+  window.setPlatformLanguage=apply;
+  window.__platformLangReady=true;
+  function bind(){
+    const en=document.getElementById('langEN'), ar=document.getElementById('langAR');
+    if(en) en.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();apply('en');},true);
+    if(ar) ar.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();apply('ar');},true);
+    apply(localStorage.getItem('platformLanguage')||'en');
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bind); else bind();
+  new MutationObserver(muts=>{
+    const lang=localStorage.getItem('platformLanguage')||'en';
+    if(lang==='ar') for(const m of muts) for(const n of m.addedNodes) if(n.nodeType===1) walk(n,T);
+  }).observe(document.documentElement,{childList:true,subtree:true});
+})();
+</script>
+
 
 <header><div class="wrap nav"><a class="brand" href="#home"><div class="logo">A<span>S</span></div><div><b>Mr. Ahmed Saber</b><small>English Learning Platform</small></div></a><nav class="navlinks"><a href="#home">Home</a><a href="#level">اختبار المستوى</a><a href="#free">Free Lessons</a><a href="#courses">Our Courses</a><a href="#about">About</a><a href="#contact">Contact</a></nav><div class="actions"><button class="btn" onclick="openModal('student')">Student Login</button><button class="btn" onclick="openModal('teacher')">Teacher Login</button><a class="btn gold subscribe-desktop" href="#subscribe">Subscribe Now →</a></div><button class="mobile-menu-btn" type="button" aria-label="Open menu" aria-controls="mobileMenu" aria-expanded="false" onclick="toggleMobileMenu()">☰</button></div></header>
 <div class="mobile-menu" id="mobileMenu" aria-hidden="true">
@@ -918,83 +998,3 @@ document.addEventListener('click',function(e){
     main.innerHTML=`<div class="welcome"><div><h1>Payment Requests</h1><p>راجعي بيانات الطالب وصورة الدفع ثم اقبلي أو ارفضي الطلب.</p></div><button class="dash-action" onclick="refreshTeacher()">Refresh</button></div>
       <section class="panel"><div class="dash-toolbar"><span class="badge-soft">طلبات معلقة: ${pending.length}</span></div>
       ${pending.map(r=>`<div class="payment-request-card pending"><div class="payment-request-head"><div><h3 style="margin:0 0 5px;font-size:14px">${safe(r.full_name||r.student_name||'Student')}</h3><div class="payment-request-meta">${r.student_id?'إعادة اشتراك':'اشتراك جديد'} • ${safe(r.course_name||'')} • ${safe(r.payment_method||'')}<br>ولي الأمر: ${safe(r.parent_phone||'—')} • المبلغ: ${safe(r.amount||0)} جنيه</div></div><span class="pill wait">Pending</span></div>${r.receipt_path?`<img class="payment-proof" src="${r.receipt_path}" alt="Payment proof" onclick="window.open(this.src,'_blank')">`:''}<div class="dash-toolbar" style="margin:0"><button class="dash-action gold" onclick="approvePaymentRequest(${Number(r.id)})">✅ موافقة وتفعيل</button><button class="dash-action" style="background:#b33a3a" onclick="rejectPaymentRequest(${Number(r.id)})">رفض الطلب</button></div></div>`).join('')||'<div class="result">لا توجد طلبات دفع معلقة حاليًا.</div>'}</section>
-      <section class="panel" style="margin-top:14px"><h3>سجل الطلبات</h3><table class="dash-table"><thead><tr><th>الطالب</th><th>النوع</th><th>المرحلة</th><th>الحالة</th><th>التاريخ</th></tr></thead><tbody>${list.slice(0,80).map(r=>`<tr><td>${safe(r.full_name||r.student_name||'')}</td><td>${r.student_id?'Renewal':'New'}</td><td>${safe(r.course_name||'')}</td><td><span class="pill ${r.status==='confirmed'?'':'wait'}">${safe(r.status||'')}</span></td><td>${r.created_at?new Date(r.created_at).toLocaleDateString('ar-EG'):''}</td></tr>`).join('')||'<tr><td colspan="5">لا توجد طلبات.</td></tr>'}</tbody></table></section>`;
-  }
-  async function approvePaymentRequest(id){
-    const {data,error}=await sb.rpc('teacher_approve_payment_request',{p_request_id:id});
-    if(error||!data?.success){alert(data?.message||error?.message||'تعذر قبول الطلب.');return;}
-    if(data.student_code) alert('تم قبول الطالب ✅\nكود الطالب: '+data.student_code+'\nبداية الاشتراك: '+fmtDate(data.start_date)+'\nإعادة الاشتراك: '+fmtDate(data.next_due_date));
-    else alert('تم قبول إعادة الاشتراك وتفعيل الحساب ✅\nموعد التجديد: '+fmtDate(data.next_due_date));
-    await refreshTeacher(); showTeacherSection('payment_requests');
-  }
-  async function rejectPaymentRequest(id){
-    const reason=prompt('سبب الرفض (اختياري):')||'';
-    const {data,error}=await sb.rpc('teacher_reject_payment_request',{p_request_id:id,p_reason:reason});
-    if(error||!data?.success){alert(data?.message||error?.message||'تعذر رفض الطلب.');return;} await refreshTeacher(); showTeacherSection('payment_requests');
-  }
-  window.approvePaymentRequest=approvePaymentRequest; window.rejectPaymentRequest=rejectPaymentRequest;
-
-  const oldShowTeacherSection=window.showTeacherSection;
-  window.showTeacherSection=function(sec){
-    addPaymentRequestsMenu();
-    if(sec==='payment_requests') return renderPaymentRequestsSection();
-    return oldShowTeacherSection(sec);
-  };
-  const oldRefreshTeacher=window.refreshTeacher;
-  window.refreshTeacher=async function(){const r=await oldRefreshTeacher(); addPaymentRequestsMenu(); return r;};
-
-  const originalContinueSubscribe=window.continueSubscribe;
-  window.continueSubscribe=function(){openNewSubscriptionForm();};
-
-  window.addEventListener('beforeunload',()=>clearInterval(window.__studentWatch));
-})();
-</script>
-
-\n<script id="platform-language-system">
-(function(){
- const T={
-  "Home":"الرئيسية","اختبار المستوى":"اختبار المستوى","Free Lessons":"دروس مجانية","Our Courses":"الكورسات","About":"عن المنصة","Contact":"تواصل معنا",
-  "Student Login":"دخول الطالب","Teacher Login":"دخول المستر","Subscribe Now →":"اشترك الآن ←","Subscribe Now":"اشترك الآن",
-  "Welcome Back!":"مرحبًا بعودتك!","Teacher Login":"دخول المستر","Student Login":"دخول الطالب",
-  "Enter your student code to access your account.":"أدخل كود الطالب للدخول إلى حسابك.",
-  "Sign in to manage students, tests, courses and support.":"سجّل الدخول لإدارة الطلاب والاختبارات والكورسات والدعم.",
-  "Student Code":"كود الطالب","Email Address":"البريد الإلكتروني","Password":"كلمة المرور","Login →":"دخول ←",
-  "Back":"رجوع","Please enter your email and password.":"من فضلك أدخل البريد الإلكتروني وكلمة المرور.",
-  "Dashboard":"لوحة التحكم","Students":"الطلاب","Subscriptions":"الاشتراكات","Levels & Prices":"المراحل والأسعار","Exams":"الامتحانات","Video Lessons":"فيديوهات الشرح","Announcements":"الإعلانات","Attendance":"الحضور والغياب","Reports":"التقارير","Settings":"الإعدادات","Customer Support":"خدمة العملاء","Student Reviews":"آراء الطلاب",
-  "Search for a student, code, or exam...":"ابحث عن طالب أو كود أو امتحان...","Quick Actions":"إجراءات سريعة","Welcome Back, Mr. Ahmed Saber! 👋":"مرحبًا بك، مستر أحمد صابر! 👋","Here’s what’s happening with your platform today.":"إليك آخر ما يحدث في منصتك اليوم.",
-  "Total Students":"إجمالي الطلاب","Active Subscriptions":"الاشتراكات النشطة","Exams Created":"الامتحانات المنشأة","Video Lessons":"فيديوهات الشرح","Total Revenue":"إجمالي الإيرادات",
-  "Student Growth":"نمو الطلاب","This Month":"هذا الشهر","Subscription by Level":"الاشتراكات حسب المرحلة","Recent Activity":"آخر النشاطات","View All":"عرض الكل","Latest Students":"أحدث الطلاب",
-  "Name":"الاسم","Code":"الكود","Level":"المرحلة","Status":"الحالة","Join Date":"تاريخ الاشتراك","Paid":"تم السداد","Unpaid":"لم يتم السداد",
-  "Add Student":"إضافة طالب","Edit Student":"تعديل طالب","Student Name":"اسم الطالب","Student Code (leave empty to auto-generate)":"كود الطالب (اتركه فارغًا للتوليد تلقائيًا)",
-  "Stage / Course":"المرحلة / الكورس","Parent Phone":"رقم ولي الأمر","Student Phone":"رقم الطالب","Email":"البريد الإلكتروني","Male":"ذكر","Female":"أنثى",
-  "Normal student (payment required)":"طالب عادي (الاشتراك مطلوب)","Exempt (free access)":"معفى (دخول مجاني)","Notes":"ملاحظات","Save Student →":"حفظ الطالب ←","Could not save":"تعذر الحفظ","Student saved. Login code:":"تم حفظ الطالب. كود الدخول:",
-  "Delete this student and related records?":"هل تريد حذف هذا الطالب وكل السجلات المرتبطة به؟","Delete failed":"فشل الحذف","Update failed":"فشل التحديث",
-  "Create Exam":"إنشاء امتحان","Exam Title":"عنوان الامتحان","Minutes":"الدقائق","Hide Answers":"إخفاء الإجابات","Show Answers":"إظهار الإجابات","Create Exam →":"إنشاء الامتحان ←",
-  "Import PDF → Exam":"استيراد PDF ← امتحان","Exam Title":"عنوان الامتحان","Read PDF & Build Exam →":"قراءة PDF وإنشاء الامتحان ←","Save Draft Exam →":"حفظ الامتحان كمسودة ←",
-  "Exam Results":"نتائج الامتحانات","Score":"الدرجة","Evaluation":"التقييم","Note":"ملاحظة","No results yet.":"لا توجد نتائج بعد.",
-  "No support messages.":"لا توجد رسائل دعم.","No reviews yet.":"لا توجد آراء بعد.","Approved":"تمت الموافقة","Pending approval":"في انتظار الموافقة",
-  "Speaking & Pronunciation":"التحدث والنطق","Separate activities for Foundation, Speaking and General English.":"أنشطة منفصلة للفونديشن والمحادثة والإنجليزية العامة.","+ New Practice":"+ تدريب جديد","Practice":"التدريب","Course":"الكورس","Target":"النص المستهدف","Attempts":"المحاولات","No pronunciation practices yet.":"لا توجد تدريبات نطق بعد.",
-  "Video Lessons":"فيديوهات الشرح","Existing video system stays connected. Use the Videos section already in your platform to upload and manage lessons.":"نظام الفيديوهات الحالي متصل بالفعل. استخدم قسم الفيديوهات لرفع وإدارة الدروس.",
-  "Announcements":"الإعلانات","Existing announcements system stays connected.":"نظام الإعلانات الحالي متصل بالفعل.",
-  "Attendance":"الحضور والغياب","Existing attendance records stay connected.":"سجلات الحضور الحالية متصلة بالفعل.",
-  "Teacher account:":"حساب المستر:","Teacher phones:":"أرقام المستر:","Project:":"المشروع:","Design:":"التصميم:","Approved V25":"V25 المعتمد",
-  "No students yet.":"لا يوجد طلاب بعد.","No subscriptions yet.":"لا توجد اشتراكات بعد.","No payment requests yet.":"لا توجد طلبات دفع بعد.",
-  "Payment Requests":"طلبات الدفع","Payment proof":"إثبات الدفع","Approve":"موافقة","Reject":"رفض","Renewal":"إعادة الاشتراك","Subscription Start":"بداية الاشتراك","Renewal Date":"موعد إعادة الاشتراك",
-  "Please wait...":"برجاء الانتظار...","Loading...":"جاري التحميل...","Save":"حفظ","Cancel":"إلغاء","Close":"إغلاق","Logout":"تسجيل الخروج",
-  "All Students":"كل الطلاب","1st Preparatory":"أولى إعدادي","2nd Preparatory":"ثانية إعدادي","3rd Preparatory":"ثالثة إعدادي","1st Secondary":"أولى ثانوي","2nd Secondary":"ثانية ثانوي","3rd Secondary":"ثالثة ثانوي","Courses":"كورسات","Unassigned":"غير محدد","students":"طلاب","All Exams":"كل الامتحانات","No students in this list yet.":"لا يوجد طلاب في هذه القائمة بعد.","No exams in this list yet.":"لا توجد امتحانات في هذه القائمة بعد.","Student records from the platform are kept here. Each stage has its own list, with a separate Courses list for students who join a course.":"كل سجلات الطلاب الموجودة في المنصة محفوظة هنا. كل مرحلة لها قائمة مستقلة، مع قائمة منفصلة للكورسات.","Create as many exams as you need. Exams are stored separately by stage/course and there is no dashboard cap.":"أنشئ العدد الذي تحتاجه من الامتحانات. يتم حفظ الامتحانات بشكل منفصل حسب المرحلة أو الكورس بدون حد أقصى في لوحة التحكم.","Stage / Course":"المرحلة / الكورس","Courses":"كورسات"
- };
- const R=Object.fromEntries(Object.entries(T).map(([a,b])=>[b,a]));
- const attrNames=['placeholder','title','aria-label'];
- function translateNode(node,dict){
-   if(node.nodeType===Node.TEXT_NODE){
-     const v=node.nodeValue.trim(); if(!v)return;
-     if(dict[v]!==undefined){node.nodeValue=node.nodeValue.replace(v,dict[v]);}
-     return;
-   }
-   if(node.nodeType!==Node.ELEMENT_NODE || node.id==='languageSwitcher')return;
-   attrNames.forEach(a=>{const v=node.getAttribute(a);if(v&&dict[v]!==undefined)node.setAttribute(a,dict[v]);});
-   node.childNodes.forEach(ch=>translateNode(ch,dict));
- }
- function setPlatformLanguage(lang){
-   try{
-     // Always normalize to English first, then apply the requested language.
