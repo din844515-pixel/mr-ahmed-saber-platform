@@ -1,0 +1,70 @@
+name: Patch video social UI
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/patch-video-social.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch index
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path("index.html")
+          s=p.read_text(encoding="utf-8")
+          marker='<!-- video-social-v1 -->'
+          if marker in s: raise SystemExit(0)
+          js=r'''
+<script id="video-social-v1">
+(function(){
+const tr=(en,ar)=>((localStorage.getItem('platformLanguage')||'en')==='ar'?ar:en);
+const esc=v=>window.escapeHtml?escapeHtml(v==null?'':String(v)):String(v==null?'':v).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]});
+const rpc=async function(n,a){const r=await sb.rpc(n,a||{});if(r.error){console.error(r.error);alert(r.error.message||tr('Error','حدث خطأ'));return null}return r.data};
+const yt=function(u){const m=String(u||'').match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/);return m?'https://www.youtube.com/embed/'+m[1]+'?rel=0&modestbranding=1':''};
+const vu=v=>v.url||v.video_url||'';
+async function teacherVideos(){
+ const d=await rpc('teacher_videos');if(!d||!d.success)return;
+ const vs=d.videos||[], ss=await Promise.all(vs.map(v=>rpc('teacher_video_stats',{p_video_id:Number(v.id)})));
+ const main=document.getElementById('teacherMain');if(!main)return;
+ let rows=vs.map(function(v,i){const x=ss[i]||{};return '<tr><td><b>'+esc(v.title||'')+'</b><br><small>'+esc(v.description||'')+'</small></td><td>'+esc(v.grade||tr('All','كل المراحل'))+'</td><td>'+Number(x.views_count||0)+'</td><td>'+Number(x.views_percent||0)+'%</td><td>❤️ '+Number(x.likes_count||0)+'</td><td><button class="dash-action" onclick="openTeacherVideoCommentsSocialV1('+Number(v.id)+','+JSON.stringify(v.title||'')+')">💬 '+tr('Comments','التعليقات')+'</button> <button class="dash-action" onclick="deleteVideoSocialV1('+Number(v.id)+')">🗑️ '+tr('Delete','حذف')+'</button></td></tr>'}).join('');
+ main.innerHTML='<div class="welcome"><div><h1>'+tr('Video Lessons','فيديوهات الشرح')+'</h1><p>'+tr('Add lessons and track views, likes and comments.','أضيفي فيديوهات الشرح وتابعي المشاهدات واللايكات والتعليقات.')+'</p></div><button class="dash-action gold" onclick="openAddVideoSocialV1()">+ '+tr('Add Video','إضافة فيديو')+'</button></div><section class="panel"><div class="v9-scroll"><table class="dash-table"><thead><tr><th>'+tr('Video','الفيديو')+'</th><th>'+tr('Stage','المرحلة')+'</th><th>'+tr('Views','المشاهدات')+'</th><th>'+tr('View rate','نسبة المشاهدة')+'</th><th>'+tr('Likes','الإعجابات')+'</th><th>'+tr('Actions','الإجراءات')+'</th></tr></thead><tbody>'+ (rows||'<tr><td colspan="6">'+tr('No videos yet.','لا توجد فيديوهات بعد.')+'</td></tr>')+'</tbody></table></div></section>';
+}
+window.openAddVideoSocialV1=function(){show('<h2>'+tr('Add Video','إضافة فيديو')+'</h2><label>'+tr('Video title','عنوان الفيديو')+'</label><input id="sv_title" class="input"><label>'+tr('Video link','رابط الفيديو')+'</label><input id="sv_url" class="input" placeholder="YouTube / direct video URL"><label>'+tr('Description','الوصف')+'</label><textarea id="sv_desc" class="input"></textarea><label>'+tr('Stage','المرحلة')+'</label><input id="sv_grade" class="input" placeholder="'+tr('Leave empty for all stages','اتركيه فارغًا لكل المراحل')+'"><button class="submit" onclick="saveVideoSocialV1()">'+tr('Save Video','حفظ الفيديو')+' ✅</button>')};
+window.saveVideoSocialV1=async function(){const t=document.getElementById('sv_title')?.value.trim()||'',u=document.getElementById('sv_url')?.value.trim()||'',d=document.getElementById('sv_desc')?.value.trim()||'',g=document.getElementById('sv_grade')?.value.trim()||'';if(!t||!u){alert(tr('Title and link are required.','العنوان والرابط مطلوبان.'));return}const r=await rpc('teacher_create_video',{p_title:t,p_description:d,p_video_url:u,p_grade:g,p_active:true});if(r?.success){closeModal();teacherVideos()}};
+window.deleteVideoSocialV1=async function(id){if(!confirm(tr('Delete this video?','هل تريد حذف هذا الفيديو؟')))return;const r=await rpc('teacher_delete_video',{p_video_id:Number(id)});if(r?.success)teacherVideos()};
+window.openTeacherVideoCommentsSocialV1=async function(id,title){const d=await rpc('teacher_video_comments',{p_video_id:Number(id)});if(!d)return;let h=(d.comments||[]).map(c=>'<div style="margin:8px 0;padding:9px;border:1px solid #e5ebf2;border-radius:9px"><b>'+esc(c.student_name)+'</b><div>'+esc(c.comment)+'</div></div>').join('');show('<h2>'+esc(title)+' — '+tr('Comments','التعليقات')+'</h2>'+(h||'<p>'+tr('No comments yet.','لا توجد تعليقات بعد.')+'</p>'))};
+const oldTR=window.renderTeacherSection;window.renderTeacherSection=function(sec){if(sec==='videos')return teacherVideos();return oldTR?oldTR(sec):null};
+
+window.openStudentVideoSocialV1=async function(id){const r=await rpc('student_video_view',{p_code:localStorage.getItem('student_code')||'',p_video_id:Number(id)});if(r?.success){const c=document.querySelector('[data-social-video="'+id+'"]');if(c){c.querySelector('[data-view-count]').textContent='👁️ '+Number(r.views_count||0)+' • '+Number(r.views_percent||0)+'%';c.querySelector('[data-like]').textContent=(r.liked?'❤️ ':'🤍 ')+Number(r.likes_count||0)}}};
+window.toggleStudentVideoLikeSocialV1=async function(id){const r=await rpc('student_toggle_video_like',{p_code:localStorage.getItem('student_code')||'',p_video_id:Number(id)});if(r?.success){const c=document.querySelector('[data-social-video="'+id+'"]');if(c){c.querySelector('[data-like]').textContent=(r.liked?'❤️ ':'🤍 ')+Number(r.likes_count||0);c.querySelector('[data-view-count]').textContent='👁️ '+Number(r.views_count||0)+' • '+Number(r.views_percent||0)+'%'}}};
+window.openStudentVideoCommentsSocialV1=async function(id,title){const d=await rpc('student_video_comments',{p_code:localStorage.getItem('student_code')||'',p_video_id:Number(id)});if(!d)return;let h=(d.comments||[]).map(c=>'<div style="margin:8px 0;padding:9px;border:1px solid #e5ebf2;border-radius:9px"><b>'+esc(c.student_name)+'</b><div>'+esc(c.comment)+'</div></div>').join('');show('<h2>'+esc(title)+' — '+tr('Comments','التعليقات')+'</h2><div style="max-height:45vh;overflow:auto">'+(h||'<p>'+tr('No comments yet.','لا توجد تعليقات بعد.')+'</p>')+'</div><textarea id="sv_social_comment" class="input" style="height:85px" placeholder="'+tr('Write a comment','اكتب تعليقًا')+'"></textarea><button class="submit" onclick="addStudentVideoCommentSocialV1('+Number(id)+','+JSON.stringify(title)+')">'+tr('Send','إرسال')+' →</button>')};
+window.addStudentVideoCommentSocialV1=async function(id,title){const c=document.getElementById('sv_social_comment')?.value.trim()||'';if(!c)return;const r=await rpc('student_add_video_comment',{p_code:localStorage.getItem('student_code')||'',p_video_id:Number(id),p_comment:c});if(r?.success)openStudentVideoCommentsSocialV1(id,title)};
+
+const oldSR=window.renderStudentSection;window.renderStudentSection=function(sec){
+ if(sec!=='videos')return oldSR?oldSR(sec):null;
+ const d=window.__studentPortalData;if(!d)return;const main=document.getElementById('studentMain');if(!main)return;
+ const vs=d.videos||[];
+ let cards=vs.map(function(v){const id=Number(v.id),u=vu(v),e=yt(u),safe=esc(u);let player=e?'<div style="aspect-ratio:16/9;background:#092f62;border-radius:12px;display:grid;place-items:center"><button class="dash-action gold" onclick="this.parentElement.outerHTML=\'<iframe class="v9-video" style="width:100%;aspect-ratio:16/9;border:0;border-radius:12px" src="'+e+'" allowfullscreen></iframe>\';openStudentVideoSocialV1('+id+')">▶️ '+tr('Start video','ابدأ الفيديو')+'</button></div>':'<video class="v9-video" style="width:100%;border-radius:12px" controls preload="metadata" src="'+safe+'" onplay="openStudentVideoSocialV1('+id+')"></video>';return '<div class="v9-card" data-social-video="'+id+'" style="margin:12px 0;padding:12px"><div>'+player+'</div><h3>'+esc(v.title||'')+'</h3><p>'+esc(v.description||'')+'</p><div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center"><span data-view-count class="pill">👁️ 0 • 0%</span><button data-like class="dash-action" onclick="toggleStudentVideoLikeSocialV1('+id+')">🤍 0</button><button class="dash-action" onclick="openStudentVideoCommentsSocialV1('+id+','+JSON.stringify(v.title||'')+')">💬 '+tr('Comments','التعليقات')+'</button></div></div>'}).join('');
+ main.innerHTML='<section class="panel"><h3>'+tr('Video Lessons','فيديوهات الشرح')+'</h3>'+(cards||'<p>'+tr('No videos available yet.','لا توجد فيديوهات متاحة حاليًا.')+'</p>')+'</section>';
+ vs.forEach(v=>openStudentVideoSocialV1(Number(v.id)));
+};
+setTimeout(function(){if(window.__teacherSection==='videos'&&document.getElementById('teacherMain'))teacherVideos()},50);
+})();
+</script>
+'''
+          s=s.replace("</body>",marker+js+"</body>")
+          p.write_text(s,encoding="utf-8")
+          PY
+      - name: Commit patch
+        run: |
+          git config user.name "chatgpt-video-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git diff --cached --quiet && exit 0
+          git commit -m "Add video views likes and comments UI"
+          git push
