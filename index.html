@@ -1376,3 +1376,29 @@ document.addEventListener('click',function(e){
   observer.observe(document.body,{childList:true,subtree:true});
 })();
 </script>
+
+<script id="teacher-announcements-controls">
+(function(){
+  function esc(v){return typeof escapeHtml==='function'?escapeHtml(v==null?'':String(v)):String(v==null?'':v).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+  window.openAddAnnouncement=function(){
+    show('<h2>إضافة إعلان جديد</h2><p class="sub">اكتب الإعلان وحدد المرحلة التي سيظهر لها.</p><div class="form-grid"><input id="annTitle" class="input" placeholder="عنوان الإعلان"><select id="annGrade" class="input"><option value="">كل الطلاب</option><option value="أولى إعدادي">أولى إعدادي</option><option value="ثانية إعدادي">ثانية إعدادي</option><option value="ثالثة إعدادي">ثالثة إعدادي</option><option value="أولى ثانوي">أولى ثانوي</option><option value="ثانية ثانوي">ثانية ثانوي</option><option value="ثالثة ثانوي">ثالثة ثانوي</option><option value="كورسات">كورسات</option></select><textarea id="annBody" class="input full" style="height:130px" placeholder="محتوى الإعلان"></textarea></div><button type="button" class="submit" id="saveAnnouncementBtn">نشر الإعلان ←</button>');
+    document.getElementById('saveAnnouncementBtn')?.addEventListener('click',saveAnnouncement);
+  };
+  async function saveAnnouncement(){
+    const title=document.getElementById('annTitle')?.value.trim()||''; const body=document.getElementById('annBody')?.value.trim()||''; const grade=document.getElementById('annGrade')?.value||'';
+    if(!title||!body){alert('اكتب عنوان الإعلان ومحتواه أولًا.');return;}
+    const {data:userData}=await sb.auth.getUser(); if(!userData?.user){alert('يجب تسجيل دخول المستر أولًا.');return;}
+    const {error}=await sb.from('announcements').insert({title,body,grade:grade||null,active:true,owner_id:userData.user.id});
+    if(error){alert(error.message||'تعذر نشر الإعلان.');return;}
+    closeModal(); await refreshTeacher(); showTeacherSection('ann');
+  }
+  window.deleteTeacherAnnouncement=async function(id){if(!confirm('حذف هذا الإعلان؟'))return;const {error}=await sb.from('announcements').delete().eq('id',id);if(error){alert(error.message||'تعذر حذف الإعلان.');return;}await refreshTeacher();showTeacherSection('ann');};
+  window.toggleTeacherAnnouncement=async function(id,active){const {error}=await sb.from('announcements').update({active}).eq('id',id);if(error){alert(error.message||'تعذر تحديث الإعلان.');return;}await refreshTeacher();showTeacherSection('ann');};
+  window.renderTeacherAnnouncements=function(){
+    const main=document.getElementById('teacherMain');if(!main)return;const list=teacherData().announcements||[];
+    main.innerHTML='<div class="welcome"><div><h1>Announcements</h1><p>إضافة وإدارة إعلانات الطلاب.</p></div><button class="dash-action gold" type="button" onclick="openAddAnnouncement()">+ إضافة إعلان</button></div><section class="panel">'+(list.map(x=>'<div class="lesson" style="align-items:flex-start"><div style="flex:1"><h4>'+esc(x.title||'')+'</h4><p style="white-space:pre-wrap">'+esc(x.body||'')+'</p><small>المرحلة: '+esc(x.grade||'كل الطلاب')+' • '+(x.active?'منشور':'متوقف')+'</small></div><div class="dash-toolbar"><button class="dash-action" onclick="toggleTeacherAnnouncement('+Number(x.id)+','+(!x.active)+')">'+(x.active?'إيقاف':'نشر')+'</button><button class="dash-action" style="background:#b33a3a" onclick="deleteTeacherAnnouncement('+Number(x.id)+')">حذف</button></div></div>').join('')||'<p class="sub">لا توجد إعلانات حتى الآن.</p>')+'</section>';
+  };
+  const old=window.renderTeacherSection;
+  window.renderTeacherSection=function(sec){if(sec==='ann'){window.__teacherSection=sec;document.querySelectorAll('#teacherDashboard .side-btn').forEach(b=>b.classList.remove('active'));renderTeacherAnnouncements();return;}return old.apply(this,arguments);};
+})();
+</script>
