@@ -1075,50 +1075,10 @@ document.addEventListener('click',function(e){
 
 <script id="monthly-student-review-feature">
 (function(){
-  function esc(v){return typeof escapeHtml==='function'?escapeHtml(v==null?'':String(v)):String(v==null?'':v).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
-  window.openMonthlyStudentReview=function(student){
-    student=student||{};
-    const name=student.name||'';
-    const stage=student.stage||'';
-    show('<h2>استبيان رأي الطالب الشهري</h2>'+
-      '<p class="sub">خدي رأي الطالب في المستر والمنصة لهذا الشهر.</p>'+
-      '<div class="result"><b>الطالب:</b> '+esc(name)+'<br><b>المرحلة:</b> '+esc(stage||'—')+'</div>'+
-      '<label class="sub">تقييمك للمستر من 1 إلى 5</label>'+
-      '<select id="monthlyReviewRating" class="input"><option value="5">⭐ 5 - ممتاز</option><option value="4">⭐ 4 - جيد جدًا</option><option value="3">⭐ 3 - جيد</option><option value="2">⭐ 2 - يحتاج تحسين</option><option value="1">⭐ 1 - ضعيف</option></select>'+
-      '<textarea id="monthlyReviewText" class="input" style="height:90px" placeholder="رأيك في شرح المستر وتعامله معك"></textarea>'+
-      '<textarea id="monthlyPlatformText" class="input" style="height:90px" placeholder="رأيك في المنصة وسهولة استخدامها"></textarea>'+
-      '<button type="button" class="submit" id="saveMonthlyReviewBtn">حفظ رأي الطالب ←</button>');
-    document.getElementById('saveMonthlyReviewBtn')?.addEventListener('click',function(){saveMonthlyStudentReview(student);});
-  };
-  async function saveMonthlyStudentReview(student){
-    const rating=Number(document.getElementById('monthlyReviewRating')?.value||0);
-    const teacherReview=document.getElementById('monthlyReviewText')?.value.trim()||'';
-    const platformReview=document.getElementById('monthlyPlatformText')?.value.trim()||'';
-    if(!teacherReview&&!platformReview){alert('اكتبي رأي الطالب أولًا.');return;}
-    const month=new Date().toLocaleDateString('ar-EG',{month:'long',year:'numeric'});
-    const review='استبيان '+month+'\nرأي الطالب في المستر: '+(teacherReview||'—')+'\nرأي الطالب في المنصة: '+(platformReview||'—');
-    const {error}=await sb.from('student_reviews').insert({name:student.name||'',stage:student.stage||'',review,rating,approved:false});
-    if(error){alert(error.message||'تعذر حفظ الرأي.');return;}
-    show('<h2>تم حفظ الرأي ✅</h2><p class="sub">تم تسجيل رأي '+esc(student.name||'الطالب')+' لاستبيان هذا الشهر.</p><button class="submit" onclick="closeModal()">تمام</button>');
-  }
-  function addReviewButtons(){
-    const table=document.getElementById('studentsTable'); if(!table)return;
-    table.querySelectorAll('tbody tr').forEach(row=>{
-      if(row.dataset.reviewBound==='1')return;
-      const cells=row.children; if(!cells||cells.length<7)return;
-      if(row.querySelector('.monthly-review-btn')){row.dataset.reviewBound='1';return;}
-      const name=(cells[0]?.querySelector('div')?.textContent||cells[0]?.textContent||'').trim();
-      const stage=(cells[2]?.textContent||'').trim();
-      if(!name||name.toLowerCase().includes('no students'))return;
-      const btn=document.createElement('button');
-      btn.type='button'; btn.className='dash-action monthly-review-btn'; btn.textContent='📝 إضافة رأي';
-      btn.onclick=function(){window.openMonthlyStudentReview({name,stage});};
-      cells[6].appendChild(document.createTextNode(' ')); cells[6].appendChild(btn);
-      row.dataset.reviewBound='1';
-    });
-  }
-  const obs=new MutationObserver(addReviewButtons);
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){obs.observe(document.body,{childList:true,subtree:true});addReviewButtons();});
-  else {obs.observe(document.body,{childList:true,subtree:true});addReviewButtons();}
+  function esc(v){return typeof escapeHtml==='function'?escapeHtml(v==null?'':String(v)):String(v==null?'':v).replace(/[&<>"\']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));}
+  window.openMonthlyStudentReview=function(student){student=student||{};const name=student.name||'',stage=student.stage||'';show('<h2>تقييم وملاحظات الطالب</h2><p class="sub">المستر هو اللي يكتب التقييم والملاحظات ويتحكم فيها.</p><div class="result"><b>الطالب:</b> '+esc(name)+'<br><b>المرحلة:</b> '+esc(stage||'—')+'</div><label class="sub">التقييم</label><input id="monthlyReviewRating" class="input" type="text" placeholder="اكتب تقييم الطالب هنا..."><label class="sub">ملاحظات المستر</label><textarea id="monthlyReviewText" class="input" style="height:110px" placeholder="اكتب ملاحظاتك عن الطالب هنا..."></textarea><button type="button" class="submit" id="saveMonthlyReviewBtn">حفظ التقييم والملاحظات ←</button>');document.getElementById('saveMonthlyReviewBtn')?.addEventListener('click',()=>saveMonthlyStudentReview(student));};
+  async function saveMonthlyStudentReview(student){const rating=document.getElementById('monthlyReviewRating')?.value.trim()||'',notes=document.getElementById('monthlyReviewText')?.value.trim()||'';if(!rating&&!notes){alert('اكتب التقييم أو الملاحظات أولًا.');return;}const month=new Date().toLocaleDateString('ar-EG',{month:'long',year:'numeric'});const review='تقييم المستر - '+month+'\\nالتقييم: '+(rating||'—')+'\\nملاحظات المستر: '+(notes||'—');const {error}=await sb.from('student_reviews').insert({name:student.name||'',stage:student.stage||'',review,rating:0,approved:false});if(error){alert(error.message||'تعذر حفظ التقييم والملاحظات.');return;}show('<h2>تم الحفظ ✅</h2><p class="sub">تم حفظ تقييم وملاحظات '+esc(student.name||'الطالب')+'.</p><button class="submit" onclick="closeModal()">تمام</button>');}
+  function addReviewButtons(){const table=document.getElementById('studentsTable');if(!table)return;const tbody=table.querySelector('tbody');if(!tbody)return;Array.from(tbody.querySelectorAll('tr')).forEach((row,index)=>{if(row.dataset.reviewBound==='1')return;const cells=row.children;if(!cells||cells.length<7)return;const name=(cells[0]?.querySelector('div')?.textContent||cells[0]?.textContent||'').trim();if(!name||name.toLowerCase().includes('no students'))return;const stage=(cells[2]?.textContent||'').trim();if(!cells[0].querySelector('.student-row-number')){const num=document.createElement('span');num.className='student-row-number';num.textContent=(index+1)+'. ';num.style.fontWeight='800';cells[0].prepend(num);}const btn=document.createElement('button');btn.type='button';btn.className='dash-action monthly-review-btn';btn.textContent='📝 تقييم وملاحظات';btn.onclick=()=>window.openMonthlyStudentReview({name,stage});cells[6].appendChild(document.createTextNode(' '));cells[6].appendChild(btn);row.dataset.reviewBound='1';});}
+  const obs=new MutationObserver(addReviewButtons);function init(){addReviewButtons();obs.observe(document.body,{childList:true,subtree:true});}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
 </script>
