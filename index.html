@@ -432,14 +432,15 @@ function startLevelQuestions(){\
   window.__levelQuestions=qs;\
 }\
 \
-async function studentLogin(){\
- const code=document.getElementById('loginCode')?.value.trim()||'';\
- if(!code){document.getElementById('studentLoginBox').insertAdjacentHTML('beforeend','<div class=\"result\" style=\"background:#fff7e0;color:#6b5100\">Please enter your student code.</div>');return}\
- const {data,error}=await sb.rpc('student_login',{p_code:code});\
- if(error||!data||data.success!==true){show('<h2>Login failed</h2><p class=\"sub\">The student code is incorrect or inactive. Please contact customer support.</p><button class=\"submit\" onclick=\"openModal(\\'support\\')\">خدمة العملاء</button>');return}\
- const row=data.student||{};\
- localStorage.setItem('student_code',code);\
- show('<h2>Welcome, '+escapeHtml(row.name||'Student')+' 👋</h2><p class=\"sub\">Your student portal is ready.</p><div class=\"result\" style=\"text-align:left\"><b>Student Code:</b> '+escapeHtml(row.student_code||code)+'<br><b>Level:</b> '+escapeHtml(row.grade||'—')+'</div><button class=\"submit\" onclick=\"loadStudentPortal()\">Open Student Portal →</button>');\
+async function studentLogin(){
+ const code=document.getElementById('loginCode')?.value.trim()||'';
+ if(!code){document.getElementById('studentLoginBox')?.insertAdjacentHTML('beforeend','<div class="result" style="background:#fff7e0;color:#6b5100">اكتبي كود الطالب.</div>');return;}
+ try{
+   const {data,error}=await sb.rpc('student_login',{p_code:code});
+   if(error) throw new Error(error.message||'تعذر الاتصال بقاعدة البيانات.');
+   if(!data||data.success!==true)return show('<h2>الدخول غير متاح</h2><p class="sub">'+escapeHtml(data?.message||'كود الطالب غير صحيح أو الاشتراك غير معتمد.')+'</p><button class="submit" onclick="openModal(\'student\')">المحاولة مرة أخرى</button>');
+   const row=data.student||{}; sessionStorage.setItem('student_code',code); sessionStorage.setItem('student_name',row.name||''); await loadStudentPortal();
+ }catch(err){show('<h2>تعذر تسجيل الدخول</h2><p class="sub">'+escapeHtml(err?.message||'حدث خطأ غير متوقع.')+'</p><button class="submit" onclick="openModal(\'student\')">المحاولة مرة أخرى</button>');}
 }\
 function escapeHtml(v){return String(v??'').replace(/[&<>'\"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;',\"'\":'&#39;','\"':'&quot;'}[m]));}\
 function portalCard(title,value,extra=''){return '<div style=\"background:#fff;border:1px solid #e5ebf2;border-radius:10px;padding:10px;margin:7px 0\"><b>'+escapeHtml(title)+'</b><div style=\"font-size:10px;color:#718399;margin-top:3px\">'+escapeHtml(value)+'</div>'+extra+'</div>';}\
@@ -483,13 +484,17 @@ async function beginRecording(id,target){\
 }\
 function closeStudentDash(){document.getElementById('studentDashboard')?.remove()}\
 function studentLogoutUI(){localStorage.removeItem('student_code');closeStudentDash();}\
-async function teacherLogin(){\
- const email=document.getElementById('teacherEmail')?.value.trim()||''; const password=document.getElementById('teacherPassword')?.value||'';\
- if(!email||!password){show(`<h2>Teacher Login</h2><p class=\"sub\">Please enter your email and password.</p><button class=\"submit\" onclick=\"openModal('teacher')\">Back</button>`);return;}\
- const {data,error}=await sb.auth.signInWithPassword({email,password});\
- if(error||!data?.user){show(`<h2>Login failed</h2><p class=\"sub\">The email or password is incorrect.</p><button class=\"submit\" onclick=\"openModal('teacher')\">Try again</button>`);return;}\
- if(data.user.app_metadata?.role!=='teacher'){await sb.auth.signOut();show('<h2>Access denied</h2><p class=\"sub\">This account is not registered as a teacher account.</p>');return;}\
- await loadTeacherDashboard();\
+async function teacherLogin(){
+ const email=document.getElementById('teacherEmail')?.value.trim()||'';
+ const password=document.getElementById('teacherPassword')?.value||'';
+ if(!email||!password){show(`<h2>Teacher Login</h2><p class="sub">من فضلك أدخلي البريد الإلكتروني وكلمة المرور.</p><button class="submit" onclick="openModal('teacher')">رجوع</button>`);return;}
+ try{
+   const {data,error}=await sb.auth.signInWithPassword({email,password});
+   if(error) throw new Error(error.message||'تعذر تسجيل الدخول.');
+   if(!data?.user) throw new Error('لم يتم إنشاء جلسة تسجيل الدخول.');
+   if(data.user.app_metadata?.role!=='teacher'){await sb.auth.signOut();throw new Error('هذا الحساب ليس حساب المستر.');}
+   await loadTeacherDashboard();
+ }catch(err){show('<h2>تعذر دخول المستر</h2><p class="sub">'+escapeHtml(err?.message||'حدث خطأ غير متوقع.')+'</p><button class="submit" onclick="openModal(\'teacher\')">المحاولة مرة أخرى</button>');}
 }\
 async function loadTeacherDashboard(){\
  const {data:userData}=await sb.auth.getUser(); if(!userData?.user)return openModal('teacher');\
