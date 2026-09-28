@@ -1179,3 +1179,200 @@ document.addEventListener('click',function(e){
   };
 })();
 </script>
+
+<script id="final-teacher-controls-fix">
+(function(){
+  function esc(v){
+    return typeof escapeHtml==='function'
+      ? escapeHtml(v==null?'':String(v))
+      : String(v==null?'':v).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+  function monthStart(){
+    const d=new Date();
+    return new Date(d.getFullYear(),d.getMonth(),1).toISOString().slice(0,10);
+  }
+  function monthKey(){
+    const d=new Date();
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+  }
+  function monthName(k){
+    const [y,m]=String(k).split('-');
+    return new Date(Number(y),Number(m)-1,1).toLocaleDateString('ar-EG',{month:'long',year:'numeric'});
+  }
+  function tdText(cell){
+    return (cell?.textContent||'').trim();
+  }
+  function teacherStudents(){
+    return (typeof teacherData==='function'?teacherData():(window.__teacherData||{})).students||[];
+  }
+
+  async function decorateStudentRowsFinal(){
+    const table=document.getElementById('studentsTable');
+    if(!table) return;
+    const head=table.querySelector('thead tr');
+    const tbody=table.querySelector('tbody');
+    if(!head||!tbody) return;
+
+    const oldBtnRows=tbody.querySelectorAll('.monthly-review-btn');
+    oldBtnRows.forEach(btn=>btn.remove());
+
+    if(!head.querySelector('.final-student-num')){
+      const h=document.createElement('th');
+      h.className='final-student-num'; h.textContent='#'; head.insertBefore(h,head.firstChild);
+    }
+    if(!head.querySelector('.final-eval-head')){
+      const h=document.createElement('th'); h.className='final-eval-head'; h.textContent='التقييم الشهري'; head.appendChild(h);
+      const h2=document.createElement('th'); h2.className='final-eval-head'; h2.textContent='ملاحظات المستر'; head.appendChild(h2);
+      const h3=document.createElement('th'); h3.className='final-eval-head'; h3.textContent='حفظ'; head.appendChild(h3);
+    }
+
+    let evalMap={};
+    const ev=await sb.rpc('teacher_monthly_evaluations',{p_month_start:monthStart()});
+    if(!ev.error){
+      (Array.isArray(ev.data)?ev.data:[]).forEach(x=>{evalMap[String(x.student_id)]=x;});
+    }
+
+    const students=teacherStudents();
+    let n=0;
+    [...tbody.querySelectorAll('tr')].forEach(row=>{
+      if(row.dataset.finalEvalBound==='1') return;
+      const cells=row.children;
+      if(!cells||cells.length<7) return;
+      const code=tdText(cells[1]);
+      const name=tdText(cells[0]).replace(/^\s*\d+\.\s*/,'');
+      if(!name||/no students/i.test(name)||/لا يوجد طلاب/.test(name)) return;
+      const student=students.find(s=>String(s.student_code||s.code||'').trim()===code) || students.find(s=>String(s.name||'').trim()===name);
+      if(!student) return;
+      n++;
+      const num=document.createElement('td'); num.innerHTML='<b>'+n+'</b>'; row.insertBefore(num,row.firstChild);
+
+      const prior=evalMap[String(student.id)]||{};
+      const evalTd=document.createElement('td');
+      const evalInput=document.createElement('input');
+      evalInput.className='input'; evalInput.placeholder='اكتب التقييم'; evalInput.value=prior.rating??'';
+      evalTd.appendChild(evalInput);
+
+      const noteTd=document.createElement('td');
+      const noteInput=document.createElement('textarea');
+      noteInput.className='input'; noteInput.style.minWidth='230px'; noteInput.style.height='62px'; noteInput.placeholder='اكتب ملاحظات المستر'; noteInput.value=prior.note||'';
+      noteTd.appendChild(noteInput);
+
+      const saveTd=document.createElement('td');
+      const saveBtn=document.createElement('button');
+      saveBtn.type='button'; saveBtn.className='dash-action gold'; saveBtn.textContent='حفظ';
+      saveBtn.onclick=async()=>{
+        saveBtn.disabled=true; saveBtn.textContent='جارٍ...';
+        const {data,error}=await sb.rpc('teacher_save_monthly_evaluation',{
+          p_student_id:Number(student.id),
+          p_month:monthStart(),
+          p_rating:evalInput.value.trim()?Number(evalInput.value.trim()):0,
+          p_note:noteInput.value.trim()
+        });
+        if(error||!data?.success){
+          alert(data?.message||error?.message||'تعذر حفظ التقييم والملاحظات.');
+          saveBtn.disabled=false; saveBtn.textContent='حفظ';
+          return;
+        }
+        saveBtn.textContent='تم ✓';
+        setTimeout(()=>{saveBtn.disabled=false;saveBtn.textContent='حفظ';},1200);
+      };
+      saveTd.appendChild(saveBtn);
+      row.appendChild(evalTd); row.appendChild(noteTd); row.appendChild(saveTd);
+      row.dataset.finalEvalBound='1';
+    });
+  }
+
+  async function renderMonthlyAttendanceFinal(){
+    const main=document.getElementById('teacherMain');
+    if(!main) return;
+    const month=window.__attendanceMonth||monthKey();
+    main.innerHTML='<section class="panel"><p class="sub">جاري تحميل حضور امتحانات '+esc(monthName(month))+'...</p></section>';
+    const {data,error}=await sb.rpc('teacher_exam_attendance_summary',{p_month_start:month+'-01'});
+    const rows=Array.isArray(data)?data:[];
+    if(error){
+      console.error(error);
+      main.innerHTML='<section class="panel"><div class="result">تعذر تحميل حضور الامتحانات حاليًا.</div></section>';
+      return;
+    }
+    const tr=rows.map((x,i)=>{
+      const attended=Number(x.attended_exams||0), absent=Number(x.absent_exams||0), total=Number(x.total_exams||0);
+      let status='<span class="pill wait">لا توجد امتحانات</span>';
+      if(total>0 && attended>0 && absent>0) status='<span class="pill wait">حضر وغاب</span>';
+      else if(attended>0) status='<span class="pill">حضر</span>';
+      else if(total>0) status='<span class="pill fail">غاب</span>';
+      return '<tr><td><b>'+(i+1)+'</b></td><td><b>'+esc(x.name||'')+'</b><br><small>'+esc(x.student_code||'')+'</small></td><td>'+esc(stageLabel(x.grade))+'</td><td>'+status+'</td><td><b>'+attended+'</b></td><td><b>'+absent+'</b></td><td>'+total+'</td></tr>';
+    }).join('');
+    main.innerHTML='<div class="welcome"><div><h1>Attendance</h1><p>الحضور والغياب من امتحانات الشهر — كل الطلاب مترقمين.</p></div><div class="dash-toolbar"><input id="attendanceMonth" class="dash-input" type="month" value="'+esc(month)+'" onchange="window.__attendanceMonth=this.value;renderMonthlyAttendance()"><button class="dash-action" onclick="renderMonthlyAttendance()">تحديث</button></div></div>'+
+      '<section class="panel"><div class="result"><b>الشهر:</b> '+esc(monthName(month))+'<br><small>حضر = الامتحانات التي دخلها الطالب، و"لم يحضر" = الامتحانات المستحقة له في هذا الشهر ولم يدخلها.</small></div><table class="dash-table"><thead><tr><th>#</th><th>اسم الطالب</th><th>المرحلة</th><th>الحالة</th><th>امتحانات حضرها</th><th>امتحانات لم يحضرها</th><th>إجمالي الامتحانات</th></tr></thead><tbody>'+(tr||'<tr><td colspan="7">لا يوجد طلاب.</td></tr>')+'</tbody></table></section>';
+  }
+  window.renderMonthlyAttendance=renderMonthlyAttendanceFinal;
+
+  const currentRender=window.renderTeacherSection;
+  if(typeof currentRender==='function'){
+    window.renderTeacherSection=function(sec){
+      if(sec==='attendance'){window.__teacherSection='attendance';renderMonthlyAttendanceFinal();return;}
+      const result=currentRender.apply(this,arguments);
+      if(sec==='students') setTimeout(()=>decorateStudentRowsFinal(),80);
+      return result;
+    };
+  }
+
+  async function renderAnnouncementsFinal(){
+    const main=document.getElementById('teacherMain'); if(!main)return;
+    const {data,error}=await sb.rpc('teacher_list_announcements');
+    const list=Array.isArray(data)?data:[];
+    if(error){
+      main.innerHTML='<section class="panel"><div class="result">تعذر تحميل الإعلانات: '+esc(error.message||'')+'</div></section>';
+      return;
+    }
+    const cards=list.map((a,i)=>
+      '<div class="lesson" style="margin-bottom:12px"><div style="flex:1">'+
+      '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div><h4 style="margin:0">'+(i+1)+'. '+esc(a.title||'')+'</h4><div class="sub">'+esc(a.grade?stageLabel(a.grade):'لكل الطلاب')+' • '+esc(a.created_at?new Date(a.created_at).toLocaleDateString('ar-EG'):'')+'</div></div>'+
+      '<span class="pill '+(a.active?'':'wait')+'">'+(a.active?'منشور':'مخفي')+'</span></div>'+
+      '<p style="margin:10px 0;white-space:pre-wrap">'+esc(a.body||'')+'</p>'+
+      (a.image_url?'<img src="'+esc(a.image_url)+'" alt="Announcement image" style="max-width:220px;border-radius:10px;display:block;margin-bottom:10px">':'')+
+      '<div class="dash-toolbar" style="margin:0"><button class="dash-action" onclick="toggleAnnouncement('+Number(a.id)+','+(a.active?true:false)+')">'+(a.active?'إخفاء الإعلان':'إظهار الإعلان')+'</button><button class="dash-action" style="background:#b33a3a" onclick="deleteAnnouncement('+Number(a.id)+')">حذف</button></div>'+
+      '</div></div>'
+    ).join('');
+    main.innerHTML='<div class="welcome"><div><h1>Announcements</h1><p>المستر يضيف الإعلان ويتحكم في نشره أو إخفائه.</p></div><div style="display:flex;gap:8px"><button class="dash-action gold" onclick="openNewAnnouncement()">+ إضافة إعلان</button><button class="dash-action" onclick="renderAnnouncementsSection()">تحديث</button></div></div><section class="panel">'+(cards||'<p class="sub">لا توجد إعلانات حاليًا.</p>')+'</section>';
+  }
+  window.renderAnnouncementsSection=renderAnnouncementsFinal;
+  window.toggleAnnouncement=async function(id,active){
+    const {data,error}=await sb.rpc('teacher_set_announcement_active',{p_id:Number(id),p_active:!active});
+    if(error||!data){alert(error?.message||'تعذر تحديث الإعلان.');return;}
+    renderAnnouncementsFinal();
+  };
+  window.deleteAnnouncement=async function(id){
+    if(!confirm('حذف الإعلان؟'))return;
+    const {data,error}=await sb.rpc('teacher_delete_announcement',{p_id:Number(id)});
+    if(error||(data&&data.success===false)){alert(data?.message||error?.message||'تعذر حذف الإعلان.');return;}
+    renderAnnouncementsFinal();
+  };
+  window.openNewAnnouncement=function(){
+    show('<h2>إضافة إعلان جديد</h2><div class="form-grid"><input id="annTitle" class="input" placeholder="عنوان الإعلان"><select id="annGrade" class="input"><option value="">كل الطلاب</option><option value="أولى إعدادي">أولى إعدادي</option><option value="ثانية إعدادي">ثانية إعدادي</option><option value="ثالثة إعدادي">ثالثة إعدادي</option><option value="أولى ثانوي">أولى ثانوي</option><option value="ثانية ثانوي">ثانية ثانوي</option><option value="ثالثة ثانوي">ثالثة ثانوي</option><option value="كورسات">كورسات</option></select><textarea id="annBody" class="input full" style="height:120px" placeholder="اكتب نص الإعلان هنا..."></textarea><input id="annImage" class="input full" placeholder="رابط صورة الإعلان (اختياري)"></div><button type="button" class="submit" id="finalSaveAnn">نشر الإعلان ←</button>');
+    document.getElementById('finalSaveAnn')?.addEventListener('click',async()=>{
+      const title=document.getElementById('annTitle')?.value.trim()||'', body=document.getElementById('annBody')?.value.trim()||'', grade=document.getElementById('annGrade')?.value.trim()||'', image_url=document.getElementById('annImage')?.value.trim()||null;
+      if(!title||!body){alert('اكتب عنوان الإعلان ونصه أولًا.');return;}
+      const btn=document.getElementById('finalSaveAnn');btn.disabled=true;btn.textContent='جارٍ النشر...';
+      const {data,error}=await sb.rpc('teacher_create_announcement',{p_title:title,p_body:body,p_grade:grade,p_image_url:image_url,p_active:true});
+      if(error||(data&&data.success===false)){alert(data?.message||error?.message||'تعذر نشر الإعلان.');btn.disabled=false;btn.textContent='نشر الإعلان ←';return;}
+      closeModal();renderAnnouncementsFinal();
+    });
+  };
+  const prevShow=window.showTeacherSection;
+  window.showTeacherSection=function(sec){
+    window.__teacherSection=sec;
+    if(sec==='ann') return renderAnnouncementsFinal();
+    if(typeof prevShow==='function') return prevShow(sec);
+  };
+
+  // Re-apply after the dashboard rerenders the student table.
+  const observer=new MutationObserver(()=>{
+    if(document.getElementById('studentsTable') && !window.__decoratingStudentsFinal){
+      window.__decoratingStudentsFinal=true;
+      decorateStudentRowsFinal().finally(()=>{window.__decoratingStudentsFinal=false;});
+    }
+  });
+  observer.observe(document.body,{childList:true,subtree:true});
+})();
+</script>
