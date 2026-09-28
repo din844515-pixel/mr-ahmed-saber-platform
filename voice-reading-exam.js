@@ -131,3 +131,77 @@
 
   setTimeout(ensureStudentVoiceMenu,500);
 })();
+
+/* pronunciation-exam-v12-completion */
+(function(){
+  const tr=(en,ar)=>((localStorage.getItem('platformLanguage')||'en')==='ar'?ar:en);
+  const esc=v=>window.escapeHtml?escapeHtml(v==null?'':String(v)):String(v==null?'':v).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const RC=()=>window.SpeechRecognition||window.webkitSpeechRecognition||null;
+
+  window.openPronunciationExamV12=function(){
+    const cats=window.CATS||[['prep1','أولى إعدادي','1st Preparatory'],['prep2','ثانية إعدادي','2nd Preparatory'],['prep3','ثالثة إعدادي','3rd Preparatory'],['sec1','أولى ثانوي','1st Secondary'],['sec2','ثانية ثانوي','2nd Secondary'],['sec3','ثالثة ثانوي','3rd Secondary'],['courses','كورسات','Courses']];
+    const opts=cats.map(c=>'<option value="'+esc(c[1])+'">'+esc(tr(c[2],c[1]))+'</option>').join('');
+    show('<h2>🎙️ '+tr('Create Pronunciation Exam','إنشاء امتحان قراءة ونطق')+'</h2><p class="sub">'+tr('Each non-empty line becomes one reading question. Students will listen and then read it aloud.','كل سطر مكتوب يصبح سؤال قراءة. الطالب سيسمع الجملة ثم يقرأها بصوته.')+'</p><div class="form-grid"><input id="pv12_title" class="input" placeholder="'+tr('Exam Title','عنوان الامتحان')+'"><select id="pv12_grade" class="input">'+opts+'</select><input id="pv12_dur" class="input" type="number" min="1" value="15" placeholder="'+tr('Minutes','الدقائق')+'"><textarea id="pv12_text" class="input full" style="height:180px" placeholder="'+tr('Write one sentence per line...','اكتبي جملة واحدة في كل سطر...')+'"></textarea></div><button class="submit" onclick="savePronunciationExamV12()">'+tr('Create Exam','إنشاء الامتحان')+' →</button>');
+  };
+
+  window.savePronunciationExamV12=async function(){
+    const title=document.getElementById('pv12_title')?.value.trim()||tr('Voice Reading Exam','امتحان القراءة بالصوت');
+    const grade=document.getElementById('pv12_grade')?.value.trim()||'كورسات';
+    const dur=Number(document.getElementById('pv12_dur')?.value||15);
+    const lines=(document.getElementById('pv12_text')?.value||'').split(/\n+/).map(x=>x.trim()).filter(Boolean);
+    if(!lines.length){alert(tr('Add at least one sentence.','أضيفي جملة واحدة على الأقل.'));return}
+    const ce=await sb.rpc('teacher_create_exam',{p_title:title.includes('Pronunciation')?title:'🎙️ Pronunciation — '+title,p_grade:grade,p_duration_minutes:dur,p_show_answers:false});
+    if(ce.error||!ce.data?.success){alert(ce.data?.message||ce.error?.message||tr('Could not create the exam.','تعذر إنشاء الامتحان.'));return}
+    for(const line of lines){
+      const q=await sb.rpc('teacher_add_exam_question',{p_exam_id:ce.data.exam_id,p_question_text:line,p_question_type:'pronunciation',p_points:10,p_correct_answer:null,p_options:[],p_grading_mode:'auto'});
+      if(q.error||!q.data?.success){alert(q.data?.message||q.error?.message||tr('Could not save a reading question.','تعذر حفظ أحد أسئلة القراءة.'));return}
+    }
+    closeModal();
+    if(typeof window.refreshTeacher==='function')await window.refreshTeacher();
+    if(typeof window.showTeacherSection==='function')window.showTeacherSection('exams');
+  };
+
+  function renderPronunciationQuestionV12(q){
+    return '<div class="v9-question" id="pv12_q_'+q.id+'"><div class="v9-qtype">🎙️ '+tr('Reading aloud','قراءة بصوت')+' • 10 pt</div><div style="font-size:15px;line-height:1.9"><b>'+esc(q.question||q.question_text||'')+'</b></div><div class="dash-toolbar" style="margin-top:8px"><button class="dash-action" onclick="pronListenV12('+q.id+')">🔊 '+tr('Listen','اسمع')+'</button><button class="dash-action gold" onclick="pronRecordV12('+q.id+')">🎙️ '+tr('Read Aloud','اقرأ بصوت')+'</button><button class="dash-action" style="display:none" id="pv12_stop_'+q.id+'">⏹️ '+tr('Stop','إيقاف')+'</button></div><div id="pv12_live_'+q.id+'" class="sub" style="margin-top:8px;padding:8px;background:#f7f9fc;border-radius:8px">'+tr('Not recorded yet','لم تتم القراءة بعد')+'</div></div>';
+  }
+  window.renderPronunciationQuestionV12=renderPronunciationQuestionV12;
+
+  window.pronListenV12=function(qid){
+    const q=window.__pronExamV12?.questions?.find(x=>Number(x.id)===Number(qid)); if(!q||!('speechSynthesis' in window))return;
+    speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(String(q.question||q.question_text||''));u.lang='en-US';u.rate=.84;speechSynthesis.speak(u);
+  };
+
+  window.pronRecordV12=function(qid){
+    const RCtor=RC(); if(!RCtor){alert(tr('Use Chrome or Edge for microphone reading.','استخدمي Chrome أو Edge لقراءة الصوت من الميكروفون.'));return}
+    const q=window.__pronExamV12?.questions?.find(x=>Number(x.id)===Number(qid)); if(!q)return;
+    if(window.__pronRecV12){try{window.__pronRecV12.stop()}catch(e){}}
+    const rec=new RCtor(); rec.lang='en-US';rec.continuous=false;rec.interimResults=true;rec.maxAlternatives=1;
+    let finalText='',interim=''; window.__pronRecV12=rec;
+    const live=document.getElementById('pv12_live_'+qid),stop=document.getElementById('pv12_stop_'+qid);
+    if(stop)stop.style.display='';
+    rec.onresult=e=>{for(let i=e.resultIndex;i<e.results.length;i++){const t=e.results[i][0]?.transcript||'';if(e.results[i].isFinal)finalText+=t+' ';else interim+=t+' ';}if(live)live.textContent=(finalText+interim).trim()||tr('Listening…','جاري الاستماع…')};
+    rec.onerror=e=>{if(live)live.textContent=tr('Voice error: ','خطأ في الصوت: ')+e.error;if(stop)stop.style.display='none'};
+    rec.onend=()=>{window.__pronAnswersV12=window.__pronAnswersV12||{};window.__pronAnswersV12[qid]=finalText.trim();if(live)live.textContent=finalText.trim()||tr('No clear speech detected','لم يتم التقاط قراءة واضحة');if(stop)stop.style.display='none'};
+    if(stop)stop.onclick=()=>{try{rec.stop()}catch(e){}};
+    try{rec.start()}catch(e){}
+  };
+
+  window.startStudentPronunciationExamV12=async function(examId,title){
+    const code=localStorage.getItem('student_code')||'';
+    const d=await sb.rpc('student_exam',{p_code:code,p_exam_id:examId});
+    if(d.error||!d.data?.success){alert(d.error?.message||d.data?.message||tr('Could not open exam.','تعذر فتح الامتحان.'));return}
+    const qs=(d.data.questions||[]).filter(q=>String(q.question_type||'')==='pronunciation');
+    if(!qs.length){alert(tr('No pronunciation questions found.','لا توجد أسئلة قراءة بالصوت في هذا الامتحان.'));return}
+    window.__pronExamV12={attempt_id:d.data.attempt_id,questions:qs};window.__pronAnswersV12={};
+    show('<h2>🎙️ '+esc(title)+'</h2><p class="sub">'+tr('Listen first, then read each sentence aloud. The score measures how closely the browser transcript matches the target text.','اسمع الجملة ثم اقرأها بصوتك. الدرجة تقيس مدى تطابق النص الذي التقطه الميكروفون مع النص المطلوب.')+'</p><div style="max-height:58vh;overflow:auto">'+qs.map(renderPronunciationQuestionV12).join('')+'</div><button class="submit" onclick="submitPronunciationExamV12()">'+tr('Submit Reading Exam','تسليم امتحان القراءة')+' ✅</button>');
+  };
+
+  window.submitPronunciationExamV12=async function(){
+    const x=window.__pronExamV12;if(!x)return;
+    const answers=window.__pronAnswersV12||{};
+    const {data,error}=await sb.rpc('student_submit_pronunciation_exam',{p_code:localStorage.getItem('student_code')||'',p_attempt_id:x.attempt_id,p_answers:answers});
+    if(error||!data?.success){alert(data?.message||error?.message||tr('Could not submit the reading exam.','تعذر تسليم امتحان القراءة.'));return}
+    closeModal();alert(tr('Reading exam submitted successfully.\nScore: ','تم تسليم امتحان القراءة بنجاح.\nالدرجة: ')+Number(data.score||0).toFixed(1)+'/'+Number(data.total_score||0).toFixed(1)+' ('+Number(data.percentage||0).toFixed(0)+'%)');
+    if(typeof window.loadStudentPortalV2==='function')await window.loadStudentPortalV2();
+  };
+})();
