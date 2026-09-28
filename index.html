@@ -1073,13 +1073,129 @@ document.addEventListener('click',function(e){
 })();
 </script>
 
-<script id="monthly-student-review-feature">
+<script id="teacher-management-fixes-v2">
 (function(){
-  function esc(v){return typeof escapeHtml==='function'?escapeHtml(v==null?'':String(v)):String(v==null?'':v).replace(/[&<>"\']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));}
-  window.openMonthlyStudentReview=function(student){student=student||{};const name=student.name||'',stage=student.stage||'';show('<h2>تقييم وملاحظات الطالب</h2><p class="sub">المستر هو اللي يكتب التقييم والملاحظات ويتحكم فيها.</p><div class="result"><b>الطالب:</b> '+esc(name)+'<br><b>المرحلة:</b> '+esc(stage||'—')+'</div><label class="sub">التقييم</label><input id="monthlyReviewRating" class="input" type="text" placeholder="اكتب تقييم الطالب هنا..."><label class="sub">ملاحظات المستر</label><textarea id="monthlyReviewText" class="input" style="height:110px" placeholder="اكتب ملاحظاتك عن الطالب هنا..."></textarea><button type="button" class="submit" id="saveMonthlyReviewBtn">حفظ التقييم والملاحظات ←</button>');document.getElementById('saveMonthlyReviewBtn')?.addEventListener('click',()=>saveMonthlyStudentReview(student));};
-  async function saveMonthlyStudentReview(student){const rating=document.getElementById('monthlyReviewRating')?.value.trim()||'',notes=document.getElementById('monthlyReviewText')?.value.trim()||'';if(!rating&&!notes){alert('اكتب التقييم أو الملاحظات أولًا.');return;}const month=new Date().toLocaleDateString('ar-EG',{month:'long',year:'numeric'});const review='تقييم المستر - '+month+'\\nالتقييم: '+(rating||'—')+'\\nملاحظات المستر: '+(notes||'—');const {error}=await sb.from('student_reviews').insert({name:student.name||'',stage:student.stage||'',review,rating:0,approved:false});if(error){alert(error.message||'تعذر حفظ التقييم والملاحظات.');return;}show('<h2>تم الحفظ ✅</h2><p class="sub">تم حفظ تقييم وملاحظات '+esc(student.name||'الطالب')+'.</p><button class="submit" onclick="closeModal()">تمام</button>');}
-  function addReviewButtons(){const table=document.getElementById('studentsTable');if(!table)return;const tbody=table.querySelector('tbody');if(!tbody)return;Array.from(tbody.querySelectorAll('tr')).forEach((row,index)=>{if(row.dataset.reviewBound==='1')return;const cells=row.children;if(!cells||cells.length<7)return;const name=(cells[0]?.querySelector('div')?.textContent||cells[0]?.textContent||'').trim();if(!name||name.toLowerCase().includes('no students'))return;const stage=(cells[2]?.textContent||'').trim();if(!cells[0].querySelector('.student-row-number')){const num=document.createElement('span');num.className='student-row-number';num.textContent=(index+1)+'. ';num.style.fontWeight='800';cells[0].prepend(num);}const btn=document.createElement('button');btn.type='button';btn.className='dash-action monthly-review-btn';btn.textContent='📝 تقييم وملاحظات';btn.onclick=()=>window.openMonthlyStudentReview({name,stage});cells[6].appendChild(document.createTextNode(' '));cells[6].appendChild(btn);row.dataset.reviewBound='1';});}
-  const obs=new MutationObserver(addReviewButtons);function init(){addReviewButtons();obs.observe(document.body,{childList:true,subtree:true});}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+  const esc=v=>typeof escapeHtml==='function'?escapeHtml(v==null?'':String(v)):String(v==null?'':v).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+
+  async function loadFeedbackMap(){
+    try{
+      const {data,error}=await sb.rpc('teacher_student_feedback');
+      if(error||!data?.success) return {};
+      const map={}; (data.students||[]).forEach(s=>map[String(s.id)]=s);
+      window.__teacherStudentFeedback=map; return map;
+    }catch(e){console.error(e);return {};}
+  }
+
+  async function addFeedbackFields(){
+    const table=document.getElementById('studentsTable');
+    if(!table) return;
+    const students=window.__teacherData?.students||[];
+    const map=window.__teacherStudentFeedback||await loadFeedbackMap();
+    const head=table.querySelector('thead tr');
+    if(head&&!head.querySelector('[data-teval]')){
+      head.insertAdjacentHTML('beforeend','<th data-teval>تقييم المستر</th><th data-tnote>ملاحظات المستر</th>');
+    }
+    table.querySelectorAll('tbody tr').forEach(row=>{
+      if(row.dataset.feedbackBound==='1') return;
+      const cells=row.children; if(!cells||cells.length<7) return;
+      const name=(cells[0]?.querySelector('div')?.textContent||cells[0]?.textContent||'').trim();
+      const code=(cells[1]?.textContent||'').trim();
+      if(!name||/no students/i.test(name)) return;
+      const s=students.find(x=>String(x.student_code||x.code||'').trim()===code)||students.find(x=>String(x.name||'').trim()===name);
+      if(!s) return;
+      const fb=map[String(s.id)]||{};
+      const td1=document.createElement('td');
+      td1.innerHTML='<input class="input teacher-evaluation-input" style="min-width:140px;padding:7px" placeholder="التقييم" value="'+esc(fb.teacher_evaluation||'')+'">';
+      const td2=document.createElement('td');
+      td2.innerHTML='<div style="display:flex;gap:6px;min-width:230px"><input class="input teacher-note-input" style="min-width:150px;padding:7px" placeholder="الملاحظات" value="'+esc(fb.teacher_note||'')+'"><button type="button" class="dash-action teacher-feedback-save">حفظ</button></div>';
+      row.append(td1,td2);
+      td2.querySelector('button').onclick=async()=>{
+        const btn=td2.querySelector('button'); btn.disabled=true; btn.textContent='...';
+        try{
+          const {data,error}=await sb.rpc('teacher_save_student_feedback',{
+            p_student_id:Number(s.id),
+            p_evaluation:td1.querySelector('input').value.trim(),
+            p_note:td2.querySelector('input').value.trim()
+          });
+          if(error||!data?.success) throw new Error(data?.message||error?.message||'تعذر حفظ البيانات.');
+          btn.textContent='تم ✓'; setTimeout(()=>{btn.textContent='حفظ';btn.disabled=false;},900);
+        }catch(e){alert(e.message||'تعذر الحفظ.');btn.textContent='حفظ';btn.disabled=false;}
+      };
+      row.dataset.feedbackBound='1';
+    });
+  }
+
+  function monthKey(v){const d=new Date(v);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+
+  function renderAttendanceFixed(){
+    const main=document.getElementById('teacherMain'); if(!main)return;
+    const d=window.__teacherData||{}, students=d.students||[], exams=d.exams||[], results=d.results||[];
+    const now=new Date(), current=monthKey(now), months=[];
+    for(let i=0;i<6;i++){const x=new Date(now.getFullYear(),now.getMonth()-i,1);months.push(monthKey(x));}
+    main.innerHTML='<div class="welcome"><div><h1>الحضور والغياب</h1><p>حضور الطلاب في امتحانات الشهر وعدد الامتحانات التي حضرها أو لم يحضرها.</p></div><select id="attendanceMonth" class="input" style="max-width:200px">'+months.map(m=>'<option value="'+m+'">'+esc(new Date(+m.slice(0,4),+m.slice(5)-1,1).toLocaleDateString('ar-EG',{month:'long',year:'numeric'}))+'</option>').join('')+'</select></div><section class="panel"><div id="attendanceWrap"></div></section>';
+    const sel=document.getElementById('attendanceMonth'); sel.value=current; sel.onchange=()=>draw(sel.value); draw(current);
+    function draw(month){
+      const monthExams=exams.filter(e=>monthKey(e.created_at)===month);
+      const rows=students.map((s,i)=>{
+        const applicable=monthExams.filter(e=>!e.grade||!s.grade||String(e.grade).trim()===String(s.grade).trim());
+        const attended=applicable.filter(e=>results.some(r=>Number(r.student_id)===Number(s.id)&&Number(r.exam_id)===Number(e.id)));
+        const missed=applicable.length-attended.length;
+        const details=applicable.map(e=>{
+          const ok=attended.some(a=>Number(a.exam_id)===Number(e.id));
+          return '<span style="display:inline-block;margin:2px;padding:4px 7px;border-radius:999px;background:'+(ok?'#e8f8ef':'#fff0f0')+';color:'+(ok?'#177245':'#9b2c2c');font-size:11px">'+(ok?'✅ حضر':'❌ لم يحضر')+' - '+esc(e.title||'امتحان')+'</span>';
+        }).join('')||'<span class="sub">لا توجد امتحانات هذا الشهر للمرحلة.</span>';
+        return '<tr><td><b>'+(i+1)+'</b></td><td><b>'+esc(s.name||'')+'</b><br><small>'+esc(s.student_code||s.code||'')+'</small></td><td><span class="pill '+(attended.length?'':'wait')+'">'+(attended.length?'حضر':'لم يحضر')+'</span></td><td><b>'+attended.length+'</b></td><td><b>'+missed+'</b></td><td>'+details+'</td></tr>';
+      }).join('');
+      document.getElementById('attendanceWrap').innerHTML='<div class="dash-toolbar"><span class="badge-soft">امتحانات الشهر: '+monthExams.length+'</span><span class="badge-soft">الطلاب: '+students.length+'</span></div><div style="overflow:auto"><table class="data-table"><thead><tr><th>#</th><th>الطالب</th><th>الحالة</th><th>حضر</th><th>لم يحضر</th><th>تفاصيل</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+    }
+  }
+
+  function openAnnouncementFormFixed(){
+    show('<h2>إضافة إعلان جديد</h2><div class="form-grid"><input id="annTitle" class="input" placeholder="عنوان الإعلان"><input id="annGrade" class="input" placeholder="المرحلة / الكورس (اختياري)"><textarea id="annBody" class="input full" style="height:140px" placeholder="اكتب نص الإعلان هنا..."></textarea><input id="annImage" class="input full" placeholder="رابط صورة الإعلان (اختياري)"></div><button class="submit" id="saveAnnBtn" type="button">نشر الإعلان ←</button>');
+    document.getElementById('saveAnnBtn').onclick=async()=>{
+      const btn=document.getElementById('saveAnnBtn');
+      const title=document.getElementById('annTitle').value.trim(), body=document.getElementById('annBody').value.trim(), grade=document.getElementById('annGrade').value.trim(), image=document.getElementById('annImage').value.trim();
+      if(!title||!body){alert('اكتب عنوان الإعلان ونص الإعلان.');return;}
+      btn.disabled=true;btn.textContent='جاري النشر...';
+      try{
+        const {data,error}=await sb.rpc('teacher_create_announcement',{p_title:title,p_body:body,p_grade:grade,p_image_url:image});
+        if(error||!data?.success) throw new Error(data?.message||error?.message||'تعذر نشر الإعلان.');
+        closeModal(); alert('تم نشر الإعلان ✅'); renderAnnouncementsFixed();
+      }catch(e){alert(e.message||'تعذر النشر.');btn.disabled=false;btn.textContent='نشر الإعلان ←';}
+    };
+  }
+
+  async function renderAnnouncementsFixed(){
+    const main=document.getElementById('teacherMain'); if(!main)return;
+    main.innerHTML='<div class="welcome"><div><h1>الإعلانات</h1><p>إضافة الإعلانات والتحكم فيها.</p></div><button class="dash-action gold" id="addAnnBtn" type="button">+ إضافة إعلان</button></div><section class="panel"><div id="annList">جاري التحميل...</div></section>';
+    document.getElementById('addAnnBtn').onclick=openAnnouncementFormFixed;
+    const box=document.getElementById('annList');
+    try{
+      const {data,error}=await sb.rpc('teacher_announcements');
+      if(error||!data?.success) throw new Error(data?.message||error?.message||'تعذر تحميل الإعلانات.');
+      const arr=data.announcements||[];
+      box.innerHTML=arr.length?arr.map(a=>'<div class="lesson" style="margin-bottom:10px"><div style="flex:1"><h4>'+esc(a.title||'')+'</h4><p style="white-space:pre-wrap">'+esc(a.body||'')+'</p><small>'+esc(a.grade||'كل الطلاب')+' • '+esc(new Date(a.created_at).toLocaleDateString('ar-EG'))+'</small></div><button class="dash-action" style="background:#b33a3a" data-del="'+Number(a.id)+'">حذف</button></div>').join(''):'<div class="result">لا توجد إعلانات حاليًا.</div>';
+      box.querySelectorAll('[data-del]').forEach(btn=>btn.onclick=async()=>{if(!confirm('حذف الإعلان؟'))return;const {data,error}=await sb.rpc('teacher_delete_announcement',{p_id:Number(btn.dataset.del)});if(error||!data?.success){alert(data?.message||error?.message||'تعذر الحذف.');return;}renderAnnouncementsFixed();});
+    }catch(e){box.innerHTML='<div class="result">'+esc(e.message||'تعذر التحميل.')+'</div>';}
+  }
+
+  const baseRender=window.renderTeacherSection;
+  window.renderTeacherSection=function(sec){
+    window.__teacherSection=sec;
+    if(sec==='ann'){renderAnnouncementsFixed();return;}
+    if(sec==='attendance'){renderAttendanceFixed();return;}
+    const out=baseRender?baseRender(sec):undefined;
+    if(sec==='students') setTimeout(()=>loadFeedbackMap().then(addFeedbackFields),0);
+    return out;
+  };
+  window.showTeacherSection=window.renderTeacherSection;
+  const oldRefresh=window.refreshTeacher;
+  window.refreshTeacher=async function(){
+    const out=await (oldRefresh?oldRefresh():Promise.resolve());
+    if(window.__teacherSection==='students') setTimeout(()=>loadFeedbackMap().then(addFeedbackFields),0);
+    return out;
+  };
+  new MutationObserver(()=>{if(document.getElementById('studentsTable'))addFeedbackFields();}).observe(document.body,{childList:true,subtree:true});
 })();
 </script><script id="monthly-attendance-exam-tracker">
 (function(){
