@@ -1413,7 +1413,96 @@ if(oldStudentRender)window.renderStudentSection=function(section){
  }).join('')||'<p class="sub">'+tr('No exams available yet.','لا توجد امتحانات متاحة حاليًا.')+'</p></section>';
 };
 })();
-</script><script src="/voice-reading-exam.js"></script><script src="/voice-reading-exam.js"></script></body></html>
+</script><script src="/voice-reading-exam.js"></script><script src="/voice-reading-exam.js"></script>
+<script id="session-persistence-v11">
+(function(){
+  const STUDENT_KEY='student_code';
+  const STUDENT_NAME_KEY='student_name';
+  const getStudentCode=()=>localStorage.getItem(STUDENT_KEY)||sessionStorage.getItem(STUDENT_KEY)||'';
+  const setStudentCode=(code,name='')=>{localStorage.setItem(STUDENT_KEY,code); if(name)localStorage.setItem(STUDENT_NAME_KEY,name);};
+  const clearStudent=()=>{localStorage.removeItem(STUDENT_KEY);localStorage.removeItem(STUDENT_NAME_KEY);sessionStorage.removeItem(STUDENT_KEY);sessionStorage.removeItem(STUDENT_NAME_KEY);clearInterval(window.__studentWatch);};
+  window.__persistentStudentCode=getStudentCode;
+  window.__clearPersistentStudent=clearStudent;
+
+  const originalStudentLogin=window.studentLogin;
+  window.studentLogin=async function(){
+    const code=document.getElementById('loginCode')?.value.trim()||'';
+    if(!code) return originalStudentLogin();
+    const before=sessionStorage.getItem(STUDENT_KEY);
+    const r=await originalStudentLogin();
+    const stored=sessionStorage.getItem(STUDENT_KEY);
+    if(stored) setStudentCode(stored,sessionStorage.getItem(STUDENT_NAME_KEY)||'');
+    return r;
+  };
+
+  const originalLoadStudent=window.loadStudentPortal;
+  if(originalLoadStudent){
+    window.loadStudentPortal=async function(){
+      const code=getStudentCode();
+      if(code && !sessionStorage.getItem(STUDENT_KEY)) sessionStorage.setItem(STUDENT_KEY,code);
+      const r=await originalLoadStudent();
+      const dash=document.getElementById('studentDashboard');
+      if(!dash && !sessionStorage.getItem(STUDENT_KEY)){
+        clearStudent();
+      } else if(sessionStorage.getItem(STUDENT_KEY)){
+        setStudentCode(sessionStorage.getItem(STUDENT_KEY),sessionStorage.getItem(STUDENT_NAME_KEY)||'');
+      }
+      return r;
+    };
+  }
+
+  const originalStudentLogout=window.studentLogoutUI;
+  window.studentLogoutUI=function(){clearStudent(); return originalStudentLogout?originalStudentLogout():undefined;};
+
+  async function validateStudentSession(){
+    const code=getStudentCode();
+    if(!code)return;
+    sessionStorage.setItem(STUDENT_KEY,code);
+    const {data,error}=await sb.rpc('student_portal',{p_code:code});
+    if(error || !data || data.success!==true){
+      if(data?.payment_required && data?.renewal_required){
+        clearStudent();
+        document.getElementById('studentDashboard')?.remove();
+        clearInterval(window.__studentWatch);
+        return;
+      }
+      return;
+    }
+    setStudentCode(code,data.student?.name||localStorage.getItem(STUDENT_NAME_KEY)||'');
+    if(!document.getElementById('studentDashboard') && typeof window.loadStudentPortal==='function'){
+      await window.loadStudentPortal();
+    }
+  }
+
+  function startExpiryWatch(){
+    clearInterval(window.__persistentExpiryWatch);
+    window.__persistentExpiryWatch=setInterval(validateStudentSession,15000);
+  }
+
+  sb.auth.onAuthStateChange(async (event,session)=>{
+    if(event==='SIGNED_OUT') return;
+    if(session?.user?.app_metadata?.role==='teacher' && !document.getElementById('teacherDashboard')){
+      setTimeout(()=>window.loadTeacherDashboard&&window.loadTeacherDashboard(),0);
+    }
+  });
+
+  window.addEventListener('pageshow',()=>setTimeout(validateStudentSession,50));
+  window.addEventListener('focus',()=>setTimeout(validateStudentSession,50));
+
+  setTimeout(async()=>{
+    try{
+      const {data}=await sb.auth.getSession();
+      if(data?.session?.user?.app_metadata?.role==='teacher'){
+        if(!document.getElementById('teacherDashboard')) await window.loadTeacherDashboard();
+      }else{
+        await validateStudentSession();
+        startExpiryWatch();
+      }
+    }catch(e){}
+  },120);
+})();
+</script>
+</body></html>
 
 <style id="bigben-mobile-visibility-fix">
 /* User-selected Big Ben photo: keep the tower clearly visible on desktop and mobile. */
