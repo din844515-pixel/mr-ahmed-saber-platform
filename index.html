@@ -1114,3 +1114,68 @@ document.addEventListener('click',function(e){
 })();
 </script>
 
+<script id="teacher-announcements-control">
+(function(){
+  function esc(v){return typeof escapeHtml==='function'?escapeHtml(v==null?'':String(v)):String(v==null?'':v).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+  function openNewAnnouncement(){
+    show('<h2>إضافة إعلان جديد</h2>'+
+      '<div class="form-grid">'+
+      '<input id="annTitle" class="input" placeholder="عنوان الإعلان">'+
+      '<select id="annGrade" class="input"><option value="">كل الطلاب</option><option value="أولى إعدادي">أولى إعدادي</option><option value="ثانية إعدادي">ثانية إعدادي</option><option value="ثالثة إعدادي">ثالثة إعدادي</option><option value="أولى ثانوي">أولى ثانوي</option><option value="ثانية ثانوي">ثانية ثانوي</option><option value="ثالثة ثانوي">ثالثة ثانوي</option><option value="كورسات">كورسات</option></select>'+
+      '<textarea id="annBody" class="input full" style="height:120px" placeholder="اكتب نص الإعلان هنا..."></textarea>'+
+      '<input id="annImage" class="input full" placeholder="رابط صورة الإعلان (اختياري)">'+
+      '</div>'+
+      '<button type="button" class="submit" id="saveAnnBtn">نشر الإعلان ←</button>');
+    document.getElementById('saveAnnBtn')?.addEventListener('click',saveAnnouncement);
+  }
+  async function saveAnnouncement(){
+    const title=document.getElementById('annTitle')?.value.trim()||'';
+    const body=document.getElementById('annBody')?.value.trim()||'';
+    const grade=document.getElementById('annGrade')?.value.trim()||'';
+    const image_url=document.getElementById('annImage')?.value.trim()||null;
+    if(!title||!body){alert('اكتب عنوان الإعلان ونصه أولًا.');return;}
+    const btn=document.getElementById('saveAnnBtn'); if(btn){btn.disabled=true;btn.textContent='جارٍ النشر...';}
+    const {data:userData}=await sb.auth.getUser();
+    const owner_id=userData?.user?.id||null;
+    const {error}=await sb.from('announcements').insert({title,body,grade:grade||null,active:true,image_url,owner_id});
+    if(error){alert(error.message||'تعذر نشر الإعلان.');if(btn){btn.disabled=false;btn.textContent='نشر الإعلان ←';}return;}
+    closeModal(); await renderAnnouncementsSection();
+  }
+  async function renderAnnouncementsSection(){
+    const main=document.getElementById('teacherMain'); if(!main)return;
+    main.innerHTML='<section class="panel"><p class="sub">جاري تحميل الإعلانات...</p></section>';
+    const {data,error}=await sb.from('announcements').select('id,title,body,grade,active,created_at,image_url').order('created_at',{ascending:false});
+    const rows=Array.isArray(data)?data:[];
+    const cards=rows.map((a,i)=>'<div class="lesson" style="margin-bottom:12px"><div style="flex:1">'+
+      '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div><span style="font-weight:900;color:#062b57">'+(i+1)+'. '+esc(a.title||'')+'</span>'+
+      '<div class="sub" style="margin-top:4px">'+(a.grade?('للـ '+esc(stageLabel(a.grade))):'لكل الطلاب')+' • '+esc(a.created_at?new Date(a.created_at).toLocaleDateString('ar-EG'):'' )+'</div></div>'+
+      '<span class="pill '+(a.active!==false?'':'wait')+'">'+(a.active!==false?'منشور':'مخفي')+'</span></div>'+
+      '<p style="margin:10px 0;white-space:pre-wrap">'+esc(a.body||'')+'</p>'+
+      (a.image_url?'<img src="'+esc(a.image_url)+'" alt="Announcement image" style="max-width:220px;border-radius:10px;display:block;margin-bottom:10px">':'')+
+      '<div class="dash-toolbar" style="margin:0"><button class="dash-action" onclick="toggleAnnouncement('+Number(a.id)+','+(a.active!==false)+')">'+(a.active!==false?'إخفاء الإعلان':'إظهار الإعلان')+'</button><button class="dash-action" style="background:#b33a3a" onclick="deleteAnnouncement('+Number(a.id)+')">حذف</button></div>'+
+      '</div></div>').join('');
+    main.innerHTML='<div class="welcome"><div><h1>Announcements</h1><p>أضف الإعلانات وتحكم في ظهورها للطلاب.</p></div><div style="display:flex;gap:8px"><button class="dash-action gold" onclick="openNewAnnouncement()">+ إضافة إعلان</button><button class="dash-action" onclick="renderAnnouncementsSection()">تحديث</button></div></div>'+
+      '<section class="panel">'+(error?'<div class="result">تعذر تحميل الإعلانات: '+esc(error.message||'')+'</div>':(cards||'<p class="sub">لا توجد إعلانات حاليًا.</p>'))+'</section>';
+  }
+  async function toggleAnnouncement(id,active){
+    const {error}=await sb.from('announcements').update({active:!active}).eq('id',id);
+    if(error) alert(error.message||'تعذر تحديث الإعلان.'); else renderAnnouncementsSection();
+  }
+  async function deleteAnnouncement(id){
+    if(!confirm('حذف الإعلان؟'))return;
+    const {error}=await sb.from('announcements').delete().eq('id',id);
+    if(error) alert(error.message||'تعذر حذف الإعلان.'); else renderAnnouncementsSection();
+  }
+  window.openNewAnnouncement=openNewAnnouncement;
+  window.saveAnnouncement=saveAnnouncement;
+  window.renderAnnouncementsSection=renderAnnouncementsSection;
+  window.toggleAnnouncement=toggleAnnouncement;
+  window.deleteAnnouncement=deleteAnnouncement;
+  const original=window.showTeacherSection;
+  window.showTeacherSection=function(sec){
+    window.__teacherSection=sec;
+    if(sec==='ann') return renderAnnouncementsSection();
+    if(typeof original==='function') return original(sec);
+  };
+})();
+</script>
