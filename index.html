@@ -1081,4 +1081,36 @@ document.addEventListener('click',function(e){
   function addReviewButtons(){const table=document.getElementById('studentsTable');if(!table)return;const tbody=table.querySelector('tbody');if(!tbody)return;Array.from(tbody.querySelectorAll('tr')).forEach((row,index)=>{if(row.dataset.reviewBound==='1')return;const cells=row.children;if(!cells||cells.length<7)return;const name=(cells[0]?.querySelector('div')?.textContent||cells[0]?.textContent||'').trim();if(!name||name.toLowerCase().includes('no students'))return;const stage=(cells[2]?.textContent||'').trim();if(!cells[0].querySelector('.student-row-number')){const num=document.createElement('span');num.className='student-row-number';num.textContent=(index+1)+'. ';num.style.fontWeight='800';cells[0].prepend(num);}const btn=document.createElement('button');btn.type='button';btn.className='dash-action monthly-review-btn';btn.textContent='📝 تقييم وملاحظات';btn.onclick=()=>window.openMonthlyStudentReview({name,stage});cells[6].appendChild(document.createTextNode(' '));cells[6].appendChild(btn);row.dataset.reviewBound='1';});}
   const obs=new MutationObserver(addReviewButtons);function init(){addReviewButtons();obs.observe(document.body,{childList:true,subtree:true});}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
+</script><script id="monthly-attendance-exam-tracker">
+(function(){
+  function esc(v){return typeof escapeHtml==='function'?escapeHtml(v==null?'':String(v)):String(v==null?'':v).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+  function dateOf(x){return x?.submitted_at||x?.created_at||x?.attempted_at||x?.updated_at||x?.exam_date||x?.scheduled_at||'';}
+  function monthOf(v){const d=new Date(v);return isNaN(d)?'':d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+  function thisMonth(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+  function monthName(k){const [y,m]=String(k).split('-');return new Date(+y,+m-1,1).toLocaleDateString('ar-EG',{month:'long',year:'numeric'});}
+  function renderMonthlyAttendance(){
+    const main=document.getElementById('teacherMain');if(!main)return;
+    const d=teacherData(), students=Array.isArray(d.students)?d.students:[], results=Array.isArray(d.results)?d.results:[], exams=Array.isArray(d.exams)?d.exams:[];
+    const month=window.__attendanceMonth||thisMonth();
+    const monthlyExams=exams.filter(e=>monthOf(e.created_at||e.exam_date||e.scheduled_at||e.updated_at)===month);
+    const monthlyResults=results.filter(r=>monthOf(r.submitted_at||r.attempted_at||r.created_at||r.updated_at)===month);
+    const rows=students.map((s,i)=>{
+      const code=String(s.student_code||s.code||'').trim(), name=String(s.name||'').trim();
+      const mine=monthlyResults.filter(r=>(code&&String(r.student_code||'').trim()===code)||(name&&String(r.student_name||'').trim()===name));
+      const attended=mine.length, missed=Math.max(0,monthlyExams.length-attended);
+      const saved=localStorage.getItem('attendance_exam_status_'+(code||name)+'_'+month);
+      const status=saved||(attended>0?'حاضر':'غائب');
+      return '<tr><td><b>'+(i+1)+'.</b></td><td><b>'+esc(name)+'</b><br><small>'+esc(stageLabel(s.grade))+'</small></td><td><select class="attendance-exam-status input" data-key="'+esc(code||name)+'" data-month="'+esc(month)+'"><option value="حاضر" '+(status==='حاضر'?'selected':'')+'>حاضر</option><option value="غائب" '+(status==='غائب'?'selected':'')+'>غائب</option></select></td><td><b>'+attended+'</b></td><td><b>'+missed+'</b></td></tr>';
+    }).join('');
+    main.innerHTML='<div class="welcome"><div><h1>Attendance</h1><p>قائمة الطلاب مرقمة، والمستر يقدر يحدد حاضر أو غائب، مع متابعة امتحانات الشهر.</p></div><div class="dash-toolbar"><input id="attendanceMonth" class="dash-input" type="month" value="'+esc(month)+'" onchange="window.__attendanceMonth=this.value;renderMonthlyAttendance()"><button class="dash-action" onclick="renderMonthlyAttendance()">تحديث</button></div></div><section class="panel"><div class="result"><b>الشهر:</b> '+esc(monthName(month))+'<br><small>امتحانات الشهر المسجلة: '+monthlyExams.length+' — الحاضر = عدد نتائج الامتحانات المسجلة للطالب، والغياب = باقي امتحانات الشهر.</small></div><table class="dash-table" id="monthlyAttendanceTable"><thead><tr><th>#</th><th>اسم الطالب</th><th>الحضور من الامتحانات</th><th>امتحانات حضرها</th><th>امتحانات لم يحضرها</th></tr></thead><tbody>'+ (rows||'<tr><td colspan="5">لا يوجد طلاب.</td></tr>')+'</tbody></table></section>';
+    main.querySelectorAll('.attendance-exam-status').forEach(x=>x.addEventListener('change',function(){localStorage.setItem('attendance_exam_status_'+this.dataset.key+'_'+this.dataset.month,this.value);}));
+  }
+  window.renderMonthlyAttendance=renderMonthlyAttendance;
+  const previous=window.renderTeacherSection;
+  window.renderTeacherSection=function(sec){
+    if(sec==='attendance'){window.__teacherSection='attendance';document.querySelectorAll('#teacherDashboard .side-btn').forEach(b=>b.classList.remove('active'));renderMonthlyAttendance();return;}
+    return previous.apply(this,arguments);
+  };
+})();
 </script>
+
