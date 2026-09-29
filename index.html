@@ -1849,4 +1849,21 @@ setTimeout(async()=>{try{if(!await waitForSupabase())return;const {data}=await s
     return false;
   };
 })();
+</script><script id="hide-disabled-teacher-features">
+(function(){
+  function hideDisabled(){
+    document.querySelectorAll('button').forEach(function(b){
+      var t=(b.textContent||'').trim().toLowerCase();
+      if(t.includes('attendance')||t.includes('الحضور')||t.includes('الغياب')||t.includes('import pdf')||t.includes('استيراد pdf')||t.includes('استيراد امتحان pdf')){
+        b.style.display='none';
+        b.setAttribute('aria-hidden','true');
+      }
+    });
+    document.querySelectorAll('[id*="attendance" i],[class*="attendance" i]').forEach(function(e){
+      if(e.tagName==='BUTTON'||e.classList.contains('side-btn'))e.style.display='none';
+    });
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',hideDisabled);else hideDisabled();
+  new MutationObserver(hideDisabled).observe(document.documentElement,{childList:true,subtree:true});
+})();
 </script></body></html>
