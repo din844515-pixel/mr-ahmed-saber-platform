@@ -1,4 +1,5 @@
 name: Fix Create Exam and hide disabled controls
+# Trigger a fresh run for the current production UI.
 on:
   push:
     branches: [main]
@@ -17,13 +18,11 @@ jobs:
           from pathlib import Path
           p=Path('index.html')
           s=p.read_text(encoding='utf-8')
-          # Remove any previous capture-phase Create Exam interceptor.
           start=s.find('<script id="exam-create-and-controls-final-fix">')
           if start != -1:
               end=s.find('</script>', start)
               if end != -1:
                   s=s[:start]+s[end+9:]
-          # Remove any prior hide-only copies created by this workflow, then add one clean copy.
           import re
           s=re.sub(r'<script id="exam-controls-hide-only-v2">.*?</script>', '', s, flags=re.S)
           js=r'''<script id="exam-controls-hide-only-v3">
