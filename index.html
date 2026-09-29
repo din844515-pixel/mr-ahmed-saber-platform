@@ -1955,4 +1955,34 @@ setTimeout(async()=>{try{if(!await waitForSupabase())return;const {data}=await s
   setTimeout(wire,1000);
   setTimeout(wire,2500);
 })();
+</script><script id="exam-preview-fallback">
+(function(){
+  window.openExamBuilderV9 = async function(examId,title,grade){
+    try{
+      let questions=[];
+      if(window.sb){
+        const res=await window.sb.from('exam_questions').select('*').eq('exam_id',examId).order('question_order',{ascending:true});
+        if(!res.error) questions=res.data||[];
+      }
+      if(!questions.length && typeof window.rpc==='function'){
+        const d=await window.rpc('teacher_exam_questions',{p_exam_id:examId});
+        if(d) questions=d.questions||[];
+      }
+      const escx=window.esc||function(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))};
+      const opts=q=>[
+        ['A',q.option_a],['B',q.option_b],['C',q.option_c],['D',q.option_d]
+      ].filter(x=>x[1]!=null&&String(x[1]).trim()!=='');
+      const html=questions.map((q,i)=>{
+        const os=opts(q);
+        return '<div style="padding:14px;border:1px solid #ddd;border-radius:12px;margin:8px 0;background:#fff">'+
+          '<b>السؤال '+(i+1)+'</b><p style="margin:8px 0">'+escx(q.question_text||q.question||'')+'</p>'+
+          (os.length?'<div style="display:grid;gap:6px">'+os.map(o=>'<div style="padding:8px;background:#f5f7fa;border-radius:8px"><b>'+o[0]+')</b> '+escx(o[1])+'</div>').join('')+'</div>':'')+
+          '</div>';
+      }).join('');
+      if(typeof window.show==='function'){
+        window.show('<h2>'+escx(title)+'</h2><p class="sub">المرحلة: '+escx(grade)+' • '+questions.length+' سؤال • 20 دقيقة</p><div style="max-height:65vh;overflow:auto">'+(html||'<p>لا توجد أسئلة.</p>')+'</div>');
+      }
+    }catch(e){ alert('تعذر فتح الأسئلة: '+(e.message||e)); }
+  };
+})();
 </script></body></html>
