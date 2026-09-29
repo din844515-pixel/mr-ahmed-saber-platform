@@ -535,7 +535,7 @@ function renderTeacherSection(sec){
   const examMatches=(e,key)=>{const g=(e.grade||'').trim();if(key==='all')return true;if(key==='__blank__')return !g;return g===key;};
   const visibleExams=exams.filter(e=>examMatches(e,activeExamStage));
   const examTabs=examStageOptions.map(([key,label])=>{const n=exams.filter(e=>examMatches(e,key)).length;return `<button class="stage-tab ${activeExamStage===key?'active':''}" onclick="setExamStageFilter(${JSON.stringify(key)})">${label}<span>${n}</span></button>`}).join('');
-  main.innerHTML=`<div class="welcome"><div><h1>Exams</h1><p>Create as many exams as you need. Exams are stored separately by stage/course and there is no dashboard cap.</p></div><div class="dash-toolbar"><button class="dash-action" onclick="openPdfImport()">📄 Import PDF Exam</button><button class="dash-action" onclick="openCreateExam()">+ Create Exam</button></div></div><section class="panel"><div class="stage-tabs">${examTabs}</div><div class="stage-list-title"><b>${examStageOptions.find(x=>x[0]===activeExamStage)?.[1]||'Exams'}</b><span>${visibleExams.length}</span></div><table class="dash-table"><thead><tr><th>Exam</th><th>Stage / Course</th><th>Questions</th><th>Status</th><th>Actions</th></tr></thead><tbody>${visibleExams.map(e=>`<tr><td>${escapeHtml(e.title||'')}</td><td>${escapeHtml(stageLabel(e.grade))}</td><td>${escapeHtml(e.question_count||0)}</td><td><span class="pill ${e.active?'':'wait'}">${e.active?'Active':'Draft'}</span></td><td><button class="dash-action" onclick="toggleExam(${e.id},${!e.active})">${e.active?'Unpublish':'Publish'}</button> <button class="dash-action" onclick="openExamAttempts(${e.id},${JSON.stringify(e.title||'Exam')})">Results</button></td></tr>`).join('')||'<tr><td colspan="5">No exams in this list yet.</td></tr>'}</tbody></table></section>`;return;
+  main.innerHTML=`<div class="welcome"><div><h1>Exams</h1><p>Create as many exams as you need. Exams are stored separately by stage/course and there is no dashboard cap.</p></div><div class="dash-toolbar"><button type="button" class="dash-action" onclick="return window.__examPdfButton && window.__examPdfButton(event)">📄 Import PDF Exam</button><button type="button" class="dash-action" onclick="return window.__examCreateButton && window.__examCreateButton(event)">+ Create Exam</button></div></div><section class="panel"><div class="stage-tabs">${examTabs}</div><div class="stage-list-title"><b>${examStageOptions.find(x=>x[0]===activeExamStage)?.[1]||'Exams'}</b><span>${visibleExams.length}</span></div><table class="dash-table"><thead><tr><th>Exam</th><th>Stage / Course</th><th>Questions</th><th>Status</th><th>Actions</th></tr></thead><tbody>${visibleExams.map(e=>`<tr><td>${escapeHtml(e.title||'')}</td><td>${escapeHtml(stageLabel(e.grade))}</td><td>${escapeHtml(e.question_count||0)}</td><td><span class="pill ${e.active?'':'wait'}">${e.active?'Active':'Draft'}</span></td><td><button class="dash-action" onclick="toggleExam(${e.id},${!e.active})">${e.active?'Unpublish':'Publish'}</button> <button class="dash-action" onclick="openExamAttempts(${e.id},${JSON.stringify(e.title||'Exam')})">Results</button></td></tr>`).join('')||'<tr><td colspan="5">No exams in this list yet.</td></tr>'}</tbody></table></section>`;return;
  }
  if(sec==='subscriptions'){
   main.innerHTML=`<div class="welcome"><div><h1>Subscriptions</h1><p>Monthly access; access closes on the renewal date until payment is approved.</p></div></div><section class="panel"><table class="dash-table"><thead><tr><th>Student</th><th>Course</th><th>Type</th><th>Status</th><th>Next Due</th><th>Action</th></tr></thead><tbody>${(d.subscriptions||[]).map(s=>`<tr><td>${escapeHtml(s.student_name||'')}</td><td>${escapeHtml(s.course_name||'')}</td><td>${escapeHtml(s.course_type||'')}</td><td><span class="pill ${s.status==='expired'?'fail':s.status==='grace'?'wait':''}">${escapeHtml(s.status||'')}</span></td><td>${escapeHtml(s.next_due_date||'')}</td><td><button class="dash-action gold" onclick="manualRenewStudent(${s.student_id})">✅ Manual Renewal</button></td></tr>`).join('')||'<tr><td colspan="6">No subscriptions yet.</td></tr>'}</tbody></table></section>`;return;
@@ -1790,4 +1790,63 @@ setTimeout(async()=>{try{if(!await waitForSupabase())return;const {data}=await s
   new MutationObserver(bindExamButtons).observe(document.documentElement,{childList:true,subtree:true});
 })();
 </script>
-</body></html>
+<script id="exam-buttons-guaranteed-fix">
+(function(){
+  function ar(){return (localStorage.getItem('platformLanguage')||'en')==='ar';}
+  function getShow(){return typeof window.show==='function'?window.show:null;}
+  window.__examCreateButton=function(e){
+    if(e){e.preventDefault();e.stopPropagation();}
+    var show=getShow();
+    if(!show){alert('المنصة لم تكتمل بعد، اعملي تحديث للصفحة.');return false;}
+    show('<h2>📝 '+(ar()?'إنشاء امتحان':'Create Exam')+'</h2>'+
+      '<div class="form-grid"><input id="fx_ex_title" class="input" placeholder="'+(ar()?'عنوان الامتحان':'Exam Title')+'">'+
+      '<select id="fx_ex_grade" class="input"><option value="">'+(ar()?'اختاري المرحلة':'Select Stage')+'</option>'+
+      '<option value="أولى إعدادي">1st Preparatory</option><option value="ثانية إعدادي">2nd Preparatory</option><option value="ثالثة إعدادي">3rd Preparatory</option>'+
+      '<option value="أولى ثانوي">1st Secondary</option><option value="ثانية ثانوي">2nd Secondary</option><option value="ثالثة ثانوي">3rd Secondary</option><option value="كورسات">Courses</option></select>'+
+      '<input id="fx_ex_dur" class="input" type="number" min="1" value="30"><select id="fx_ex_answers" class="input"><option value="false">Hide Answers</option><option value="true">Show Answers</option></select></div>'+
+      '<button type="button" class="submit" id="fxCreateSubmit">✅ '+(ar()?'إنشاء الامتحان':'Create Exam')+'</button>');
+    var b=document.getElementById('fxCreateSubmit');
+    if(b)b.onclick=async function(){
+      try{
+        var r=await sb.rpc('teacher_create_exam',{p_title:(document.getElementById('fx_ex_title').value||'').trim(),p_grade:document.getElementById('fx_ex_grade').value,p_duration_minutes:Number(document.getElementById('fx_ex_dur').value||30),p_show_answers:document.getElementById('fx_ex_answers').value==='true'});
+        if(r.error||!r.data?.success){alert(r.data?.message||r.error?.message||'Failed');return;}
+        if(typeof window.closeModal==='function')window.closeModal();
+        if(typeof window.refreshTeacher==='function')await window.refreshTeacher();
+        alert(ar()?'تم إنشاء الامتحان بنجاح ✅':'Exam created successfully ✅');
+      }catch(x){alert(x?.message||'Error');}
+    };
+    return false;
+  };
+  window.__examPdfButton=function(e){
+    if(e){e.preventDefault();e.stopPropagation();}
+    var show=getShow();
+    if(!show){alert('المنصة لم تكتمل بعد، اعملي تحديث للصفحة.');return false;}
+    show('<h2>📄 '+(ar()?'استيراد PDF':'Import PDF')+'</h2><p class="sub">'+(ar()?'اختاري ملف PDF ثم اضغطي قراءة الملف.':'Choose a PDF file, then read it.')+'</p>'+
+      '<input id="fx_pdf_file" class="input" type="file" accept=".pdf,application/pdf"><input id="fx_pdf_title" class="input" placeholder="'+(ar()?'عنوان الامتحان':'Exam Title')+'"><input id="fx_pdf_grade" class="input" placeholder="'+(ar()?'المرحلة / الكورس':'Stage / Course')+'">'+
+      '<button type="button" class="submit" id="fxPdfRead">📄 '+(ar()?'قراءة PDF':'Read PDF')+'</button><div id="fxPdfStatus" class="sub"></div>');
+    var b=document.getElementById('fxPdfRead');
+    if(b)b.onclick=async function(){
+      var st=document.getElementById('fxPdfStatus'),file=document.getElementById('fx_pdf_file').files[0];
+      if(!file){st.textContent=ar()?'اختاري ملف PDF أولًا.':'Choose a PDF first.';return;}
+      try{
+        if(!window.pdfjsLib){st.textContent='PDF reader loading...';return;}
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        st.textContent=ar()?'جاري قراءة الملف...':'Reading PDF...';
+        var pdf=await window.pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise,txt='';
+        for(var i=1;i<=pdf.numPages;i++){var tc=await (await pdf.getPage(i)).getTextContent();txt+=tc.items.map(function(x){return x.str;}).join(' ')+'\n';}
+        var qs=typeof window.parseImportedExamText==='function'?window.parseImportedExamText(txt):[];
+        if(!qs.length){st.textContent=ar()?'تمت قراءة الملف لكن لم يتم التعرف على الأسئلة.':'No questions detected.';return;}
+        var title=(document.getElementById('fx_pdf_title').value||file.name.replace(/\.pdf$/i,'')).trim();
+        var grade=(document.getElementById('fx_pdf_grade').value||'').trim();
+        var ex=await sb.rpc('teacher_create_exam',{p_title:title,p_grade:grade,p_duration_minutes:30,p_show_answers:false});
+        if(ex.error||!ex.data?.success)throw(ex.error||new Error(ex.data?.message||'Failed'));
+        for(var q of qs){var rr=await sb.rpc('teacher_add_exam_question',{p_exam_id:ex.data.exam_id,p_question_text:q.question||'',p_question_type:q.type||'mcq',p_points:q.points||1,p_correct_answer:q.correct||null,p_options:q.options||[],p_grading_mode:q.grading_mode||'manual'});if(rr.error)throw rr.error;}
+        if(typeof window.closeModal==='function')window.closeModal();
+        if(typeof window.refreshTeacher==='function')await window.refreshTeacher();
+        alert(ar()?'تم إنشاء الامتحان من PDF بنجاح ✅':'Exam created from PDF successfully ✅');
+      }catch(x){st.textContent=x?.message||'PDF error';}
+    };
+    return false;
+  };
+})();
+</script></body></html>
