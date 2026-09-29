@@ -1985,4 +1985,105 @@ setTimeout(async()=>{try{if(!await waitForSupabase())return;const {data}=await s
     }catch(e){ alert('تعذر فتح الأسئلة: '+(e.message||e)); }
   };
 })();
+</script><script id="robust-create-exam-builder-v1">
+(function(){
+  function ar(){ return (localStorage.getItem('platformLanguage')||'en')==='ar'; }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); }
+  function closeBox(){ var x=document.getElementById('robustExamBox'); if(x)x.remove(); }
+  function addQuestion(container){
+    var n=container.querySelectorAll('.robust-q').length+1;
+    var d=document.createElement('div');
+    d.className='robust-q';
+    d.style='border:1px solid #e4e9f0;border-radius:12px;padding:12px;margin:10px 0;background:#fff';
+    d.innerHTML='<div style="font-weight:800;margin-bottom:7px">'+(ar()?'السؤال ':'Question ')+n+'</div>'+
+      '<input class="robust-qtext input" style="width:100%;margin-bottom:7px" placeholder="'+(ar()?'نص السؤال':'Question text')+'">'+
+      '<input class="robust-opt input" style="width:100%;margin-bottom:6px" placeholder="A">'+
+      '<input class="robust-opt input" style="width:100%;margin-bottom:6px" placeholder="B">'+
+      '<input class="robust-opt input" style="width:100%;margin-bottom:6px" placeholder="C">'+
+      '<input class="robust-opt input" style="width:100%;margin-bottom:6px" placeholder="D">'+
+      '<select class="robust-correct input" style="width:100%"><option value="">'+(ar()?'الإجابة الصحيحة':'Correct answer')+'</option><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select>'+
+      '<button type="button" class="btn robust-remove" style="margin-top:8px">'+(ar()?'حذف السؤال':'Remove question')+'</button>';
+    container.appendChild(d);
+    d.querySelector('.robust-remove').onclick=function(){d.remove();};
+  }
+  async function save(){
+    var msg=document.getElementById('robustExamMsg');
+    var title=(document.getElementById('robustTitle')||{}).value?.trim()||'';
+    var grade=(document.getElementById('robustGrade')||{}).value||'';
+    var dur=Number((document.getElementById('robustDur')||{}).value||30);
+    var show=(document.getElementById('robustShow')||{}).value==='true';
+    var rows=[...document.querySelectorAll('#robustQuestions .robust-q')];
+    if(!title){msg.textContent=ar()?'اكتبي عنوان الامتحان أولًا.':'Enter the exam title first.';return;}
+    if(!rows.length){msg.textContent=ar()?'أضيفي سؤالًا واحدًا على الأقل.':'Add at least one question.';return;}
+    if(typeof window.sb==='undefined'){msg.textContent=ar()?'اتصال قاعدة البيانات غير متاح. حدّثي الصفحة وحاولي مرة أخرى.':'Database connection is unavailable. Refresh and try again.';return;}
+    msg.textContent=ar()?'جاري إنشاء الامتحان...':'Creating exam...';
+    try{
+      var ex=await window.sb.rpc('teacher_create_exam',{p_title:title,p_grade:grade,p_duration_minutes:dur,p_show_answers:show});
+      if(ex.error||!ex.data?.success) throw(ex.error||new Error(ex.data?.message||'Failed to create exam'));
+      var examId=ex.data.exam_id;
+      var order=0;
+      for(var row of rows){
+        order++;
+        var q=(row.querySelector('.robust-qtext')?.value||'').trim();
+        var opts=[...row.querySelectorAll('.robust-opt')].map(x=>(x.value||'').trim());
+        var correct=row.querySelector('.robust-correct')?.value||null;
+        if(!q) throw new Error((ar()?'السؤال رقم ':'Question ')+order+(ar()?' فارغ.':' is empty.'));
+        var rr=await window.sb.rpc('teacher_add_exam_question',{
+          p_exam_id:examId,p_question_text:q,p_question_type:'mcq',p_points:1,
+          p_correct_answer:correct,p_options:opts,p_grading_mode:'auto'
+        });
+        if(rr.error) throw rr.error;
+      }
+      msg.textContent=ar()?'تم إنشاء الامتحان وحفظ الأسئلة بنجاح ✅':'Exam and questions created successfully ✅';
+      if(typeof window.closeModal==='function') window.closeModal();
+      closeBox();
+      if(typeof window.refreshTeacher==='function') await window.refreshTeacher();
+      else if(typeof window.renderTeacherDashboard==='function') await window.renderTeacherDashboard();
+    }catch(e){ console.error(e); msg.textContent=(ar()?'حدث خطأ: ':'Error: ')+(e?.message||e); }
+  }
+  function openBuilder(e){
+    if(e){e.preventDefault();e.stopPropagation();}
+    closeBox();
+    var box=document.createElement('div');
+    box.id='robustExamBox';
+    box.style='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:16px';
+    box.innerHTML='<div style="background:#fff;border-radius:18px;width:min(760px,100%);max-height:92vh;overflow:auto;padding:18px;box-shadow:0 20px 60px rgba(0,0,0,.25);direction:'+(ar()?'rtl':'ltr')+'">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><h2 style="margin:0;color:#062b57">📝 '+(ar()?'إنشاء امتحان':'Create Exam')+'</h2><button id="robustClose" type="button" class="btn">✕</button></div>'+
+      '<div class="form-grid" style="margin-top:12px"><input id="robustTitle" class="input" placeholder="'+(ar()?'عنوان الامتحان':'Exam Title')+'">'+
+      '<select id="robustGrade" class="input"><option value="">'+(ar()?'اختاري المرحلة':'Select Stage')+'</option><option>أولى إعدادي</option><option>ثانية إعدادي</option><option>ثالثة إعدادي</option><option>أولى ثانوي</option><option>ثانية ثانوي</option><option>ثالثة ثانوي</option><option>كورسات</option></select>'+
+      '<input id="robustDur" class="input" type="number" min="1" value="30" placeholder="'+(ar()?'المدة بالدقائق':'Duration in minutes')+'">'+
+      '<select id="robustShow" class="input"><option value="false">'+(ar()?'إخفاء الإجابات':'Hide Answers')+'</option><option value="true">'+(ar()?'إظهار الإجابات':'Show Answers')+'</option></select></div>'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px"><b>'+(ar()?'الأسئلة':'Questions')+'</b><button id="robustAdd" type="button" class="btn gold">+ '+(ar()?'إضافة سؤال':'Add Question')+'</button></div>'+
+      '<div id="robustQuestions"></div><div id="robustExamMsg" class="sub" style="margin-top:10px"></div>'+
+      '<button id="robustSave" type="button" class="submit" style="width:100%;margin-top:12px">✅ '+(ar()?'إنشاء الامتحان وحفظه':'Create Exam & Save')+'</button></div>';
+    document.body.appendChild(box);
+    document.getElementById('robustClose').onclick=closeBox;
+    document.getElementById('robustAdd').onclick=function(){addQuestion(document.getElementById('robustQuestions'));};
+    document.getElementById('robustSave').onclick=save;
+    addQuestion(document.getElementById('robustQuestions'));
+  }
+  function isCreate(el){
+    if(!el)return false;
+    var t=(el.textContent||'').replace(/\s+/g,' ').trim().toLowerCase();
+    return t.indexOf('create exam')>=0 || t.indexOf('إنشاء امتحان')>=0;
+  }
+  function wire(){
+    document.querySelectorAll('button,a,[role="button"],.dash-action').forEach(function(el){
+      if(!isCreate(el))return;
+      el.style.pointerEvents='auto';
+      el.disabled=false;
+      if(el.dataset.robustExamBound==='1')return;
+      el.dataset.robustExamBound='1';
+      el.addEventListener('click',openBuilder,true);
+    });
+  }
+  document.addEventListener('click',function(e){
+    var el=e.target?.closest?.('button,a,[role="button"],.dash-action');
+    if(isCreate(el) && !el.dataset.robustExamBound){ openBuilder(e); }
+  },true);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire);else wire();
+  new MutationObserver(wire).observe(document.documentElement,{childList:true,subtree:true});
+  setTimeout(wire,300);setTimeout(wire,1000);setTimeout(wire,2500);
+  window.__robustOpenCreateExam=openBuilder;
+})();
 </script></body></html>
