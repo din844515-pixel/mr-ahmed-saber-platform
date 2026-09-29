@@ -1,0 +1,114 @@
+name: Standalone Create Exam Fix
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[standalone-exam]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inject standalone Create Exam window
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          marker='id="standalone-create-exam-v1"'
+          if marker in s:
+              raise SystemExit(0)
+          js=r'''<script id="standalone-create-exam-v1">
+          (function(){
+            function ar(){return (localStorage.getItem('platformLanguage')||'en')==='ar';}
+            function closeBox(){var x=document.getElementById('standaloneExamBox');if(x)x.remove();}
+            function addQuestion(){
+              var c=document.getElementById('standaloneQs'), n=c.children.length+1, d=document.createElement('div');
+              d.style='border:1px solid #e1e7ef;border-radius:12px;padding:12px;margin:10px 0;background:#fff';
+              d.innerHTML='<div style="font-weight:800;margin-bottom:7px">'+(ar()?'السؤال ':'Question ')+n+'</div>'+
+                '<input class="input sx-q" style="width:100%;margin:5px 0" placeholder="'+(ar()?'نص السؤال':'Question text')+'">'+
+                '<input class="input sx-o" style="width:100%;margin:5px 0" placeholder="A">'+
+                '<input class="input sx-o" style="width:100%;margin:5px 0" placeholder="B">'+
+                '<input class="input sx-o" style="width:100%;margin:5px 0" placeholder="C">'+
+                '<input class="input sx-o" style="width:100%;margin:5px 0" placeholder="D">'+
+                '<select class="input sx-c" style="width:100%;margin:5px 0"><option value="">'+(ar()?'الإجابة الصحيحة':'Correct answer')+'</option><option>A</option><option>B</option><option>C</option><option>D</option></select>'+
+                '<button type="button" class="btn sx-rm" style="margin-top:5px">'+(ar()?'حذف السؤال':'Remove question')+'</button>';
+              c.appendChild(d); d.querySelector('.sx-rm').onclick=function(){d.remove();};
+            }
+            async function saveExam(){
+              var msg=document.getElementById('standaloneMsg'), title=(document.getElementById('standaloneTitle').value||'').trim();
+              var grade=document.getElementById('standaloneGrade').value, dur=Number(document.getElementById('standaloneDur').value||30), show=document.getElementById('standaloneShow').value==='true';
+              var rows=[...document.querySelectorAll('#standaloneQs > div')];
+              if(!title){msg.textContent=ar()?'اكتبي عنوان الامتحان أولًا.':'Enter the exam title first.';return;}
+              if(!rows.length){msg.textContent=ar()?'أضيفي سؤالًا واحدًا على الأقل.':'Add at least one question.';return;}
+              if(!window.sb){msg.textContent=ar()?'اتصال قاعدة البيانات غير متاح.':'Database connection unavailable.';return;}
+              msg.textContent=ar()?'جاري إنشاء الامتحان...':'Creating exam...';
+              try{
+                var ex=await window.sb.rpc('teacher_create_exam',{p_title:title,p_grade:grade,p_duration_minutes:dur,p_show_answers:show});
+                if(ex.error||!ex.data?.success) throw(ex.error||new Error(ex.data?.message||'Failed to create exam'));
+                for(var i=0;i<rows.length;i++){
+                  var row=rows[i], q=(row.querySelector('.sx-q').value||'').trim(), opts=[...row.querySelectorAll('.sx-o')].map(function(x){return (x.value||'').trim();}), cor=row.querySelector('.sx-c').value||null;
+                  if(!q) throw new Error((ar()?'السؤال رقم ':'Question ')+(i+1)+(ar()?' فارغ.':' is empty.'));
+                  var rr=await window.sb.rpc('teacher_add_exam_question',{p_exam_id:ex.data.exam_id,p_question_text:q,p_question_type:'mcq',p_points:1,p_correct_answer:cor,p_options:opts,p_grading_mode:'auto'});
+                  if(rr.error) throw rr.error;
+                }
+                closeBox();
+                if(typeof window.refreshTeacher==='function') await window.refreshTeacher();
+                if(typeof window.showTeacherSection==='function') window.showTeacherSection('exams');
+                alert(ar()?'تم إنشاء الامتحان بنجاح ✅':'Exam created successfully ✅');
+              }catch(e){
+                console.error(e);
+                msg.textContent=(ar()?'حدث خطأ: ':'Error: ')+(e&&e.message||e);
+              }
+            }
+            function openStandalone(e){
+              if(e){e.preventDefault();e.stopImmediatePropagation();}
+              closeBox();
+              var b=document.createElement('div'); b.id='standaloneExamBox';
+              b.style='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:14px';
+              b.innerHTML='<div style="background:#fff;border-radius:18px;width:min(760px,100%);max-height:94vh;overflow:auto;padding:18px;direction:'+(ar()?'rtl':'ltr')+'">'+
+                '<div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0;color:#062b57">📝 '+(ar()?'إنشاء امتحان':'Create Exam')+'</h2><button id="standaloneClose" type="button" class="btn">✕</button></div>'+
+                '<div class="form-grid" style="margin-top:12px"><input id="standaloneTitle" class="input" placeholder="'+(ar()?'عنوان الامتحان':'Exam Title')+'">'+
+                '<select id="standaloneGrade" class="input"><option value="">'+(ar()?'اختاري المرحلة':'Select Stage')+'</option><option>أولى إعدادي</option><option>ثانية إعدادي</option><option>ثالثة إعدادي</option><option>أولى ثانوي</option><option>ثانية ثانوي</option><option>ثالثة ثانوي</option><option>كورسات</option></select>'+
+                '<input id="standaloneDur" class="input" type="number" min="1" value="30" placeholder="'+(ar()?'المدة بالدقائق':'Duration in minutes')+'">'+
+                '<select id="standaloneShow" class="input"><option value="false">'+(ar()?'إخفاء الإجابات':'Hide Answers')+'</option><option value="true">'+(ar()?'إظهار الإجابات':'Show Answers')+'</option></select></div>'+
+                '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px"><b>'+(ar()?'الأسئلة':'Questions')+'</b><button id="standaloneAdd" type="button" class="btn gold">+ '+(ar()?'إضافة سؤال':'Add Question')+'</button></div>'+
+                '<div id="standaloneQs"></div><div id="standaloneMsg" class="sub" style="margin-top:8px"></div>'+
+                '<button id="standaloneSave" type="button" class="submit" style="width:100%;margin-top:10px">✅ '+(ar()?'إنشاء الامتحان وحفظه':'Create Exam & Save')+'</button></div>';
+              document.body.appendChild(b);
+              document.getElementById('standaloneClose').onclick=closeBox;
+              document.getElementById('standaloneAdd').onclick=addQuestion;
+              document.getElementById('standaloneSave').onclick=saveExam;
+              addQuestion();
+            }
+            window.__standaloneOpenExam=openStandalone;
+            window.__examCreateButton=openStandalone;
+            window.openCreateExam=openStandalone;
+            function wire(){
+              document.querySelectorAll('button,a,[role="button"],.dash-action').forEach(function(el){
+                var t=(el.textContent||'').replace(/\s+/g,' ').trim().toLowerCase();
+                if(t.indexOf('create exam')<0 && t.indexOf('إنشاء امتحان')<0) return;
+                el.disabled=false; el.style.pointerEvents='auto'; el.onclick=openStandalone;
+              });
+            }
+            wire();
+            if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire);
+            new MutationObserver(wire).observe(document.documentElement,{childList:true,subtree:true});
+            setTimeout(wire,300);setTimeout(wire,1000);setTimeout(wire,2500);
+          })();
+          </script>'''
+          s=s.replace('</body>',js+'</body>') if '</body>' in s else s+js
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Commit standalone fix
+        run: |
+          git config user.name "chatgpt-ui-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git diff --cached --quiet && exit 0
+          git commit -m "Add standalone Create Exam builder [standalone-exam]"
+          git push
