@@ -1866,13 +1866,13 @@ setTimeout(async()=>{try{if(!await waitForSupabase())return;const {data}=await s
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',hideDisabled);else hideDisabled();
   new MutationObserver(hideDisabled).observe(document.documentElement,{childList:true,subtree:true});
 })();
-</script><script id="exam-controls-hide-only-v2">
+</script><script id="exam-controls-hide-only-v3">
 (function(){
   function clean(t){return (t||'').replace(/\s+/g,' ').trim().toLowerCase();}
   function hide(){
     document.querySelectorAll('button,a,[role="button"],.dash-action,.nav-item,.sidebar-item').forEach(function(el){
       var t=clean(el.textContent);
-      if(t.includes('attendance & absence')||t.includes('attendance and absence')||t==='attendance'||t==='attendance & absence'||t==='الحضور والغياب'||t==='الحضور'||t==='الغياب'||t.includes('import pdf')||t.includes('pdf import')||t.includes('استيراد pdf')||t.includes('استيراد امتحان pdf')){
+      if(t.includes('attendance & absence')||t.includes('attendance and absence')||t==='attendance'||t==='الحضور والغياب'||t==='الحضور'||t==='الغياب'||t.includes('import pdf')||t.includes('pdf import')||t.includes('استيراد pdf')||t.includes('استيراد امتحان pdf')){
         el.style.setProperty('display','none','important');
         el.setAttribute('aria-hidden','true');
       }
