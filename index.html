@@ -1911,4 +1911,48 @@ setTimeout(async()=>{try{if(!await waitForSupabase())return;const {data}=await s
   new MutationObserver(wire).observe(document.documentElement,{childList:true,subtree:true});
   setTimeout(wire,300);setTimeout(wire,1000);setTimeout(wire,2500);
 })();
+</script><script id="create-exam-direct-final-fix">
+(function(){
+  function isCreate(el){
+    if(!el) return false;
+    var t=(el.textContent||'').replace(/\s+/g,' ').trim().toLowerCase();
+    return t.includes('create exam') || t.includes('إنشاء امتحان');
+  }
+  function open(){
+    if(typeof window.openCreateExam==='function'){
+      window.openCreateExam();
+      return true;
+    }
+    if(typeof window.__examCreateButton==='function'){
+      window.__examCreateButton();
+      return true;
+    }
+    return false;
+  }
+  function wire(){
+    document.querySelectorAll('button,a,[role="button"],.dash-action').forEach(function(el){
+      if(!isCreate(el)) return;
+      el.onclick=function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        return open();
+      };
+      el.style.pointerEvents='auto';
+      el.disabled=false;
+    });
+  }
+  document.addEventListener('click',function(e){
+    var el=e.target && e.target.closest ? e.target.closest('button,a,[role="button"],.dash-action') : null;
+    if(!isCreate(el)) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    open();
+  },true);
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',wire);
+  else wire();
+  new MutationObserver(wire).observe(document.documentElement,{childList:true,subtree:true});
+  setTimeout(wire,300);
+  setTimeout(wire,1000);
+  setTimeout(wire,2500);
+})();
 </script></body></html>
