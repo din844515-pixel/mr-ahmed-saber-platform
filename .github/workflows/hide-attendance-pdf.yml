@@ -1,0 +1,58 @@
+name: Hide attendance and PDF import UI
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/hide-attendance-pdf.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Hide unwanted teacher controls
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          marker='<!-- hide-attendance-pdf-v1 -->'
+          if marker in s:
+              raise SystemExit(0)
+          js=r'''
+<script id="hide-attendance-pdf-v1">
+(function(){
+  const BAD = /^(?:\s*(?:📅\s*)?(?:الحضور والغياب|الحضور|الغياب|Attendance|Attendance & Absence|Attendance and Absence)\s*|\s*(?:📄\s*)?(?:استيراد PDF|Import PDF|PDF Import)\s*)$/i;
+  function hide(){
+    document.querySelectorAll('button,a,[role="button"],.dash-action,.nav-item,.sidebar-item').forEach(function(el){
+      const t=(el.textContent||'').replace(/\s+/g,' ').trim();
+      if(BAD.test(t)){el.style.setProperty('display','none','important');el.setAttribute('aria-hidden','true');}
+    });
+    document.querySelectorAll('body *').forEach(function(el){
+      if(el.children.length===0){
+        const t=(el.textContent||'').replace(/\s+/g,' ').trim();
+        if(BAD.test(t)){
+          const p=el.closest('button,a,[role="button"],.dash-action,.nav-item,.sidebar-item');
+          if(p)p.style.setProperty('display','none','important');
+        }
+      }
+    });
+  }
+  hide();
+  new MutationObserver(hide).observe(document.documentElement,{childList:true,subtree:true});
+  setTimeout(hide,300);setTimeout(hide,1000);setTimeout(hide,2500);
+})();
+</script>
+'''
+          s=s.replace('</body>', marker+js+'</body>')
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Commit patch
+        run: |
+          git config user.name "chatgpt-ui-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git diff --cached --quiet && exit 0
+          git commit -m "Hide attendance and PDF import controls"
+          git push
