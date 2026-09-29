@@ -1668,4 +1668,126 @@ setTimeout(async()=>{try{if(!await waitForSupabase())return;const {data}=await s
   };
 })();
 </script>
+<!-- EXAMS BUTTONS FINAL FIX -->
+<script>
+(function(){
+  function ar(){return (localStorage.getItem('platformLanguage')||'en')==='ar';}
+  function safeShow(html){ if(typeof window.show==='function') window.show(html); else alert(ar()?'تعذر فتح النافذة.':'Unable to open window.'); }
+
+  window.openCreateExam=function(){
+    safeShow(
+      '<h2>📝 '+(ar()?'إنشاء امتحان':'Create Exam')+'</h2>'+
+      '<div class="form-grid">'+
+      '<input id="ex_title" class="input" placeholder="'+(ar()?'عنوان الامتحان':'Exam Title')+'">'+
+      '<select id="ex_grade" class="input">'+
+      '<option value="">'+(ar()?'اختاري المرحلة':'Select Stage')+'</option>'+
+      '<option value="أولى إعدادي">1st Preparatory</option>'+
+      '<option value="ثانية إعدادي">2nd Preparatory</option>'+
+      '<option value="ثالثة إعدادي">3rd Preparatory</option>'+
+      '<option value="أولى ثانوي">1st Secondary</option>'+
+      '<option value="ثانية ثانوي">2nd Secondary</option>'+
+      '<option value="ثالثة ثانوي">3rd Secondary</option>'+
+      '<option value="كورسات">Courses</option>'+
+      '</select>'+
+      '<input id="ex_dur" class="input" type="number" min="1" value="30" placeholder="Minutes">'+
+      '<select id="ex_answers" class="input"><option value="false">Hide Answers</option><option value="true">Show Answers</option></select>'+
+      '</div>'+
+      '<button class="submit" id="finalCreateExamBtn">✅ '+(ar()?'إنشاء الامتحان':'Create Exam')+'</button>'
+    );
+    setTimeout(function(){
+      var b=document.getElementById('finalCreateExamBtn');
+      if(b) b.onclick=window.__finalCreateExam;
+    },0);
+  };
+
+  window.__finalCreateExam=async function(){
+    try{
+      var title=(document.getElementById('ex_title')?.value||'').trim();
+      var grade=(document.getElementById('ex_grade')?.value||'').trim();
+      var duration=Number(document.getElementById('ex_dur')?.value||30);
+      var answers=document.getElementById('ex_answers')?.value==='true';
+      if(!title){alert(ar()?'اكتبي عنوان الامتحان أولًا.':'Enter an exam title first.');return;}
+      var r=await sb.rpc('teacher_create_exam',{p_title:title,p_grade:grade,p_duration_minutes:duration,p_show_answers:answers});
+      if(r.error||!r.data?.success){alert(r.data?.message||r.error?.message||'Failed to create exam');return;}
+      alert(ar()?'تم إنشاء الامتحان بنجاح ✅':'Exam created successfully ✅');
+      if(typeof window.closeModal==='function') window.closeModal();
+      if(typeof window.refreshTeacher==='function') await window.refreshTeacher();
+    }catch(e){console.error(e);alert(e?.message||'Error creating exam');}
+  };
+
+  window.openPdfImport=function(){
+    safeShow(
+      '<h2>📄 '+(ar()?'استيراد PDF':'Import PDF')+'</h2>'+
+      '<p class="sub">'+(ar()?'اختاري ملف PDF ثم اضغطي قراءة الملف.':'Choose a PDF file, then read it.')+'</p>'+
+      '<input id="pdfFile" class="input" type="file" accept=".pdf,application/pdf">'+
+      '<input id="pdfTitle" class="input" placeholder="'+(ar()?'عنوان الامتحان':'Exam Title')+'">'+
+      '<input id="pdfGrade" class="input" placeholder="'+(ar()?'المرحلة / الكورس':'Stage / Course')+'">'+
+      '<button class="submit" id="finalReadPdfBtn">📄 '+(ar()?'قراءة PDF':'Read PDF')+'</button>'+
+      '<div id="pdfStatus" class="sub" style="margin-top:8px"></div>'
+    );
+    setTimeout(function(){
+      var b=document.getElementById('finalReadPdfBtn');
+      if(b) b.onclick=window.__finalReadPdf;
+    },0);
+  };
+
+  window.__finalReadPdf=async function(){
+    var st=document.getElementById('pdfStatus'), file=document.getElementById('pdfFile')?.files?.[0];
+    if(!file){if(st)st.textContent=ar()?'اختاري ملف PDF أولًا.':'Choose a PDF first.';return;}
+    try{
+      if(!window.pdfjsLib){if(st)st.textContent=ar()?'قارئ PDF لم يكتمل تحميله، حاولي مرة أخرى.':'PDF reader is still loading, try again.';return;}
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      if(st)st.textContent=ar()?'جاري قراءة الملف...':'Reading PDF...';
+      var pdf=await window.pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise, text='';
+      for(var i=1;i<=pdf.numPages;i++){
+        var page=await pdf.getPage(i), tc=await page.getTextContent();
+        text+=tc.items.map(function(x){return x.str;}).join(' ')+'\n';
+      }
+      var questions=typeof window.parseImportedExamText==='function'?window.parseImportedExamText(text):[];
+      if(!questions.length){if(st)st.textContent=ar()?'تمت قراءة الملف لكن لم يتم التعرف على الأسئلة.':'PDF was read, but no questions were detected.';return;}
+      window.__pdfExam={fileName:file.name,title:(document.getElementById('pdfTitle')?.value||file.name.replace(/\.pdf$/i,'')).trim(),grade:(document.getElementById('pdfGrade')?.value||'').trim(),text:text,questions:questions};
+      if(st)st.innerHTML=(ar()?'تمت القراءة بنجاح ✅ عدد الأسئلة: ':'PDF read successfully ✅ Questions: ')+questions.length;
+      st.insertAdjacentHTML('afterend','<button class="submit" id="finalSavePdfBtn" style="margin-top:10px">💾 '+(ar()?'حفظ الامتحان كمسودة':'Save Draft Exam')+'</button>');
+      var save=document.getElementById('finalSavePdfBtn');
+      if(save)save.onclick=window.__finalSavePdf;
+    }catch(e){console.error(e);if(st)st.textContent=(ar()?'حدث خطأ أثناء قراءة PDF: ':'PDF error: ')+(e?.message||e);}
+  };
+
+  window.__finalSavePdf=async function(){
+    try{
+      if(!window.__pdfExam?.questions?.length){alert(ar()?'لا توجد أسئلة محفوظة.':'No questions found.');return;}
+      if(typeof window.saveImportedPdfExam==='function'){
+        await window.saveImportedPdfExam();
+        return;
+      }
+      var p=window.__pdfExam;
+      var ex=await sb.rpc('teacher_create_exam',{p_title:p.title,p_grade:p.grade,p_duration_minutes:30,p_show_answers:false});
+      if(ex.error||!ex.data?.success)throw(ex.error||new Error(ex.data?.message||'Failed'));
+      for(var q of p.questions){
+        var rr=await sb.rpc('teacher_add_exam_question',{p_exam_id:ex.data.exam_id,p_question_text:q.question||'',p_question_type:q.type||'mcq',p_points:q.points||1,p_correct_answer:q.correct||null,p_options:q.options||[],p_grading_mode:q.grading_mode||'manual'});
+        if(rr.error)throw rr.error;
+      }
+      if(typeof window.closeModal==='function')window.closeModal();
+      if(typeof window.refreshTeacher==='function')await window.refreshTeacher();
+      alert(ar()?'تم إنشاء الامتحان من PDF بنجاح ✅':'Exam created from PDF successfully ✅');
+    }catch(e){console.error(e);alert(e?.message||'Error saving exam');}
+  };
+
+  function bindExamButtons(){
+    document.querySelectorAll('button').forEach(function(b){
+      if(b.dataset.finalExamFix==='1')return;
+      var t=(b.textContent||'').trim().toLowerCase();
+      if(t.indexOf('import pdf')>=0 || t.indexOf('استيراد pdf')>=0){
+        b.dataset.finalExamFix='1';
+        b.addEventListener('click',function(e){e.preventDefault();e.stopImmediatePropagation();window.openPdfImport();},true);
+      }else if(t.indexOf('create exam')>=0 || t.indexOf('إنشاء امتحان')>=0){
+        b.dataset.finalExamFix='1';
+        b.addEventListener('click',function(e){e.preventDefault();e.stopImmediatePropagation();window.openCreateExam();},true);
+      }
+    });
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bindExamButtons);else bindExamButtons();
+  new MutationObserver(bindExamButtons).observe(document.documentElement,{childList:true,subtree:true});
+})();
+</script>
 </body></html>
