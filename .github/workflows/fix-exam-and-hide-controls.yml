@@ -1,0 +1,63 @@
+name: Fix Create Exam and hide disabled controls
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-exam-and-hide-controls.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch teacher controls
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          marker='id="exam-create-and-controls-final-fix"'
+          if marker in s:
+              raise SystemExit(0)
+          js=r'''<script id="exam-create-and-controls-final-fix">
+          (function(){
+            function clean(t){return (t||'').replace(/\s+/g,' ').trim().toLowerCase();}
+            function hide(){
+              document.querySelectorAll('button,a,[role="button"],.dash-action,.nav-item,.sidebar-item').forEach(function(el){
+                var t=clean(el.textContent);
+                if(t.includes('attendance')||t.includes('attendance & absence')||t.includes('attendance and absence')||t.includes('الحضور والغياب')||t==='الحضور'||t==='الغياب'||t.includes('import pdf')||t.includes('pdf import')||t.includes('استيراد pdf')||t.includes('استيراد امتحان pdf')){
+                  el.style.setProperty('display','none','important');
+                  el.setAttribute('aria-hidden','true');
+                }
+              });
+            }
+            function examClick(e){
+              var el=e.target && e.target.closest ? e.target.closest('button,a,[role="button"]') : null;
+              if(!el)return;
+              var t=clean(el.textContent);
+              if(!t.includes('create exam') && !t.includes('إنشاء امتحان'))return;
+              e.preventDefault();e.stopImmediatePropagation();
+              try{
+                if(typeof window.__examCreateButton==='function') return window.__examCreateButton(e);
+                if(typeof window.openCreateExam==='function') return window.openCreateExam();
+                alert('Create Exam is loading. Please refresh once and try again.');
+              }catch(err){alert(err && err.message ? err.message : 'Create Exam error');}
+            }
+            hide();
+            document.addEventListener('click',examClick,true);
+            new MutationObserver(hide).observe(document.documentElement,{childList:true,subtree:true});
+            setTimeout(hide,300);setTimeout(hide,1000);setTimeout(hide,2500);
+          })();
+          </script>'''
+          s=s.replace('</body>',js+'</body>')
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Commit patch
+        run: |
+          git config user.name "chatgpt-ui-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git diff --cached --quiet && exit 0
+          git commit -m "Apply final Create Exam and disabled control fix"
+          git push
