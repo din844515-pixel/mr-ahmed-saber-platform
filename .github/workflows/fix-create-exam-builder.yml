@@ -151,7 +151,7 @@ jobs:
             window.__robustOpenCreateExam=openBuilder;
           })();
           </script>'''
-          s=s.replace('</body>', js+'</body>') if '</body>' in s else s+js
+          s=s.replace('</body>', js+override+'</body>') if '</body>' in s else s+js+override
           p.write_text(s,encoding='utf-8')
           PY
       - name: Commit injected fix
