@@ -112,7 +112,7 @@
       }
       if(isCreate(text)){
         e.preventDefault(); e.stopPropagation();
-        window.__finalOpenExam(e); return;
+        if(typeof window.__standaloneOpenExamDirect==='function') window.__standaloneOpenExamDirect(e); else if(typeof window.__robustOpenCreateExam==='function') window.__robustOpenCreateExam(e); else window.openCreateExam(e); return;
       }
       el=el.parentElement;
     }
