@@ -1615,4 +1615,57 @@ async function teacherLoginV15(){if(window.__teacherLoginBusyV15)return;window._
 window.studentLogin=studentLoginV15;window.teacherLogin=teacherLoginV15;
 setTimeout(async()=>{try{if(!await waitForSupabase())return;const {data}=await sb.auth.getSession();if(data?.session?.user?.app_metadata?.role==='teacher'&&!document.getElementById('teacherDashboard'))await loadTeacherDashboard();}catch(e){console.error('session restore v15',e);}},150);
 })();
-</script><script src="/voice-reading-exam.js"></script></body></html>
+</script><script src="/voice-reading-exam.js"></script><!-- EXAMS BUTTONS DIRECT HOTFIX -->
+<script>
+(function(){
+  function ar(){return (localStorage.getItem('platformLanguage')||'en')==='ar'}
+  window.openCreateExam=function(){
+    show('<h2>📝 '+(ar()?'إنشاء امتحان':'Create Exam')+'</h2><div class="form-grid">'+
+      '<input id="ex_title" class="input" placeholder="'+(ar()?'عنوان الامتحان':'Exam Title')+'">'+
+      '<select id="ex_grade" class="input"><option value="">'+(ar()?'اختاري المرحلة':'Select Stage')+'</option><option value="أولى إعدادي">1st Preparatory</option><option value="ثانية إعدادي">2nd Preparatory</option><option value="ثالثة إعدادي">3rd Preparatory</option><option value="أولى ثانوي">1st Secondary</option><option value="ثانية ثانوي">2nd Secondary</option><option value="ثالثة ثانوي">3rd Secondary</option><option value="كورسات">Courses</option></select>'+
+      '<input id="ex_dur" class="input" type="number" min="1" value="30" placeholder="Minutes">'+
+      '<select id="ex_answers" class="input"><option value="false">Hide Answers</option><option value="true">Show Answers</option></select>'+
+      '<textarea id="ex_questions" class="input full" style="height:180px" placeholder="'+(ar()?'اكتبي سؤالًا واحدًا في كل سطر':'Write one question per line')+'"></textarea></div>'+
+      '<button class="submit" onclick="window.__createExamDirect()">✅ '+(ar()?'إنشاء الامتحان':'Create Exam')+'</button>');
+  };
+  window.__createExamDirect=async function(){
+    const title=(document.getElementById('ex_title')?.value||'').trim();
+    const grade=(document.getElementById('ex_grade')?.value||'').trim();
+    const dur=Number(document.getElementById('ex_dur')?.value||30);
+    const qs=(document.getElementById('ex_questions')?.value||'').split(/\n+/).map(x=>x.trim()).filter(Boolean);
+    if(!title){alert(ar()?'اكتبي عنوان الامتحان أولًا.':'Enter an exam title first.');return}
+    const {data,error}=await sb.rpc('teacher_create_exam',{p_title:title,p_grade:grade,p_duration_minutes:dur,p_show_answers:document.getElementById('ex_answers')?.value==='true'});
+    if(error||!data?.success){alert(data?.message||error?.message||'Failed');return}
+    for(const q of qs){
+      const r=await sb.rpc('teacher_add_exam_question',{p_exam_id:data.exam_id,p_question_text:q,p_question_type:'written',p_points:1,p_correct_answer:null,p_options:[],p_grading_mode:'manual'});
+      if(r.error||!r.data?.success){alert(r.data?.message||r.error?.message||'Failed to save question');return}
+    }
+    closeModal(); if(typeof refreshTeacher==='function') await refreshTeacher();
+  };
+  window.openPdfImport=function(){
+    show('<h2>📄 '+(ar()?'استيراد PDF':'Import PDF')+'</h2><p class="sub">'+(ar()?'اختاري ملف PDF ثم اضغطي قراءة الملف.':'Choose a PDF file, then read it.')+'</p>'+
+      '<input id="pdfFile" class="input" type="file" accept=".pdf,application/pdf">'+
+      '<input id="pdfTitle" class="input" placeholder="'+(ar()?'عنوان الامتحان':'Exam Title')+'">'+
+      '<input id="pdfGrade" class="input" placeholder="'+(ar()?'المرحلة / الكورس':'Stage / Course')+'">'+
+      '<button class="submit" onclick="window.__readPdfDirect()">📄 '+(ar()?'قراءة PDF وإنشاء الامتحان':'Read PDF & Build Exam')+'</button><div id="pdfStatus" class="sub" style="margin-top:8px"></div>');
+  };
+  window.__readPdfDirect=async function(){
+    const file=document.getElementById('pdfFile')?.files?.[0], st=document.getElementById('pdfStatus');
+    if(!file){if(st)st.textContent=ar()?'اختاري ملف PDF أولًا.':'Choose a PDF first.';return}
+    try{
+      if(!window.pdfjsLib){if(st)st.textContent=ar()?'قارئ PDF لم يكتمل تحميله، حاولي مرة أخرى.':'PDF reader is still loading, try again.';return}
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      const pdf=await window.pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise; let text='';
+      for(let i=1;i<=pdf.numPages;i++){const tc=await (await pdf.getPage(i)).getTextContent();text+=tc.items.map(x=>x.str).join(' ')+'\n'}
+      const title=(document.getElementById('pdfTitle')?.value||file.name.replace(/\.pdf$/i,'')).trim();
+      const grade=(document.getElementById('pdfGrade')?.value||'General English').trim();
+      const ex=await sb.rpc('teacher_create_exam',{p_title:title,p_grade:grade,p_duration_minutes:30,p_show_answers:false});
+      if(ex.error||!ex.data?.success)throw(ex.error||new Error(ex.data?.message||'Failed'));
+      const lines=text.split(/\n+/).map(x=>x.trim()).filter(Boolean);
+      for(const q of lines.slice(0,100)){const rr=await sb.rpc('teacher_add_exam_question',{p_exam_id:ex.data.exam_id,p_question_text:q,p_question_type:'written',p_points:1,p_correct_answer:null,p_options:[],p_grading_mode:'manual'});if(rr.error||!rr.data?.success)throw(rr.error||new Error(rr.data?.message||'Failed'))}
+      closeModal(); if(typeof refreshTeacher==='function')await refreshTeacher();
+    }catch(e){console.error(e);if(st)st.textContent=e?.message|| (ar()?'تعذر قراءة الملف.':'Could not read PDF.')}
+  };
+})();
+</script>
+</body></html>
