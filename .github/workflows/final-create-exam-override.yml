@@ -22,7 +22,7 @@ jobs:
           marker='id="create-exam-final-override"'
           if marker in s:
               raise SystemExit(0)
-          js=r'''<script id="create-exam-final-v2">
+          js=r'''<script id="create-exam-final-v3">
           (function(){
             'use strict';
             function isCreate(el){
@@ -64,5 +64,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html
           git diff --cached --quiet && exit 0
-          git commit -m "Final Create Exam button override [create-exam-final]"
+          git commit -m "Final Create Exam direct bridge [create-exam-v3]"
           git push
