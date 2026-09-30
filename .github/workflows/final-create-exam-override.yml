@@ -56,6 +56,51 @@ jobs:
           })();
           </script>'''
           s=s.replace('</body>',js+'</body>') if '</body>' in s else s+js
+          # Replace the earlier capture hotfix that was blocking later Create Exam handlers.
+          import re
+          safe_capture = r'''<!-- CREATE-EXAM-CAPTURE-FIX-2026-09-30 -->
+<script>
+(function(){
+  function isCreate(el){
+    if(!el) return false;
+    var t=(el.textContent||'').replace(/\s+/g,' ').trim().toLowerCase();
+    return t.indexOf('create exam')>=0 || t.indexOf('إنشاء امتحان')>=0;
+  }
+  document.addEventListener('click',function(e){
+    var el=e.target&&e.target.closest?e.target.closest('button,a,[role="button"],.dash-action'):null;
+    if(!isCreate(el)) return;
+    var fn=window.__robustOpenCreateExam||window.__standaloneOpenExamDirect||window.__standaloneOpenExam;
+    if(typeof fn==='function'){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      try{fn(e);}catch(err){console.error('Create Exam capture',err);}
+    }
+  },true);
+})();
+</script>'''
+          s=re.sub(r'<!-- CREATE-EXAM-CAPTURE-FIX-2026-09-30 -->.*?</script>', safe_capture, s, count=1, flags=re.S)
+          safe_final = r'''<script id="create-exam-final-override">
+(function(){
+  function openFixed(e){
+    if(e){e.preventDefault();e.stopImmediatePropagation();e.stopPropagation();}
+    var fn=window.__robustOpenCreateExam||window.__standaloneOpenExamDirect||window.__standaloneOpenExam;
+    if(typeof fn==='function') return fn(e);
+    return false;
+  }
+  window.__examCreateButton=openFixed;
+  function wire(){
+    document.querySelectorAll('button,a,[role="button"],.dash-action').forEach(function(el){
+      var t=(el.textContent||'').replace(/\s+/g,' ').trim().toLowerCase();
+      if(t.indexOf('create exam')<0&&t.indexOf('إنشاء امتحان')<0)return;
+      el.disabled=false;el.style.pointerEvents='auto';el.onclick=openFixed;
+    });
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire);else wire();
+  new MutationObserver(wire).observe(document.documentElement,{childList:true,subtree:true});
+  setTimeout(wire,300);setTimeout(wire,1000);setTimeout(wire,2500);
+})();
+</script>'''
+          s=re.sub(r'<script id="create-exam-final-override">.*?</script>', safe_final, s, count=1, flags=re.S)
           p.write_text(s,encoding='utf-8')
           PY
       - name: Commit final fix
@@ -64,5 +109,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html
           git diff --cached --quiet && exit 0
-          git commit -m "Final Create Exam direct bridge [create-exam-v3]"
+          git commit -m "Patch Create Exam capture and remove alert fallback [create-exam-v4]"
           git push
