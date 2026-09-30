@@ -59,6 +59,9 @@ jobs:
           import re
           s=re.sub(r'<!-- CREATE-EXAM-CAPTURE-FIX-2026-09-30 -->.*?</script>', '', s, count=1, flags=re.S)
           s=re.sub(r'<script id="create-exam-final-override">.*?</script>', '', s, count=1, flags=re.S)
+          # Remove the stale v2 handler that overwrites the working v1 Create Exam button.
+          s=re.sub(r'<script id=\\?"robust-create-exam-builder-v2\\?">.*?</script>', '', s, count=1, flags=re.S)
+          s=s.replace('<script id=\\"robust-create-exam-builder-v2\\">','')
           p.write_text(s,encoding='utf-8')
           PY
       - name: Commit final fix
