@@ -19,10 +19,10 @@ jobs:
           from pathlib import Path
           p=Path('index.html')
           s=p.read_text(encoding='utf-8')
-          marker='id="create-exam-final-v3"'
+          marker='id="create-exam-final-v4"'
           if marker in s:
               raise SystemExit(0)
-          js=r'''<script id="create-exam-final-v3">
+          js=r'''<script id="create-exam-final-v4">
           (function(){
             'use strict';
             function isCreate(el){
