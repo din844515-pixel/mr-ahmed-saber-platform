@@ -2429,4 +2429,28 @@ function boot(){addButton();setTimeout(createPrep1Exam,2500);}
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",boot);else boot();
 new MutationObserver(addButton).observe(document.documentElement,{childList:true,subtree:true});
 })();
-</script></body></html>
+</script>
+<!-- CREATE-EXAM-CAPTURE-FIX-2026-09-30 -->
+<script>
+(function(){
+  'use strict';
+  function isCreate(el){
+    if(!el) return false;
+    var t=(el.textContent||'').replace(/\s+/g,' ').trim().toLowerCase();
+    return t.indexOf('create exam')>=0 || t.indexOf('إنشاء امتحان')>=0;
+  }
+  function open(e){
+    if(e){e.preventDefault();e.stopImmediatePropagation();}
+    var fn=window.__standaloneOpenExamDirect||window.__standaloneOpenExam||window.__robustOpenCreateExam;
+    if(typeof fn==='function'){
+      try{return fn(e);}catch(err){console.error('Create Exam capture fix',err);}
+    }
+    return false;
+  }
+  document.addEventListener('click',function(e){
+    var el=e.target&&e.target.closest ? e.target.closest('button,a,[role="button"],.dash-action') : e.target;
+    if(isCreate(el)) return open(e);
+  },true);
+})();
+</script>
+</body></html>
