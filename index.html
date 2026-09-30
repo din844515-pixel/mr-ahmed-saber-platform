@@ -2233,34 +2233,6 @@ setTimeout(async()=>{try{if(!await waitForSupabase())return;const {data}=await s
   new MutationObserver(wire).observe(document.documentElement,{childList:true,subtree:true});
   setTimeout(wire,300);setTimeout(wire,1000);setTimeout(wire,2500);
 })();
-</script><script id="create-exam-final-override">
-(function(){
-  function openFixed(e){
-    if(e){e.preventDefault();e.stopImmediatePropagation();}
-    if(typeof window.__robustOpenCreateExam==='function'){
-      return window.__robustOpenCreateExam(e);
-    }
-    if(typeof window.openCreateExam==='function' && window.openCreateExam!==openFixed){
-      return window.openCreateExam(e);
-    }
-    alert('إنشاء الامتحان لم يكتمل تحميله. حدّثي الصفحة وحاولي مرة أخرى.');
-    return false;
-  }
-  window.__examCreateButton=openFixed;
-  window.openCreateExam=openFixed;
-  function wire(){
-    document.querySelectorAll('button,a,[role="button"],.dash-action').forEach(function(el){
-      var t=(el.textContent||'').replace(/\s+/g,' ').trim().toLowerCase();
-      if(t.indexOf('create exam')<0 && t.indexOf('إنشاء امتحان')<0) return;
-      el.disabled=false;
-      el.style.pointerEvents='auto';
-      el.onclick=openFixed;
-    });
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire);else wire();
-  new MutationObserver(wire).observe(document.documentElement,{childList:true,subtree:true});
-  setTimeout(wire,300);setTimeout(wire,1000);setTimeout(wire,2500);
-})();
 </script><script id="standalone-create-exam-v1">
 (function(){
   function ar(){return (localStorage.getItem('platformLanguage')||'en')==='ar';}
@@ -2430,8 +2402,8 @@ if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",
 new MutationObserver(addButton).observe(document.documentElement,{childList:true,subtree:true});
 })();
 </script>
-<!-- CREATE-EXAM-CAPTURE-FIX-2026-09-30 -->
-<script>
+
+<script id="create-exam-final-v3">
 (function(){
   'use strict';
   function isCreate(el){
@@ -2439,21 +2411,31 @@ new MutationObserver(addButton).observe(document.documentElement,{childList:true
     var t=(el.textContent||'').replace(/\s+/g,' ').trim().toLowerCase();
     return t.indexOf('create exam')>=0 || t.indexOf('إنشاء امتحان')>=0;
   }
-  function open(e){
-    if(e){e.preventDefault();e.stopImmediatePropagation();}
-    var fn=window.__standaloneOpenExamDirect||window.__standaloneOpenExam||window.__robustOpenCreateExam;
-    if(typeof fn==='function'){
-      try{return fn(e);}catch(err){console.error('Create Exam capture fix',err);}
-    }
+  function openDirect(e){
+    if(e){e.preventDefault();e.stopImmediatePropagation();e.stopPropagation();}
+    var fn=window.__robustOpenCreateExam;
+    if(typeof fn==='function') return fn(e);
+    var fn2=window.__standaloneOpenExamDirect||window.__standaloneOpenExam;
+    if(typeof fn2==='function') return fn2(e);
     return false;
   }
+  function wire(){
+    document.querySelectorAll('button,a,[role="button"],.dash-action').forEach(function(el){
+      if(!isCreate(el)) return;
+      el.disabled=false;
+      el.style.pointerEvents='auto';
+      el.onclick=openDirect;
+    });
+  }
   document.addEventListener('click',function(e){
-    var el=e.target&&e.target.closest ? e.target.closest('button,a,[role="button"],.dash-action') : e.target;
-    if(isCreate(el)) return open(e);
+    var el=e.target&&e.target.closest?e.target.closest('button,a,[role="button"],.dash-action'):null;
+    if(isCreate(el)) openDirect(e);
   },true);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire);else wire();
+  new MutationObserver(wire).observe(document.documentElement,{childList:true,subtree:true});
+  setTimeout(wire,300);setTimeout(wire,1000);setTimeout(wire,2500);
 })();
-</script>
-<script id="create-exam-final-v3">
+</script><script id="create-exam-final-v4">
 (function(){
   'use strict';
   function isCreate(el){
