@@ -1615,241 +1615,9 @@ async function teacherLoginV15(){if(window.__teacherLoginBusyV15)return;window._
 window.studentLogin=studentLoginV15;window.teacherLogin=teacherLoginV15;
 setTimeout(async()=>{try{if(!await waitForSupabase())return;const {data}=await sb.auth.getSession();if(data?.session?.user?.app_metadata?.role==='teacher'&&!document.getElementById('teacherDashboard'))await loadTeacherDashboard();}catch(e){console.error('session restore v15',e);}},150);
 })();
-</script><script src="/voice-reading-exam.js"></script><!-- EXAMS BUTTONS DIRECT HOTFIX -->
-<script>
-(function(){
-  function ar(){return (localStorage.getItem('platformLanguage')||'en')==='ar'}
-  window.openCreateExam=function(){
-    show('<h2>📝 '+(ar()?'إنشاء امتحان':'Create Exam')+'</h2><div class="form-grid">'+
-      '<input id="ex_title" class="input" placeholder="'+(ar()?'عنوان الامتحان':'Exam Title')+'">'+
-      '<select id="ex_grade" class="input"><option value="">'+(ar()?'اختاري المرحلة':'Select Stage')+'</option><option value="أولى إعدادي">1st Preparatory</option><option value="ثانية إعدادي">2nd Preparatory</option><option value="ثالثة إعدادي">3rd Preparatory</option><option value="أولى ثانوي">1st Secondary</option><option value="ثانية ثانوي">2nd Secondary</option><option value="ثالثة ثانوي">3rd Secondary</option><option value="كورسات">Courses</option></select>'+
-      '<input id="ex_dur" class="input" type="number" min="1" value="30" placeholder="Minutes">'+
-      '<select id="ex_answers" class="input"><option value="false">Hide Answers</option><option value="true">Show Answers</option></select>'+
-      '<textarea id="ex_questions" class="input full" style="height:180px" placeholder="'+(ar()?'اكتبي سؤالًا واحدًا في كل سطر':'Write one question per line')+'"></textarea></div>'+
-      '<button class="submit" onclick="window.__createExamDirect()">✅ '+(ar()?'إنشاء الامتحان':'Create Exam')+'</button>');
-  };
-  window.__createExamDirect=async function(){
-    const title=(document.getElementById('ex_title')?.value||'').trim();
-    const grade=(document.getElementById('ex_grade')?.value||'').trim();
-    const dur=Number(document.getElementById('ex_dur')?.value||30);
-    const qs=(document.getElementById('ex_questions')?.value||'').split(/\n+/).map(x=>x.trim()).filter(Boolean);
-    if(!title){alert(ar()?'اكتبي عنوان الامتحان أولًا.':'Enter an exam title first.');return}
-    const {data,error}=await sb.rpc('teacher_create_exam',{p_title:title,p_grade:grade,p_duration_minutes:dur,p_show_answers:document.getElementById('ex_answers')?.value==='true'});
-    if(error||!data?.success){alert(data?.message||error?.message||'Failed');return}
-    for(const q of qs){
-      const r=await sb.rpc('teacher_add_exam_question',{p_exam_id:data.exam_id,p_question_text:q,p_question_type:'written',p_points:1,p_correct_answer:null,p_options:[],p_grading_mode:'manual'});
-      if(r.error||!r.data?.success){alert(r.data?.message||r.error?.message||'Failed to save question');return}
-    }
-    closeModal(); if(typeof refreshTeacher==='function') await refreshTeacher();
-  };
-  window.openPdfImport=function(){
-    show('<h2>📄 '+(ar()?'استيراد PDF':'Import PDF')+'</h2><p class="sub">'+(ar()?'اختاري ملف PDF ثم اضغطي قراءة الملف.':'Choose a PDF file, then read it.')+'</p>'+
-      '<input id="pdfFile" class="input" type="file" accept=".pdf,application/pdf">'+
-      '<input id="pdfTitle" class="input" placeholder="'+(ar()?'عنوان الامتحان':'Exam Title')+'">'+
-      '<input id="pdfGrade" class="input" placeholder="'+(ar()?'المرحلة / الكورس':'Stage / Course')+'">'+
-      '<button class="submit" onclick="window.__readPdfDirect()">📄 '+(ar()?'قراءة PDF وإنشاء الامتحان':'Read PDF & Build Exam')+'</button><div id="pdfStatus" class="sub" style="margin-top:8px"></div>');
-  };
-  window.__readPdfDirect=async function(){
-    const file=document.getElementById('pdfFile')?.files?.[0], st=document.getElementById('pdfStatus');
-    if(!file){if(st)st.textContent=ar()?'اختاري ملف PDF أولًا.':'Choose a PDF first.';return}
-    try{
-      if(!window.pdfjsLib){if(st)st.textContent=ar()?'قارئ PDF لم يكتمل تحميله، حاولي مرة أخرى.':'PDF reader is still loading, try again.';return}
-      window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-      const pdf=await window.pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise; let text='';
-      for(let i=1;i<=pdf.numPages;i++){const tc=await (await pdf.getPage(i)).getTextContent();text+=tc.items.map(x=>x.str).join(' ')+'\n'}
-      const title=(document.getElementById('pdfTitle')?.value||file.name.replace(/\.pdf$/i,'')).trim();
-      const grade=(document.getElementById('pdfGrade')?.value||'General English').trim();
-      const ex=await sb.rpc('teacher_create_exam',{p_title:title,p_grade:grade,p_duration_minutes:30,p_show_answers:false});
-      if(ex.error||!ex.data?.success)throw(ex.error||new Error(ex.data?.message||'Failed'));
-      const lines=text.split(/\n+/).map(x=>x.trim()).filter(Boolean);
-      for(const q of lines.slice(0,100)){const rr=await sb.rpc('teacher_add_exam_question',{p_exam_id:ex.data.exam_id,p_question_text:q,p_question_type:'written',p_points:1,p_correct_answer:null,p_options:[],p_grading_mode:'manual'});if(rr.error||!rr.data?.success)throw(rr.error||new Error(rr.data?.message||'Failed'))}
-      closeModal(); if(typeof refreshTeacher==='function')await refreshTeacher();
-    }catch(e){console.error(e);if(st)st.textContent=e?.message|| (ar()?'تعذر قراءة الملف.':'Could not read PDF.')}
-  };
-})();
-</script>
-<!-- EXAMS BUTTONS FINAL FIX -->
-<script>
-(function(){
-  function ar(){return (localStorage.getItem('platformLanguage')||'en')==='ar';}
-  function safeShow(html){ if(typeof window.show==='function') window.show(html); else alert(ar()?'تعذر فتح النافذة.':'Unable to open window.'); }
+</script><script src="/voice-reading-exam.js"></script>
 
-  window.openCreateExam=function(){
-    safeShow(
-      '<h2>📝 '+(ar()?'إنشاء امتحان':'Create Exam')+'</h2>'+
-      '<div class="form-grid">'+
-      '<input id="ex_title" class="input" placeholder="'+(ar()?'عنوان الامتحان':'Exam Title')+'">'+
-      '<select id="ex_grade" class="input">'+
-      '<option value="">'+(ar()?'اختاري المرحلة':'Select Stage')+'</option>'+
-      '<option value="أولى إعدادي">1st Preparatory</option>'+
-      '<option value="ثانية إعدادي">2nd Preparatory</option>'+
-      '<option value="ثالثة إعدادي">3rd Preparatory</option>'+
-      '<option value="أولى ثانوي">1st Secondary</option>'+
-      '<option value="ثانية ثانوي">2nd Secondary</option>'+
-      '<option value="ثالثة ثانوي">3rd Secondary</option>'+
-      '<option value="كورسات">Courses</option>'+
-      '</select>'+
-      '<input id="ex_dur" class="input" type="number" min="1" value="30" placeholder="Minutes">'+
-      '<select id="ex_answers" class="input"><option value="false">Hide Answers</option><option value="true">Show Answers</option></select>'+
-      '</div>'+
-      '<button class="submit" id="finalCreateExamBtn">✅ '+(ar()?'إنشاء الامتحان':'Create Exam')+'</button>'
-    );
-    setTimeout(function(){
-      var b=document.getElementById('finalCreateExamBtn');
-      if(b) b.onclick=window.__finalCreateExam;
-    },0);
-  };
-
-  window.__finalCreateExam=async function(){
-    try{
-      var title=(document.getElementById('ex_title')?.value||'').trim();
-      var grade=(document.getElementById('ex_grade')?.value||'').trim();
-      var duration=Number(document.getElementById('ex_dur')?.value||30);
-      var answers=document.getElementById('ex_answers')?.value==='true';
-      if(!title){alert(ar()?'اكتبي عنوان الامتحان أولًا.':'Enter an exam title first.');return;}
-      var r=await sb.rpc('teacher_create_exam',{p_title:title,p_grade:grade,p_duration_minutes:duration,p_show_answers:answers});
-      if(r.error||!r.data?.success){alert(r.data?.message||r.error?.message||'Failed to create exam');return;}
-      alert(ar()?'تم إنشاء الامتحان بنجاح ✅':'Exam created successfully ✅');
-      if(typeof window.closeModal==='function') window.closeModal();
-      if(typeof window.refreshTeacher==='function') await window.refreshTeacher();
-    }catch(e){console.error(e);alert(e?.message||'Error creating exam');}
-  };
-
-  window.openPdfImport=function(){
-    safeShow(
-      '<h2>📄 '+(ar()?'استيراد PDF':'Import PDF')+'</h2>'+
-      '<p class="sub">'+(ar()?'اختاري ملف PDF ثم اضغطي قراءة الملف.':'Choose a PDF file, then read it.')+'</p>'+
-      '<input id="pdfFile" class="input" type="file" accept=".pdf,application/pdf">'+
-      '<input id="pdfTitle" class="input" placeholder="'+(ar()?'عنوان الامتحان':'Exam Title')+'">'+
-      '<input id="pdfGrade" class="input" placeholder="'+(ar()?'المرحلة / الكورس':'Stage / Course')+'">'+
-      '<button class="submit" id="finalReadPdfBtn">📄 '+(ar()?'قراءة PDF':'Read PDF')+'</button>'+
-      '<div id="pdfStatus" class="sub" style="margin-top:8px"></div>'
-    );
-    setTimeout(function(){
-      var b=document.getElementById('finalReadPdfBtn');
-      if(b) b.onclick=window.__finalReadPdf;
-    },0);
-  };
-
-  window.__finalReadPdf=async function(){
-    var st=document.getElementById('pdfStatus'), file=document.getElementById('pdfFile')?.files?.[0];
-    if(!file){if(st)st.textContent=ar()?'اختاري ملف PDF أولًا.':'Choose a PDF first.';return;}
-    try{
-      if(!window.pdfjsLib){if(st)st.textContent=ar()?'قارئ PDF لم يكتمل تحميله، حاولي مرة أخرى.':'PDF reader is still loading, try again.';return;}
-      window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-      if(st)st.textContent=ar()?'جاري قراءة الملف...':'Reading PDF...';
-      var pdf=await window.pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise, text='';
-      for(var i=1;i<=pdf.numPages;i++){
-        var page=await pdf.getPage(i), tc=await page.getTextContent();
-        text+=tc.items.map(function(x){return x.str;}).join(' ')+'\n';
-      }
-      var questions=typeof window.parseImportedExamText==='function'?window.parseImportedExamText(text):[];
-      if(!questions.length){if(st)st.textContent=ar()?'تمت قراءة الملف لكن لم يتم التعرف على الأسئلة.':'PDF was read, but no questions were detected.';return;}
-      window.__pdfExam={fileName:file.name,title:(document.getElementById('pdfTitle')?.value||file.name.replace(/\.pdf$/i,'')).trim(),grade:(document.getElementById('pdfGrade')?.value||'').trim(),text:text,questions:questions};
-      if(st)st.innerHTML=(ar()?'تمت القراءة بنجاح ✅ عدد الأسئلة: ':'PDF read successfully ✅ Questions: ')+questions.length;
-      st.insertAdjacentHTML('afterend','<button class="submit" id="finalSavePdfBtn" style="margin-top:10px">💾 '+(ar()?'حفظ الامتحان كمسودة':'Save Draft Exam')+'</button>');
-      var save=document.getElementById('finalSavePdfBtn');
-      if(save)save.onclick=window.__finalSavePdf;
-    }catch(e){console.error(e);if(st)st.textContent=(ar()?'حدث خطأ أثناء قراءة PDF: ':'PDF error: ')+(e?.message||e);}
-  };
-
-  window.__finalSavePdf=async function(){
-    try{
-      if(!window.__pdfExam?.questions?.length){alert(ar()?'لا توجد أسئلة محفوظة.':'No questions found.');return;}
-      if(typeof window.saveImportedPdfExam==='function'){
-        await window.saveImportedPdfExam();
-        return;
-      }
-      var p=window.__pdfExam;
-      var ex=await sb.rpc('teacher_create_exam',{p_title:p.title,p_grade:p.grade,p_duration_minutes:30,p_show_answers:false});
-      if(ex.error||!ex.data?.success)throw(ex.error||new Error(ex.data?.message||'Failed'));
-      for(var q of p.questions){
-        var rr=await sb.rpc('teacher_add_exam_question',{p_exam_id:ex.data.exam_id,p_question_text:q.question||'',p_question_type:q.type||'mcq',p_points:q.points||1,p_correct_answer:q.correct||null,p_options:q.options||[],p_grading_mode:q.grading_mode||'manual'});
-        if(rr.error)throw rr.error;
-      }
-      if(typeof window.closeModal==='function')window.closeModal();
-      if(typeof window.refreshTeacher==='function')await window.refreshTeacher();
-      alert(ar()?'تم إنشاء الامتحان من PDF بنجاح ✅':'Exam created from PDF successfully ✅');
-    }catch(e){console.error(e);alert(e?.message||'Error saving exam');}
-  };
-
-  function bindExamButtons(){
-    document.querySelectorAll('button').forEach(function(b){
-      if(b.dataset.finalExamFix==='1')return;
-      var t=(b.textContent||'').trim().toLowerCase();
-      if(t.indexOf('import pdf')>=0 || t.indexOf('استيراد pdf')>=0){
-        b.dataset.finalExamFix='1';
-        b.addEventListener('click',function(e){e.preventDefault();e.stopImmediatePropagation();window.openPdfImport();},true);
-      }else if(t.indexOf('create exam')>=0 || t.indexOf('إنشاء امتحان')>=0){
-        b.dataset.finalExamFix='1';
-        b.addEventListener('click',function(e){e.preventDefault();e.stopImmediatePropagation();window.openCreateExam();},true);
-      }
-    });
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bindExamButtons);else bindExamButtons();
-  new MutationObserver(bindExamButtons).observe(document.documentElement,{childList:true,subtree:true});
-})();
-</script>
-<script id="exam-buttons-guaranteed-fix">
-(function(){
-  function ar(){return (localStorage.getItem('platformLanguage')||'en')==='ar';}
-  function getShow(){return typeof window.show==='function'?window.show:null;}
-  window.__examCreateButton=function(e){
-    if(e){e.preventDefault();e.stopPropagation();}
-    var show=getShow();
-    if(!show){alert('المنصة لم تكتمل بعد، اعملي تحديث للصفحة.');return false;}
-    show('<h2>📝 '+(ar()?'إنشاء امتحان':'Create Exam')+'</h2>'+
-      '<div class="form-grid"><input id="fx_ex_title" class="input" placeholder="'+(ar()?'عنوان الامتحان':'Exam Title')+'">'+
-      '<select id="fx_ex_grade" class="input"><option value="">'+(ar()?'اختاري المرحلة':'Select Stage')+'</option>'+
-      '<option value="أولى إعدادي">1st Preparatory</option><option value="ثانية إعدادي">2nd Preparatory</option><option value="ثالثة إعدادي">3rd Preparatory</option>'+
-      '<option value="أولى ثانوي">1st Secondary</option><option value="ثانية ثانوي">2nd Secondary</option><option value="ثالثة ثانوي">3rd Secondary</option><option value="كورسات">Courses</option></select>'+
-      '<input id="fx_ex_dur" class="input" type="number" min="1" value="30"><select id="fx_ex_answers" class="input"><option value="false">Hide Answers</option><option value="true">Show Answers</option></select></div>'+
-      '<button type="button" class="submit" id="fxCreateSubmit">✅ '+(ar()?'إنشاء الامتحان':'Create Exam')+'</button>');
-    var b=document.getElementById('fxCreateSubmit');
-    if(b)b.onclick=async function(){
-      try{
-        var r=await sb.rpc('teacher_create_exam',{p_title:(document.getElementById('fx_ex_title').value||'').trim(),p_grade:document.getElementById('fx_ex_grade').value,p_duration_minutes:Number(document.getElementById('fx_ex_dur').value||30),p_show_answers:document.getElementById('fx_ex_answers').value==='true'});
-        if(r.error||!r.data?.success){alert(r.data?.message||r.error?.message||'Failed');return;}
-        if(typeof window.closeModal==='function')window.closeModal();
-        if(typeof window.refreshTeacher==='function')await window.refreshTeacher();
-        alert(ar()?'تم إنشاء الامتحان بنجاح ✅':'Exam created successfully ✅');
-      }catch(x){alert(x?.message||'Error');}
-    };
-    return false;
-  };
-  window.__examPdfButton=function(e){
-    if(e){e.preventDefault();e.stopPropagation();}
-    var show=getShow();
-    if(!show){alert('المنصة لم تكتمل بعد، اعملي تحديث للصفحة.');return false;}
-    show('<h2>📄 '+(ar()?'استيراد PDF':'Import PDF')+'</h2><p class="sub">'+(ar()?'اختاري ملف PDF ثم اضغطي قراءة الملف.':'Choose a PDF file, then read it.')+'</p>'+
-      '<input id="fx_pdf_file" class="input" type="file" accept=".pdf,application/pdf"><input id="fx_pdf_title" class="input" placeholder="'+(ar()?'عنوان الامتحان':'Exam Title')+'"><input id="fx_pdf_grade" class="input" placeholder="'+(ar()?'المرحلة / الكورس':'Stage / Course')+'">'+
-      '<button type="button" class="submit" id="fxPdfRead">📄 '+(ar()?'قراءة PDF':'Read PDF')+'</button><div id="fxPdfStatus" class="sub"></div>');
-    var b=document.getElementById('fxPdfRead');
-    if(b)b.onclick=async function(){
-      var st=document.getElementById('fxPdfStatus'),file=document.getElementById('fx_pdf_file').files[0];
-      if(!file){st.textContent=ar()?'اختاري ملف PDF أولًا.':'Choose a PDF first.';return;}
-      try{
-        if(!window.pdfjsLib){st.textContent='PDF reader loading...';return;}
-        window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-        st.textContent=ar()?'جاري قراءة الملف...':'Reading PDF...';
-        var pdf=await window.pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise,txt='';
-        for(var i=1;i<=pdf.numPages;i++){var tc=await (await pdf.getPage(i)).getTextContent();txt+=tc.items.map(function(x){return x.str;}).join(' ')+'\n';}
-        var qs=typeof window.parseImportedExamText==='function'?window.parseImportedExamText(txt):[];
-        if(!qs.length){st.textContent=ar()?'تمت قراءة الملف لكن لم يتم التعرف على الأسئلة.':'No questions detected.';return;}
-        var title=(document.getElementById('fx_pdf_title').value||file.name.replace(/\.pdf$/i,'')).trim();
-        var grade=(document.getElementById('fx_pdf_grade').value||'').trim();
-        var ex=await sb.rpc('teacher_create_exam',{p_title:title,p_grade:grade,p_duration_minutes:30,p_show_answers:false});
-        if(ex.error||!ex.data?.success)throw(ex.error||new Error(ex.data?.message||'Failed'));
-        for(var q of qs){var rr=await sb.rpc('teacher_add_exam_question',{p_exam_id:ex.data.exam_id,p_question_text:q.question||'',p_question_type:q.type||'mcq',p_points:q.points||1,p_correct_answer:q.correct||null,p_options:q.options||[],p_grading_mode:q.grading_mode||'manual'});if(rr.error)throw rr.error;}
-        if(typeof window.closeModal==='function')window.closeModal();
-        if(typeof window.refreshTeacher==='function')await window.refreshTeacher();
-        alert(ar()?'تم إنشاء الامتحان من PDF بنجاح ✅':'Exam created from PDF successfully ✅');
-      }catch(x){st.textContent=x?.message||'PDF error';}
-    };
-    return false;
-  };
-})();
-</script><script id="hide-disabled-teacher-features">
+<script id="hide-disabled-teacher-features">
 (function(){
   function hideDisabled(){
     document.querySelectorAll('button').forEach(function(b){
@@ -1911,50 +1679,6 @@ setTimeout(async()=>{try{if(!await waitForSupabase())return;const {data}=await s
   new MutationObserver(wire).observe(document.documentElement,{childList:true,subtree:true});
   setTimeout(wire,300);setTimeout(wire,1000);setTimeout(wire,2500);
 })();
-</script><script id="create-exam-direct-final-fix">
-(function(){
-  function isCreate(el){
-    if(!el) return false;
-    var t=(el.textContent||'').replace(/\s+/g,' ').trim().toLowerCase();
-    return t.includes('create exam') || t.includes('إنشاء امتحان');
-  }
-  function open(){
-    if(typeof window.openCreateExam==='function'){
-      window.openCreateExam();
-      return true;
-    }
-    if(typeof window.__examCreateButton==='function'){
-      window.__examCreateButton();
-      return true;
-    }
-    return false;
-  }
-  function wire(){
-    document.querySelectorAll('button,a,[role="button"],.dash-action').forEach(function(el){
-      if(!isCreate(el)) return;
-      el.onclick=function(e){
-        e.preventDefault();
-        e.stopPropagation();
-        return open();
-      };
-      el.style.pointerEvents='auto';
-      el.disabled=false;
-    });
-  }
-  document.addEventListener('click',function(e){
-    var el=e.target && e.target.closest ? e.target.closest('button,a,[role="button"],.dash-action') : null;
-    if(!isCreate(el)) return;
-    e.preventDefault();
-    e.stopImmediatePropagation();
-    open();
-  },true);
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',wire);
-  else wire();
-  new MutationObserver(wire).observe(document.documentElement,{childList:true,subtree:true});
-  setTimeout(wire,300);
-  setTimeout(wire,1000);
-  setTimeout(wire,2500);
-})();
 </script><script id="exam-preview-fallback">
 (function(){
   window.openExamBuilderV9 = async function(examId,title,grade){
@@ -1985,150 +1709,6 @@ setTimeout(async()=>{try{if(!await waitForSupabase())return;const {data}=await s
     }catch(e){ alert('تعذر فتح الأسئلة: '+(e.message||e)); }
   };
 })();
-</script><script id="standalone-create-exam-v1">
-(function(){
-  function ar(){return (localStorage.getItem('platformLanguage')||'en')==='ar';}
-  function closeBox(){var x=document.getElementById('standaloneExamBox');if(x)x.remove();}
-  function addQuestion(){
-    var c=document.getElementById('standaloneQs'), n=c.children.length+1, d=document.createElement('div');
-    d.style='border:1px solid #e1e7ef;border-radius:12px;padding:12px;margin:10px 0;background:#fff';
-    d.innerHTML='<div style="font-weight:800;margin-bottom:7px">'+(ar()?'السؤال ':'Question ')+n+'</div>'+
-      '<input class="input sx-q" style="width:100%;margin:5px 0" placeholder="'+(ar()?'نص السؤال':'Question text')+'">'+
-      '<input class="input sx-o" style="width:100%;margin:5px 0" placeholder="A">'+
-      '<input class="input sx-o" style="width:100%;margin:5px 0" placeholder="B">'+
-      '<input class="input sx-o" style="width:100%;margin:5px 0" placeholder="C">'+
-      '<input class="input sx-o" style="width:100%;margin:5px 0" placeholder="D">'+
-      '<select class="input sx-c" style="width:100%;margin:5px 0"><option value="">'+(ar()?'الإجابة الصحيحة':'Correct answer')+'</option><option>A</option><option>B</option><option>C</option><option>D</option></select>'+
-      '<button type="button" class="btn sx-rm" style="margin-top:5px">'+(ar()?'حذف السؤال':'Remove question')+'</button>';
-    c.appendChild(d); d.querySelector('.sx-rm').onclick=function(){d.remove();};
-  }
-  async function saveExam(){
-    var msg=document.getElementById('standaloneMsg'), title=(document.getElementById('standaloneTitle').value||'').trim();
-    var grade=document.getElementById('standaloneGrade').value, dur=Number(document.getElementById('standaloneDur').value||30), show=document.getElementById('standaloneShow').value==='true';
-    var rows=[...document.querySelectorAll('#standaloneQs > div')];
-    if(!title){msg.textContent=ar()?'اكتبي عنوان الامتحان أولًا.':'Enter the exam title first.';return;}
-    if(!rows.length){msg.textContent=ar()?'أضيفي سؤالًا واحدًا على الأقل.':'Add at least one question.';return;}
-    if(!window.sb){msg.textContent=ar()?'اتصال قاعدة البيانات غير متاح.':'Database connection unavailable.';return;}
-    msg.textContent=ar()?'جاري إنشاء الامتحان...':'Creating exam...';
-    try{
-      var ex=await window.sb.rpc('teacher_create_exam',{p_title:title,p_grade:grade,p_duration_minutes:dur,p_show_answers:show});
-      if(ex.error||!ex.data?.success) throw(ex.error||new Error(ex.data?.message||'Failed to create exam'));
-      for(var i=0;i<rows.length;i++){
-        var row=rows[i], q=(row.querySelector('.sx-q').value||'').trim(), opts=[...row.querySelectorAll('.sx-o')].map(function(x){return (x.value||'').trim();}), cor=row.querySelector('.sx-c').value||null;
-        if(!q) throw new Error((ar()?'السؤال رقم ':'Question ')+(i+1)+(ar()?' فارغ.':' is empty.'));
-        var rr=await window.sb.rpc('teacher_add_exam_question',{p_exam_id:ex.data.exam_id,p_question_text:q,p_question_type:'mcq',p_points:1,p_correct_answer:cor,p_options:opts,p_grading_mode:'auto'});
-        if(rr.error) throw rr.error;
-      }
-      closeBox();
-      if(typeof window.refreshTeacher==='function') await window.refreshTeacher();
-      if(typeof window.showTeacherSection==='function') window.showTeacherSection('exams');
-      alert(ar()?'تم إنشاء الامتحان بنجاح ✅':'Exam created successfully ✅');
-    }catch(e){
-      console.error(e);
-      msg.textContent=(ar()?'حدث خطأ: ':'Error: ')+(e&&e.message||e);
-    }
-  }
-  function openStandalone(e){
-    if(e){e.preventDefault();e.stopImmediatePropagation();}
-    closeBox();
-    var b=document.createElement('div'); b.id='standaloneExamBox';
-    b.style='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:14px';
-    b.innerHTML='<div style="background:#fff;border-radius:18px;width:min(760px,100%);max-height:94vh;overflow:auto;padding:18px;direction:'+(ar()?'rtl':'ltr')+'">'+
-      '<div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0;color:#062b57">📝 '+(ar()?'إنشاء امتحان':'Create Exam')+'</h2><button id="standaloneClose" type="button" class="btn">✕</button></div>'+
-      '<div class="form-grid" style="margin-top:12px"><input id="standaloneTitle" class="input" placeholder="'+(ar()?'عنوان الامتحان':'Exam Title')+'">'+
-      '<select id="standaloneGrade" class="input"><option value="">'+(ar()?'اختاري المرحلة':'Select Stage')+'</option><option>أولى إعدادي</option><option>ثانية إعدادي</option><option>ثالثة إعدادي</option><option>أولى ثانوي</option><option>ثانية ثانوي</option><option>ثالثة ثانوي</option><option>كورسات</option></select>'+
-      '<input id="standaloneDur" class="input" type="number" min="1" value="30" placeholder="'+(ar()?'المدة بالدقائق':'Duration in minutes')+'">'+
-      '<select id="standaloneShow" class="input"><option value="false">'+(ar()?'إخفاء الإجابات':'Hide Answers')+'</option><option value="true">'+(ar()?'إظهار الإجابات':'Show Answers')+'</option></select></div>'+
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px"><b>'+(ar()?'الأسئلة':'Questions')+'</b><button id="standaloneAdd" type="button" class="btn gold">+ '+(ar()?'إضافة سؤال':'Add Question')+'</button></div>'+
-      '<div id="standaloneQs"></div><div id="standaloneMsg" class="sub" style="margin-top:8px"></div>'+
-      '<button id="standaloneSave" type="button" class="submit" style="width:100%;margin-top:10px">✅ '+(ar()?'إنشاء الامتحان وحفظه':'Create Exam & Save')+'</button></div>';
-    document.body.appendChild(b);
-    document.getElementById('standaloneClose').onclick=closeBox;
-    document.getElementById('standaloneAdd').onclick=addQuestion;
-    document.getElementById('standaloneSave').onclick=saveExam;
-    addQuestion();
-  }
-  window.__standaloneOpenExam=openStandalone;
-  window.__examCreateButton=openStandalone;
-  window.openCreateExam=openStandalone;
-  function wire(){
-    document.querySelectorAll('button,a,[role="button"],.dash-action').forEach(function(el){
-      var t=(el.textContent||'').replace(/\s+/g,' ').trim().toLowerCase();
-      if(t.indexOf('create exam')<0 && t.indexOf('إنشاء امتحان')<0) return;
-      el.disabled=false; el.style.pointerEvents='auto'; el.onclick=openStandalone;
-    });
-  }
-  wire();
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire);
-  new MutationObserver(wire).observe(document.documentElement,{childList:true,subtree:true});
-  setTimeout(wire,300);setTimeout(wire,1000);setTimeout(wire,2500);
-})();
-</script><script id="standalone-create-exam-direct-v2">
-(function(){
-  function ar(){return (localStorage.getItem('platformLanguage')||'en')==='ar';}
-  function closeBox(){var x=document.getElementById('standaloneExamDirect');if(x)x.remove();}
-  function addQ(){
-    var c=document.getElementById('sedQs'), n=c.children.length+1, d=document.createElement('div');
-    d.style='border:1px solid #e1e7ef;border-radius:12px;padding:12px;margin:10px 0;background:#fff';
-    d.innerHTML='<b>'+(ar()?'السؤال ':'Question ')+n+'</b>'+
-      '<input class="input sed-q" style="width:100%;margin:7px 0" placeholder="'+(ar()?'نص السؤال':'Question text')+'">'+
-      '<input class="input sed-o" style="width:100%;margin:4px 0" placeholder="A">'+
-      '<input class="input sed-o" style="width:100%;margin:4px 0" placeholder="B">'+
-      '<input class="input sed-o" style="width:100%;margin:4px 0" placeholder="C">'+
-      '<input class="input sed-o" style="width:100%;margin:4px 0" placeholder="D">'+
-      '<select class="input sed-c" style="width:100%;margin-top:4px"><option value="">'+(ar()?'الإجابة الصحيحة':'Correct answer')+'</option><option>A</option><option>B</option><option>C</option><option>D</option></select>'+
-      '<button type="button" class="btn sed-rm" style="margin-top:7px">'+(ar()?'حذف السؤال':'Remove question')+'</button>';
-    c.appendChild(d);d.querySelector('.sed-rm').onclick=function(){d.remove();};
-  }
-  async function save(){
-    var m=document.getElementById('sedMsg'), title=(document.getElementById('sedTitle').value||'').trim(), grade=document.getElementById('sedGrade').value, dur=Number(document.getElementById('sedDur').value||30), show=document.getElementById('sedShow').value==='true', rows=[...document.querySelectorAll('#sedQs > div')];
-    if(!title){m.textContent=ar()?'اكتبي عنوان الامتحان.':'Enter the exam title.';return;}
-    if(!rows.length){m.textContent=ar()?'أضيفي سؤالًا واحدًا على الأقل.':'Add at least one question.';return;}
-    if(!window.sb){m.textContent=ar()?'قاعدة البيانات غير متاحة.':'Database connection unavailable.';return;}
-    m.textContent=ar()?'جاري إنشاء الامتحان...':'Creating exam...';
-    try{
-      var ex=await window.sb.rpc('teacher_create_exam',{p_title:title,p_grade:grade,p_duration_minutes:dur,p_show_answers:show});
-      if(ex.error||!ex.data?.success)throw(ex.error||new Error(ex.data?.message||'Failed to create exam'));
-      for(var i=0;i<rows.length;i++){
-        var r=rows[i], q=(r.querySelector('.sed-q').value||'').trim(), opts=[...r.querySelectorAll('.sed-o')].map(function(x){return (x.value||'').trim();}), cor=r.querySelector('.sed-c').value||null;
-        if(!q)throw new Error((ar()?'السؤال رقم ':'Question ')+(i+1)+(ar()?' فارغ.':' is empty.'));
-        var rr=await window.sb.rpc('teacher_add_exam_question',{p_exam_id:ex.data.exam_id,p_question_text:q,p_question_type:'mcq',p_points:1,p_correct_answer:cor,p_options:opts,p_grading_mode:'auto'});
-        if(rr.error)throw rr.error;
-      }
-      closeBox();
-      if(typeof window.refreshTeacher==='function')await window.refreshTeacher();
-      if(typeof window.showTeacherSection==='function')window.showTeacherSection('exams');
-      alert(ar()?'تم إنشاء الامتحان بنجاح ✅':'Exam created successfully ✅');
-    }catch(e){console.error(e);m.textContent=(ar()?'حدث خطأ: ':'Error: ')+(e&&e.message||e);}
-  }
-  function openExam(e){
-    if(e){e.preventDefault();e.stopImmediatePropagation();}
-    closeBox();
-    var b=document.createElement('div');b.id='standaloneExamDirect';b.style='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:14px';
-    b.innerHTML='<div style="background:#fff;border-radius:18px;width:min(760px,100%);max-height:94vh;overflow:auto;padding:18px;direction:'+(ar()?'rtl':'ltr')+'">'+
-      '<div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0;color:#062b57">📝 '+(ar()?'إنشاء امتحان':'Create Exam')+'</h2><button id="sedClose" type="button" class="btn">✕</button></div>'+
-      '<div class="form-grid" style="margin-top:12px"><input id="sedTitle" class="input" placeholder="'+(ar()?'عنوان الامتحان':'Exam Title')+'"><select id="sedGrade" class="input"><option value="">'+(ar()?'اختاري المرحلة':'Select Stage')+'</option><option>أولى إعدادي</option><option>ثانية إعدادي</option><option>ثالثة إعدادي</option><option>أولى ثانوي</option><option>ثانية ثانوي</option><option>ثالثة ثانوي</option><option>كورسات</option></select><input id="sedDur" class="input" type="number" min="1" value="30"><select id="sedShow" class="input"><option value="false">'+(ar()?'إخفاء الإجابات':'Hide Answers')+'</option><option value="true">'+(ar()?'إظهار الإجابات':'Show Answers')+'</option></select></div>'+
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px"><b>'+(ar()?'الأسئلة':'Questions')+'</b><button id="sedAdd" type="button" class="btn gold">+ '+(ar()?'إضافة سؤال':'Add Question')+'</button></div>'+
-      '<div id="sedQs"></div><div id="sedMsg" class="sub" style="margin-top:8px"></div><button id="sedSave" type="button" class="submit" style="width:100%;margin-top:10px">✅ '+(ar()?'إنشاء الامتحان وحفظه':'Create Exam & Save')+'</button></div>';
-    document.body.appendChild(b);
-    document.getElementById('sedClose').onclick=closeBox;document.getElementById('sedAdd').onclick=addQ;document.getElementById('sedSave').onclick=save;addQ();
-  }
-  window.openCreateExam=openExam;
-  window.__examCreateButton=openExam;
-  window.__standaloneOpenExamDirect=openExam;
-  window.__robustOpenCreateExam=openExam;
-  function wire(){
-    document.querySelectorAll('button,a,[role="button"],.dash-action').forEach(function(el){
-      var t=(el.textContent||'').replace(/\s+/g,' ').trim().toLowerCase();
-      if(t.indexOf('create exam')<0&&t.indexOf('إنشاء امتحان')<0)return;
-      el.disabled=false;el.style.pointerEvents='auto';el.onclick=openExam;
-    });
-  }
-  wire();
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire);
-  new MutationObserver(wire).observe(document.documentElement,{childList:true,subtree:true});
-  setTimeout(wire,300);setTimeout(wire,1000);setTimeout(wire,2500);
-})();
 </script><script id="prep1-40-mcq-import-v1">
 (function(){
 const examTitle="أولى إعدادي - Unit 2 - 40 MCQ";
@@ -2155,245 +1735,121 @@ new MutationObserver(addButton).observe(document.documentElement,{childList:true
 })();
 </script>
 
-<script id="create-exam-final-v3">
+<script id="create-exam-final-clean-v2">
 (function(){
   'use strict';
-  function isCreate(el){
-    if(!el) return false;
-    var t=(el.textContent||'').replace(/\s+/g,' ').trim().toLowerCase();
-    return t.indexOf('create exam')>=0 || t.indexOf('إنشاء امتحان')>=0;
+
+  function ar(){return (localStorage.getItem('platformLanguage')||'en')==='ar';}
+  function closeBox(){
+    var x=document.getElementById('cleanExamV2');
+    if(x)x.remove();
   }
-  function openDirect(e){
-    if(e){e.preventDefault();e.stopImmediatePropagation();e.stopPropagation();}
-    var fn=window.__robustOpenCreateExam;
-    if(typeof fn==='function') return fn(e);
-    var fn2=window.__standaloneOpenExamDirect||window.__standaloneOpenExam;
-    if(typeof fn2==='function') return fn2(e);
-    return false;
-  }
-  function wire(){
-    document.querySelectorAll('button,a,[role="button"],.dash-action').forEach(function(el){
-      if(!isCreate(el)) return;
-      el.disabled=false;
-      el.style.pointerEvents='auto';
-      el.onclick=openDirect;
-    });
-  }
-  document.addEventListener('click',function(e){
-    var el=e.target&&e.target.closest?e.target.closest('button,a,[role="button"],.dash-action'):null;
-    if(isCreate(el)) openDirect(e);
-  },true);
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire);else wire();
-  new MutationObserver(wire).observe(document.documentElement,{childList:true,subtree:true});
-  setTimeout(wire,300);setTimeout(wire,1000);setTimeout(wire,2500);
-})();
-</script><script id="create-exam-final-v4">
-(function(){
-  'use strict';
-  function isCreate(el){
-    if(!el) return false;
-    var t=(el.textContent||'').replace(/\s+/g,' ').trim().toLowerCase();
-    return t.indexOf('create exam')>=0 || t.indexOf('إنشاء امتحان')>=0;
-  }
-  function openDirect(e){
-    if(e){e.preventDefault();e.stopImmediatePropagation();e.stopPropagation();}
-    var fn=window.__robustOpenCreateExam;
-    if(typeof fn==='function') return fn(e);
-    var fn2=window.__standaloneOpenExamDirect||window.__standaloneOpenExam;
-    if(typeof fn2==='function') return fn2(e);
-    return false;
-  }
-  function wire(){
-    document.querySelectorAll('button,a,[role="button"],.dash-action').forEach(function(el){
-      if(!isCreate(el)) return;
-      el.disabled=false;
-      el.style.pointerEvents='auto';
-      el.onclick=openDirect;
-    });
-  }
-  document.addEventListener('click',function(e){
-    var el=e.target&&e.target.closest?e.target.closest('button,a,[role="button"],.dash-action'):null;
-    if(isCreate(el)) openDirect(e);
-  },true);
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire);else wire();
-  new MutationObserver(wire).observe(document.documentElement,{childList:true,subtree:true});
-  setTimeout(wire,300);setTimeout(wire,1000);setTimeout(wire,2500);
-})();
-</script><script id="create-exam-final-v5">
-(function(){
-  'use strict';
-  function isCreate(el){
-    if(!el) return false;
-    var t=(el.textContent||'').replace(/\s+/g,' ').trim().toLowerCase();
-    return t.indexOf('create exam')>=0 || t.indexOf('إنشاء امتحان')>=0;
-  }
-  function openDirect(e){
-    if(e){e.preventDefault();e.stopImmediatePropagation();e.stopPropagation();}
-    var fn=window.__robustOpenCreateExam;
-    if(typeof fn==='function') return fn(e);
-    var fn2=window.__standaloneOpenExamDirect||window.__standaloneOpenExam;
-    if(typeof fn2==='function') return fn2(e);
-    return false;
-  }
-  function wire(){
-    document.querySelectorAll('button,a,[role="button"],.dash-action').forEach(function(el){
-      if(!isCreate(el)) return;
-      el.disabled=false;
-      el.style.pointerEvents='auto';
-      el.onclick=openDirect;
-    });
-  }
-  document.addEventListener('click',function(e){
-    var el=e.target&&e.target.closest?e.target.closest('button,a,[role="button"],.dash-action'):null;
-    if(isCreate(el)) openDirect(e);
-  },true);
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire);else wire();
-  new MutationObserver(wire).observe(document.documentElement,{childList:true,subtree:true});
-  setTimeout(wire,300);setTimeout(wire,1000);setTimeout(wire,2500);
-})();
-</script><script id="robust-create-exam-builder-v2">
-(function(){
-  function openFixed(e){
-    if(e){e.preventDefault();e.stopImmediatePropagation();}
-    if(typeof window.__robustOpenCreateExam==='function') return window.__robustOpenCreateExam(e);
-    alert('إنشاء الامتحان غير جاهز، حدّثي الصفحة مرة أخرى.');
-    return false;
-  }
-  window.__examCreateButton=openFixed;
-  window.openCreateExam=openFixed;
-  function wire(){
-    document.querySelectorAll('button,a,[role="button"],.dash-action').forEach(function(el){
-      var t=(el.textContent||'').replace(/\s+/g,' ').trim().toLowerCase();
-      if(t.indexOf('create exam')<0 && t.indexOf('إنشاء امتحان')<0) return;
-      el.disabled=false;
-      el.style.pointerEvents='auto';
-      el.onclick=openFixed;
-    });
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire);else wire();
-  new MutationObserver(wire).observe(document.documentElement,{childList:true,subtree:true});
-  setTimeout(wire,300);setTimeout(wire,1000);setTimeout(wire,2500);
-})();
-</script><script id="robust-create-exam-builder-v1">
-(function(){
-  function ar(){ return (localStorage.getItem('platformLanguage')||'en')==='ar'; }
-  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); }
-  function closeBox(){ var x=document.getElementById('robustExamBox'); if(x)x.remove(); }
-  function addQuestion(container){
-    var n=container.querySelectorAll('.robust-q').length+1;
+
+  function addQuestion(){
+    var c=document.getElementById('cleanExamV2Questions');
+    if(!c)return;
+    var n=c.children.length+1;
     var d=document.createElement('div');
-    d.className='robust-q';
-    d.style='border:1px solid #e4e9f0;border-radius:12px;padding:12px;margin:10px 0;background:#fff';
-    d.innerHTML='<div style="font-weight:800;margin-bottom:7px">'+(ar()?'السؤال ':'Question ')+n+'</div>'+
-      '<input class="robust-qtext input" style="width:100%;margin-bottom:7px" placeholder="'+(ar()?'نص السؤال':'Question text')+'">'+
-      '<input class="robust-opt input" style="width:100%;margin-bottom:6px" placeholder="A">'+
-      '<input class="robust-opt input" style="width:100%;margin-bottom:6px" placeholder="B">'+
-      '<input class="robust-opt input" style="width:100%;margin-bottom:6px" placeholder="C">'+
-      '<input class="robust-opt input" style="width:100%;margin-bottom:6px" placeholder="D">'+
-      '<select class="robust-correct input" style="width:100%"><option value="">'+(ar()?'الإجابة الصحيحة':'Correct answer')+'</option><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select>'+
-      '<button type="button" class="btn robust-remove" style="margin-top:8px">'+(ar()?'حذف السؤال':'Remove question')+'</button>';
-    container.appendChild(d);
-    d.querySelector('.robust-remove').onclick=function(){d.remove();};
+    d.style='border:1px solid #e3e8ef;border-radius:12px;padding:12px;margin:10px 0;background:#fff';
+    d.innerHTML='<b>'+(ar()?'السؤال ':'Question ')+n+'</b>'+
+      '<input class="ce2-q input" style="width:100%;margin:6px 0" placeholder="'+(ar()?'نص السؤال':'Question text')+'">'+
+      '<input class="ce2-o input" style="width:100%;margin:4px 0" placeholder="A">'+
+      '<input class="ce2-o input" style="width:100%;margin:4px 0" placeholder="B">'+
+      '<input class="ce2-o input" style="width:100%;margin:4px 0" placeholder="C">'+
+      '<input class="ce2-o input" style="width:100%;margin:4px 0" placeholder="D">'+
+      '<select class="ce2-c input" style="width:100%;margin:5px 0"><option value="">'+(ar()?'الإجابة الصحيحة':'Correct answer')+'</option><option>A</option><option>B</option><option>C</option><option>D</option></select>'+
+      '<button type="button" class="btn ce2-rm">'+(ar()?'حذف السؤال':'Remove question')+'</button>';
+    c.appendChild(d);
+    d.querySelector('.ce2-rm').onclick=function(){d.remove();};
   }
-  async function save(){
-    var msg=document.getElementById('robustExamMsg');
-    var title=(document.getElementById('robustTitle')||{}).value?.trim()||'';
-    var grade=(document.getElementById('robustGrade')||{}).value||'';
-    var dur=Number((document.getElementById('robustDur')||{}).value||30);
-    var show=(document.getElementById('robustShow')||{}).value==='true';
-    var rows=[...document.querySelectorAll('#robustQuestions .robust-q')];
-    if(!title){msg.textContent=ar()?'اكتبي عنوان الامتحان أولًا.':'Enter the exam title first.';return;}
+
+  async function saveExam(){
+    var msg=document.getElementById('cleanExamV2Msg');
+    var title=(document.getElementById('cleanExamV2Title')?.value||'').trim();
+    var grade=document.getElementById('cleanExamV2Grade')?.value||'';
+    var dur=Number(document.getElementById('cleanExamV2Dur')?.value||30);
+    var show=document.getElementById('cleanExamV2Show')?.value==='true';
+    var rows=[...document.querySelectorAll('#cleanExamV2Questions>div')];
+
+    if(!title){msg.textContent=ar()?'اكتبي عنوان الامتحان.':'Enter the exam title.';return;}
+    if(!grade){msg.textContent=ar()?'اختاري المرحلة.':'Select the stage.';return;}
     if(!rows.length){msg.textContent=ar()?'أضيفي سؤالًا واحدًا على الأقل.':'Add at least one question.';return;}
-    if(typeof window.sb==='undefined'){msg.textContent=ar()?'اتصال قاعدة البيانات غير متاح. حدّثي الصفحة وحاولي مرة أخرى.':'Database connection is unavailable. Refresh and try again.';return;}
+    if(!window.sb){msg.textContent=ar()?'قاعدة البيانات غير متاحة.':'Database connection unavailable.';return;}
+
     msg.textContent=ar()?'جاري إنشاء الامتحان...':'Creating exam...';
     try{
-      var ex=await window.sb.rpc('teacher_create_exam',{p_title:title,p_grade:grade,p_duration_minutes:dur,p_show_answers:show});
-      if(ex.error||!ex.data?.success) throw(ex.error||new Error(ex.data?.message||'Failed to create exam'));
-      var examId=ex.data.exam_id;
-      var order=0;
-      for(var row of rows){
-        order++;
-        var q=(row.querySelector('.robust-qtext')?.value||'').trim();
-        var opts=[...row.querySelectorAll('.robust-opt')].map(x=>(x.value||'').trim());
-        var correct=row.querySelector('.robust-correct')?.value||null;
-        if(!q) throw new Error((ar()?'السؤال رقم ':'Question ')+order+(ar()?' فارغ.':' is empty.'));
+      var ex=await window.sb.rpc('teacher_create_exam',{
+        p_title:title,p_grade:grade,p_duration_minutes:dur,p_show_answers:show
+      });
+      if(ex.error||!ex.data?.success)throw(ex.error||new Error(ex.data?.message||'Failed'));
+
+      for(var i=0;i<rows.length;i++){
+        var row=rows[i];
+        var q=(row.querySelector('.ce2-q')?.value||'').trim();
+        var opts=[...row.querySelectorAll('.ce2-o')].map(function(x){return (x.value||'').trim();});
+        var correct=row.querySelector('.ce2-c')?.value||null;
+        if(!q)throw new Error((ar()?'السؤال رقم ':'Question ')+(i+1)+(ar()?' فارغ.':' is empty.'));
         var rr=await window.sb.rpc('teacher_add_exam_question',{
-          p_exam_id:examId,p_question_text:q,p_question_type:'mcq',p_points:1,
-          p_correct_answer:correct,p_options:opts,p_grading_mode:'auto'
+          p_exam_id:ex.data.exam_id,p_question_text:q,p_question_type:'mcq',
+          p_points:1,p_correct_answer:correct,p_options:opts,p_grading_mode:'auto'
         });
-        if(rr.error) throw rr.error;
+        if(rr.error)throw rr.error;
       }
-      msg.textContent=ar()?'تم إنشاء الامتحان وحفظ الأسئلة بنجاح ✅':'Exam and questions created successfully ✅';
-      if(typeof window.closeModal==='function') window.closeModal();
+
       closeBox();
-      if(typeof window.refreshTeacher==='function') await window.refreshTeacher();
-      else if(typeof window.renderTeacherDashboard==='function') await window.renderTeacherDashboard();
-    }catch(e){ console.error(e); msg.textContent=(ar()?'حدث خطأ: ':'Error: ')+(e?.message||e); }
+      if(typeof window.refreshTeacher==='function')await window.refreshTeacher();
+      alert(ar()?'تم إنشاء الامتحان بنجاح ✅':'Exam created successfully ✅');
+    }catch(err){
+      console.error('clean exam v2',err);
+      msg.textContent=(ar()?'حدث خطأ: ':'Error: ')+(err?.message||err);
+    }
   }
-  function openBuilder(e){
-    if(e){e.preventDefault();e.stopPropagation();}
+
+  window.__finalCleanCreateExamV2=function(e){
+    if(e){e.preventDefault();e.stopImmediatePropagation();e.stopPropagation();}
     closeBox();
-    var box=document.createElement('div');
-    box.id='robustExamBox';
-    box.style='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:16px';
-    box.innerHTML='<div style="background:#fff;border-radius:18px;width:min(760px,100%);max-height:92vh;overflow:auto;padding:18px;box-shadow:0 20px 60px rgba(0,0,0,.25);direction:'+(ar()?'rtl':'ltr')+'">'+
-      '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><h2 style="margin:0;color:#062b57">📝 '+(ar()?'إنشاء امتحان':'Create Exam')+'</h2><button id="robustClose" type="button" class="btn">✕</button></div>'+
-      '<div class="form-grid" style="margin-top:12px"><input id="robustTitle" class="input" placeholder="'+(ar()?'عنوان الامتحان':'Exam Title')+'">'+
-      '<select id="robustGrade" class="input"><option value="">'+(ar()?'اختاري المرحلة':'Select Stage')+'</option><option>أولى إعدادي</option><option>ثانية إعدادي</option><option>ثالثة إعدادي</option><option>أولى ثانوي</option><option>ثانية ثانوي</option><option>ثالثة ثانوي</option><option>كورسات</option></select>'+
-      '<input id="robustDur" class="input" type="number" min="1" value="30" placeholder="'+(ar()?'المدة بالدقائق':'Duration in minutes')+'">'+
-      '<select id="robustShow" class="input"><option value="false">'+(ar()?'إخفاء الإجابات':'Hide Answers')+'</option><option value="true">'+(ar()?'إظهار الإجابات':'Show Answers')+'</option></select></div>'+
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px"><b>'+(ar()?'الأسئلة':'Questions')+'</b><button id="robustAdd" type="button" class="btn gold">+ '+(ar()?'إضافة سؤال':'Add Question')+'</button></div>'+
-      '<div id="robustQuestions"></div><div id="robustExamMsg" class="sub" style="margin-top:10px"></div>'+
-      '<button id="robustSave" type="button" class="submit" style="width:100%;margin-top:12px">✅ '+(ar()?'إنشاء الامتحان وحفظه':'Create Exam & Save')+'</button></div>';
-    document.body.appendChild(box);
-    document.getElementById('robustClose').onclick=closeBox;
-    document.getElementById('robustAdd').onclick=function(){addQuestion(document.getElementById('robustQuestions'));};
-    document.getElementById('robustSave').onclick=save;
-    addQuestion(document.getElementById('robustQuestions'));
-  }
+
+    var b=document.createElement('div');
+    b.id='cleanExamV2';
+    b.style='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:14px';
+    b.innerHTML='<div style="background:#fff;border-radius:18px;width:min(760px,100%);max-height:94vh;overflow:auto;padding:18px;direction:'+(ar()?'rtl':'ltr')+'">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0;color:#062b57">📝 '+(ar()?'إنشاء امتحان':'Create Exam')+'</h2><button id="cleanExamV2Close" type="button" class="btn">✕</button></div>'+
+      '<div class="form-grid" style="margin-top:12px"><input id="cleanExamV2Title" class="input" placeholder="'+(ar()?'عنوان الامتحان':'Exam Title')+'">'+
+      '<select id="cleanExamV2Grade" class="input"><option value="">'+(ar()?'اختاري المرحلة':'Select Stage')+'</option><option>أولى إعدادي</option><option>ثانية إعدادي</option><option>ثالثة إعدادي</option><option>أولى ثانوي</option><option>ثانية ثانوي</option><option>ثالثة ثانوي</option><option>كورسات</option></select>'+
+      '<input id="cleanExamV2Dur" class="input" type="number" min="1" value="30">'+
+      '<select id="cleanExamV2Show" class="input"><option value="false">'+(ar()?'إخفاء الإجابات':'Hide Answers')+'</option><option value="true">'+(ar()?'إظهار الإجابات':'Show Answers')+'</option></select></div>'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px"><b>'+(ar()?'الأسئلة':'Questions')+'</b><button id="cleanExamV2Add" type="button" class="btn gold">+ '+(ar()?'إضافة سؤال':'Add Question')+'</button></div>'+
+      '<div id="cleanExamV2Questions"></div><div id="cleanExamV2Msg" class="sub" style="margin-top:8px"></div>'+
+      '<button id="cleanExamV2Save" type="button" class="submit" style="width:100%;margin-top:10px">✅ '+(ar()?'إنشاء الامتحان وحفظه':'Create Exam & Save')+'</button></div>';
+
+    document.body.appendChild(b);
+    document.getElementById('cleanExamV2Close').onclick=closeBox;
+    document.getElementById('cleanExamV2Add').onclick=addQuestion;
+    document.getElementById('cleanExamV2Save').onclick=saveExam;
+    addQuestion();
+  };
+
   function isCreate(el){
     if(!el)return false;
     var t=(el.textContent||'').replace(/\s+/g,' ').trim().toLowerCase();
-    return t.indexOf('create exam')>=0 || t.indexOf('إنشاء امتحان')>=0;
+    return t.indexOf('create exam')>=0||t.indexOf('إنشاء امتحان')>=0;
   }
+
   function wire(){
     document.querySelectorAll('button,a,[role="button"],.dash-action').forEach(function(el){
       if(!isCreate(el))return;
-      el.style.pointerEvents='auto';
       el.disabled=false;
-      if(el.dataset.robustExamBound==='1')return;
-      el.dataset.robustExamBound='1';
-      el.addEventListener('click',openBuilder,true);
+      el.style.pointerEvents='auto';
+      el.onclick=function(e){return window.__finalCleanCreateExamV2(e);};
     });
   }
+
   document.addEventListener('click',function(e){
-    var el=e.target?.closest?.('button,a,[role="button"],.dash-action');
-    if(isCreate(el) && !el.dataset.robustExamBound){ openBuilder(e); }
+    var el=e.target&&e.target.closest?e.target.closest('button,a,[role="button"],.dash-action'):null;
+    if(!isCreate(el))return;
+    window.__finalCleanCreateExamV2(e);
   },true);
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire);else wire();
-  new MutationObserver(wire).observe(document.documentElement,{childList:true,subtree:true});
-  setTimeout(wire,300);setTimeout(wire,1000);setTimeout(wire,2500);
-  window.__robustOpenCreateExam=openBuilder;
-})();
-</script><script id="robust-create-exam-builder-v2">
-(function(){
-  function openFixed(e){
-    if(e){e.preventDefault();e.stopImmediatePropagation();}
-    if(typeof window.__robustOpenCreateExam==='function') return window.__robustOpenCreateExam(e);
-    alert('إنشاء الامتحان غير جاهز، حدّثي الصفحة مرة أخرى.');
-    return false;
-  }
-  window.__examCreateButton=openFixed;
-  window.openCreateExam=openFixed;
-  function wire(){
-    document.querySelectorAll('button,a,[role="button"],.dash-action').forEach(function(el){
-      var t=(el.textContent||'').replace(/\s+/g,' ').trim().toLowerCase();
-      if(t.indexOf('create exam')<0 && t.indexOf('إنشاء امتحان')<0) return;
-      el.disabled=false;
-      el.style.pointerEvents='auto';
-      el.onclick=openFixed;
-    });
-  }
+
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire);else wire();
   new MutationObserver(wire).observe(document.documentElement,{childList:true,subtree:true});
   setTimeout(wire,300);setTimeout(wire,1000);setTimeout(wire,2500);
