@@ -535,7 +535,7 @@ function renderTeacherSection(sec){
   const examMatches=(e,key)=>{const g=(e.grade||'').trim();if(key==='all')return true;if(key==='__blank__')return !g;return g===key;};
   const visibleExams=exams.filter(e=>examMatches(e,activeExamStage));
   const examTabs=examStageOptions.map(([key,label])=>{const n=exams.filter(e=>examMatches(e,key)).length;return `<button class="stage-tab ${activeExamStage===key?'active':''}" onclick="setExamStageFilter(${JSON.stringify(key)})">${label}<span>${n}</span></button>`}).join('');
-  main.innerHTML=`<div class="welcome"><div><h1>Exams</h1><p>Create as many exams as you need. Exams are stored separately by stage/course and there is no dashboard cap.</p></div><div class="dash-toolbar"><button type="button" class="dash-action" onclick="return window.__examPdfButton && window.__examPdfButton(event)">📄 Import PDF Exam</button><button type="button" id="directCreateExamBtn" class="dash-action" onclick="event.preventDefault();event.stopPropagation();if(window.__examCreateButton){window.__examCreateButton(event);}">+ Create Exam</button></div></div><section class="panel"><div class="stage-tabs">${examTabs}</div><div class="stage-list-title"><b>${examStageOptions.find(x=>x[0]===activeExamStage)?.[1]||'Exams'}</b><span>${visibleExams.length}</span></div><table class="dash-table"><thead><tr><th>Exam</th><th>Stage / Course</th><th>Questions</th><th>Status</th><th>Actions</th></tr></thead><tbody>${visibleExams.map(e=>`<tr><td>${escapeHtml(e.title||'')}</td><td>${escapeHtml(stageLabel(e.grade))}</td><td>${escapeHtml(e.question_count||0)}</td><td><span class="pill ${e.active?'':'wait'}">${e.active?'Active':'Draft'}</span></td><td><button class="dash-action" onclick="toggleExam(${e.id},${!e.active})">${e.active?'Unpublish':'Publish'}</button> <button class="dash-action" onclick="openExamAttempts(${e.id},${JSON.stringify(e.title||'Exam')})">Results</button></td></tr>`).join('')||'<tr><td colspan="5">No exams in this list yet.</td></tr>'}</tbody></table></section>`;return;
+  main.innerHTML=`<div class="welcome"><div><h1>Exams</h1><p>Create as many exams as you need. Exams are stored separately by stage/course and there is no dashboard cap.</p></div><div class="dash-toolbar"><button type="button" class="dash-action" onclick="return window.__examPdfButton && window.__examPdfButton(event)">📄 Import PDF Exam</button><button type="button" id="directCreateExamBtn" class="dash-action">+ Create Exam</button></div></div><section class="panel"><div class="stage-tabs">${examTabs}</div><div class="stage-list-title"><b>${examStageOptions.find(x=>x[0]===activeExamStage)?.[1]||'Exams'}</b><span>${visibleExams.length}</span></div><table class="dash-table"><thead><tr><th>Exam</th><th>Stage / Course</th><th>Questions</th><th>Status</th><th>Actions</th></tr></thead><tbody>${visibleExams.map(e=>`<tr><td>${escapeHtml(e.title||'')}</td><td>${escapeHtml(stageLabel(e.grade))}</td><td>${escapeHtml(e.question_count||0)}</td><td><span class="pill ${e.active?'':'wait'}">${e.active?'Active':'Draft'}</span></td><td><button class="dash-action" onclick="toggleExam(${e.id},${!e.active})">${e.active?'Unpublish':'Publish'}</button> <button class="dash-action" onclick="openExamAttempts(${e.id},${JSON.stringify(e.title||'Exam')})">Results</button></td></tr>`).join('')||'<tr><td colspan="5">No exams in this list yet.</td></tr>'}</tbody></table></section>`;return;
  }
  if(sec==='subscriptions'){
   main.innerHTML=`<div class="welcome"><div><h1>Subscriptions</h1><p>Monthly access; access closes on the renewal date until payment is approved.</p></div></div><section class="panel"><table class="dash-table"><thead><tr><th>Student</th><th>Course</th><th>Type</th><th>Status</th><th>Next Due</th><th>Action</th></tr></thead><tbody>${(d.subscriptions||[]).map(s=>`<tr><td>${escapeHtml(s.student_name||'')}</td><td>${escapeHtml(s.course_name||'')}</td><td>${escapeHtml(s.course_type||'')}</td><td><span class="pill ${s.status==='expired'?'fail':s.status==='grace'?'wait':''}">${escapeHtml(s.status||'')}</span></td><td>${escapeHtml(s.next_due_date||'')}</td><td><button class="dash-action gold" onclick="manualRenewStudent(${s.student_id})">✅ Manual Renewal</button></td></tr>`).join('')||'<tr><td colspan="6">No subscriptions yet.</td></tr>'}</tbody></table></section>`;return;
@@ -1870,4 +1870,22 @@ setTimeout(wire,300);setTimeout(wire,1000);setTimeout(wire,2500);
 .ce-v3-type,.ce-v3-text,.ce-v3-fields{margin-top:8px}.ce-v3-text{width:100%;resize:vertical}.ce-v3-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px}.ce-v3-fields .input{width:100%;margin-top:7px}
 .ce-v3-remove{border:0;background:transparent;color:#b33a3a;cursor:pointer;font-weight:800}
 @media(max-width:700px){.ce-v3-top{grid-template-columns:1fr 1fr}.ce-v3-grid{grid-template-columns:1fr}.ce-v3-box{padding:12px}}
-</style></body></html>
+</style><script id="create-exam-direct-bind">
+(function(){
+  function bindCreateExam(){
+    var b=document.getElementById('directCreateExamBtn');
+    if(!b||b.dataset.bound==='1')return;
+    b.dataset.bound='1';
+    b.addEventListener('click',function(e){
+      e.preventDefault(); e.stopPropagation();
+      var fn=window.__createExamForceCleanV2||window.__examCreateButton;
+      if(typeof fn==='function'){fn(e);return;}
+      var m=document.getElementById('ceV3Modal');
+      if(m)return;
+    },false);
+  }
+  bindCreateExam();
+  new MutationObserver(bindCreateExam).observe(document.documentElement,{childList:true,subtree:true});
+  window.addEventListener('DOMContentLoaded',bindCreateExam);
+})();
+</script></body></html>
