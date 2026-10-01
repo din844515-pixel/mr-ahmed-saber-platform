@@ -535,7 +535,7 @@ function renderTeacherSection(sec){
   const examMatches=(e,key)=>{const g=(e.grade||'').trim();if(key==='all')return true;if(key==='__blank__')return !g;return g===key;};
   const visibleExams=exams.filter(e=>examMatches(e,activeExamStage));
   const examTabs=examStageOptions.map(([key,label])=>{const n=exams.filter(e=>examMatches(e,key)).length;return `<button class="stage-tab ${activeExamStage===key?'active':''}" onclick="setExamStageFilter(${JSON.stringify(key)})">${label}<span>${n}</span></button>`}).join('');
-  main.innerHTML=`<div class="welcome"><div><h1>Exams</h1><p>Create as many exams as you need. Exams are stored separately by stage/course and there is no dashboard cap.</p></div><div class="dash-toolbar"><button type="button" class="dash-action" onclick="return window.__examPdfButton && window.__examPdfButton(event)">📄 Import PDF Exam</button><button type="button" class="dash-action" onclick="return window.__examCreateButton && window.__examCreateButton(event)">+ Create Exam</button></div></div><section class="panel"><div class="stage-tabs">${examTabs}</div><div class="stage-list-title"><b>${examStageOptions.find(x=>x[0]===activeExamStage)?.[1]||'Exams'}</b><span>${visibleExams.length}</span></div><table class="dash-table"><thead><tr><th>Exam</th><th>Stage / Course</th><th>Questions</th><th>Status</th><th>Actions</th></tr></thead><tbody>${visibleExams.map(e=>`<tr><td>${escapeHtml(e.title||'')}</td><td>${escapeHtml(stageLabel(e.grade))}</td><td>${escapeHtml(e.question_count||0)}</td><td><span class="pill ${e.active?'':'wait'}">${e.active?'Active':'Draft'}</span></td><td><button class="dash-action" onclick="toggleExam(${e.id},${!e.active})">${e.active?'Unpublish':'Publish'}</button> <button class="dash-action" onclick="openExamAttempts(${e.id},${JSON.stringify(e.title||'Exam')})">Results</button></td></tr>`).join('')||'<tr><td colspan="5">No exams in this list yet.</td></tr>'}</tbody></table></section>`;return;
+  main.innerHTML=`<div class="welcome"><div><h1>Exams</h1><p>Create as many exams as you need. Exams are stored separately by stage/course and there is no dashboard cap.</p></div><div class="dash-toolbar"><button type="button" class="dash-action" onclick="return window.__examPdfButton && window.__examPdfButton(event)">📄 Import PDF Exam</button><button type="button" class="dash-action" onclick="return window.__createExamForceCleanV2(event)">+ Create Exam</button></div></div><section class="panel"><div class="stage-tabs">${examTabs}</div><div class="stage-list-title"><b>${examStageOptions.find(x=>x[0]===activeExamStage)?.[1]||'Exams'}</b><span>${visibleExams.length}</span></div><table class="dash-table"><thead><tr><th>Exam</th><th>Stage / Course</th><th>Questions</th><th>Status</th><th>Actions</th></tr></thead><tbody>${visibleExams.map(e=>`<tr><td>${escapeHtml(e.title||'')}</td><td>${escapeHtml(stageLabel(e.grade))}</td><td>${escapeHtml(e.question_count||0)}</td><td><span class="pill ${e.active?'':'wait'}">${e.active?'Active':'Draft'}</span></td><td><button class="dash-action" onclick="toggleExam(${e.id},${!e.active})">${e.active?'Unpublish':'Publish'}</button> <button class="dash-action" onclick="openExamAttempts(${e.id},${JSON.stringify(e.title||'Exam')})">Results</button></td></tr>`).join('')||'<tr><td colspan="5">No exams in this list yet.</td></tr>'}</tbody></table></section>`;return;
  }
  if(sec==='subscriptions'){
   main.innerHTML=`<div class="welcome"><div><h1>Subscriptions</h1><p>Monthly access; access closes on the renewal date until payment is approved.</p></div></div><section class="panel"><table class="dash-table"><thead><tr><th>Student</th><th>Course</th><th>Type</th><th>Status</th><th>Next Due</th><th>Action</th></tr></thead><tbody>${(d.subscriptions||[]).map(s=>`<tr><td>${escapeHtml(s.student_name||'')}</td><td>${escapeHtml(s.course_name||'')}</td><td>${escapeHtml(s.course_type||'')}</td><td><span class="pill ${s.status==='expired'?'fail':s.status==='grace'?'wait':''}">${escapeHtml(s.status||'')}</span></td><td>${escapeHtml(s.next_due_date||'')}</td><td><button class="dash-action gold" onclick="manualRenewStudent(${s.student_id})">✅ Manual Renewal</button></td></tr>`).join('')||'<tr><td colspan="6">No subscriptions yet.</td></tr>'}</tbody></table></section>`;return;
@@ -1236,7 +1236,7 @@ document.addEventListener('click',function(e){
 
   function renderSections(sec){window.__teacherSection=sec;setActiveSide(sec);teacherLangSide();const d=teacherData(),main=document.getElementById('teacherMain');if(!main)return; if(sec==='dashboard')return renderDashboard(main,d);if(sec==='students')return renderStudents(main,d);if(sec==='payment_requests')return renderPaymentRequests(main,d);if(sec==='subscriptions')return renderSubscriptions(main,d);if(sec==='levels')return renderPrices(main);if(sec==='exams'){
       const exams=d.exams||[];const active=window.__examStageFilter||'all';const visible=active==='all'?exams:exams.filter(e=>catOf(e.grade)===active);const tabs=[['all',tr('All Exams','كل الامتحانات'),exams.length]].concat(CATS.map(c=>[c[0],tr(c[2],c[1]),exams.filter(e=>catOf(e.grade)===c[0]).length]));
-      main.innerHTML=`<div class="welcome"><div><h1>${tr('Exams','الامتحانات')}</h1><p>${tr('Create, import, review and manage every exam and every old exam.','أنشئي واستوردي وراجعي وعدّلي كل الامتحانات القديمة والجديدة.')}</p></div><div class="dash-toolbar"><button class="dash-action" onclick="openCreateExam()">+ ${tr('Create Exam','إنشاء امتحان')}</button></div></div><section class="panel"><div class="v9-pills">${tabs.map(t=>`<button class="v9-pill ${active===t[0]?'active':''}" onclick="setExamStageFilter(${JSON.stringify(t[0])})">${esc(t[1])} <b>${t[2]}</b></button>`).join('')}</div><div class="v9-scroll"><table class="dash-table"><thead><tr><th>${tr('Exam','الامتحان')}</th><th>${tr('Stage','المرحلة')}</th><th>${tr('Questions','الأسئلة')}</th><th>${tr('Status','الحالة')}</th><th>${tr('Actions','الإجراءات')}</th></tr></thead><tbody>${visible.map(e=>`<tr><td>${esc(e.title)}</td><td>${esc(catLabel(catOf(e.grade)))}</td><td>${e.question_count||0}</td><td>${e.active?tr('Active','نشط'):tr('Draft','مسودة')}</td><td><button class="dash-action" onclick="openExamBuilderV9(${e.id},${JSON.stringify(e.title)},${JSON.stringify(e.grade)})">${tr('Questions','الأسئلة')}</button> <button class="dash-action" onclick="openExamAttempts(${e.id},${JSON.stringify(e.title)})">${tr('Results','النتائج')}</button> <button class="dash-action gold" onclick="toggleExam(${e.id},${!e.active})">${e.active?tr('Unpublish','إلغاء النشر'):tr('Publish','نشر')}</button></td></tr>`).join('')||`<tr><td colspan="5">${tr('No exams in this list yet.','لا توجد امتحانات في هذه القائمة بعد.')}</td></tr>`}</tbody></table></div></section>`;
+      main.innerHTML=`<div class="welcome"><div><h1>${tr('Exams','الامتحانات')}</h1><p>${tr('Create, import, review and manage every exam and every old exam.','أنشئي واستوردي وراجعي وعدّلي كل الامتحانات القديمة والجديدة.')}</p></div><div class="dash-toolbar"><button class="dash-action" onclick="return window.__createExamForceCleanV2(event)">+ ${tr('Create Exam','إنشاء امتحان')}</button></div></div><section class="panel"><div class="v9-pills">${tabs.map(t=>`<button class="v9-pill ${active===t[0]?'active':''}" onclick="setExamStageFilter(${JSON.stringify(t[0])})">${esc(t[1])} <b>${t[2]}</b></button>`).join('')}</div><div class="v9-scroll"><table class="dash-table"><thead><tr><th>${tr('Exam','الامتحان')}</th><th>${tr('Stage','المرحلة')}</th><th>${tr('Questions','الأسئلة')}</th><th>${tr('Status','الحالة')}</th><th>${tr('Actions','الإجراءات')}</th></tr></thead><tbody>${visible.map(e=>`<tr><td>${esc(e.title)}</td><td>${esc(catLabel(catOf(e.grade)))}</td><td>${e.question_count||0}</td><td>${e.active?tr('Active','نشط'):tr('Draft','مسودة')}</td><td><button class="dash-action" onclick="openExamBuilderV9(${e.id},${JSON.stringify(e.title)},${JSON.stringify(e.grade)})">${tr('Questions','الأسئلة')}</button> <button class="dash-action" onclick="openExamAttempts(${e.id},${JSON.stringify(e.title)})">${tr('Results','النتائج')}</button> <button class="dash-action gold" onclick="toggleExam(${e.id},${!e.active})">${e.active?tr('Unpublish','إلغاء النشر'):tr('Publish','نشر')}</button></td></tr>`).join('')||`<tr><td colspan="5">${tr('No exams in this list yet.','لا توجد امتحانات في هذه القائمة بعد.')}</td></tr>`}</tbody></table></div></section>`;
       return;
     }if(sec==='videos')return renderVideos(main);if(sec==='ann')return renderAnnouncements(main);if(sec==='attendance')return renderAttendance(main);if(sec==='reports')return renderReports(main);if(sec==='pronunciation')return renderPronunciation(main);if(sec==='reviews')return renderReviews(main);if(sec==='support'){main.innerHTML=`<section class="panel"><h3>${tr('Customer Support','خدمة العملاء')}</h3>${(d.support||[]).map(x=>`<div class="lesson"><div><b>${esc(x.name)}</b><p>${esc(x.message)}</p><small>${esc(x.contact||'')}</small></div></div>`).join('')||`<p class="sub">${tr('No support messages.','لا توجد رسائل دعم.')}</p>`}</section>`;return}if(sec==='settings'){main.innerHTML=`<section class="panel"><h3>${tr('Settings','الإعدادات')}</h3><div class="result"><b>${tr('Teacher account','حساب المستر')}:</b> din844515@gmail.com<br><b>${tr('Teacher phones','أرقام المستر')}:</b> 01064443212 · 01278211301</div></section>`}}
   window.renderTeacherSection=renderSections;
@@ -1735,121 +1735,103 @@ new MutationObserver(addButton).observe(document.documentElement,{childList:true
 })();
 </script>
 
-<script id="create-exam-final-clean-v2">
+<script id="create-exam-force-clean-v2">
 (function(){
   'use strict';
-
   function ar(){return (localStorage.getItem('platformLanguage')||'en')==='ar';}
-  function closeBox(){
-    var x=document.getElementById('cleanExamV2');
-    if(x)x.remove();
-  }
-
-  function addQuestion(){
-    var c=document.getElementById('cleanExamV2Questions');
-    if(!c)return;
-    var n=c.children.length+1;
-    var d=document.createElement('div');
+  function closeBox(){var x=document.getElementById('ceForce2Modal');if(x)x.remove();}
+  function addQ(){
+    var c=document.getElementById('ceForce2Qs');if(!c)return;
+    var n=c.children.length+1,d=document.createElement('div');
     d.style='border:1px solid #e3e8ef;border-radius:12px;padding:12px;margin:10px 0;background:#fff';
     d.innerHTML='<b>'+(ar()?'السؤال ':'Question ')+n+'</b>'+
-      '<input class="ce2-q input" style="width:100%;margin:6px 0" placeholder="'+(ar()?'نص السؤال':'Question text')+'">'+
-      '<input class="ce2-o input" style="width:100%;margin:4px 0" placeholder="A">'+
-      '<input class="ce2-o input" style="width:100%;margin:4px 0" placeholder="B">'+
-      '<input class="ce2-o input" style="width:100%;margin:4px 0" placeholder="C">'+
-      '<input class="ce2-o input" style="width:100%;margin:4px 0" placeholder="D">'+
-      '<select class="ce2-c input" style="width:100%;margin:5px 0"><option value="">'+(ar()?'الإجابة الصحيحة':'Correct answer')+'</option><option>A</option><option>B</option><option>C</option><option>D</option></select>'+
-      '<button type="button" class="btn ce2-rm">'+(ar()?'حذف السؤال':'Remove question')+'</button>';
+      '<input class="cef2-q input" style="width:100%;margin:5px 0" placeholder="'+(ar()?'نص السؤال':'Question text')+'">'+
+      '<input class="cef2-o input" style="width:100%;margin:4px 0" placeholder="A">'+
+      '<input class="cef2-o input" style="width:100%;margin:4px 0" placeholder="B">'+
+      '<input class="cef2-o input" style="width:100%;margin:4px 0" placeholder="C">'+
+      '<input class="cef2-o input" style="width:100%;margin:4px 0" placeholder="D">'+
+      '<select class="cef2-c input" style="width:100%;margin:5px 0"><option value="">'+(ar()?'الإجابة الصحيحة':'Correct answer')+'</option><option>A</option><option>B</option><option>C</option><option>D</option></select>'+
+      '<button type="button" class="btn cef2-rm">'+(ar()?'حذف السؤال':'Remove question')+'</button>';
     c.appendChild(d);
-    d.querySelector('.ce2-rm').onclick=function(){d.remove();};
+    d.querySelector('.cef2-rm').onclick=function(){d.remove();};
   }
-
-  async function saveExam(){
-    var msg=document.getElementById('cleanExamV2Msg');
-    var title=(document.getElementById('cleanExamV2Title')?.value||'').trim();
-    var grade=document.getElementById('cleanExamV2Grade')?.value||'';
-    var dur=Number(document.getElementById('cleanExamV2Dur')?.value||30);
-    var show=document.getElementById('cleanExamV2Show')?.value==='true';
-    var rows=[...document.querySelectorAll('#cleanExamV2Questions>div')];
-
-    if(!title){msg.textContent=ar()?'اكتبي عنوان الامتحان.':'Enter the exam title.';return;}
-    if(!grade){msg.textContent=ar()?'اختاري المرحلة.':'Select the stage.';return;}
-    if(!rows.length){msg.textContent=ar()?'أضيفي سؤالًا واحدًا على الأقل.':'Add at least one question.';return;}
-    if(!window.sb){msg.textContent=ar()?'قاعدة البيانات غير متاحة.':'Database connection unavailable.';return;}
-
-    msg.textContent=ar()?'جاري إنشاء الامتحان...':'Creating exam...';
+  async function save(){
+    var m=document.getElementById('ceForce2Msg');
+    var title=(document.getElementById('ceForce2Title')?.value||'').trim();
+    var grade=document.getElementById('ceForce2Grade')?.value||'';
+    var dur=Number(document.getElementById('ceForce2Dur')?.value||30);
+    var show=document.getElementById('ceForce2Show')?.value==='true';
+    var rows=[...document.querySelectorAll('#ceForce2Qs>div')];
+    if(!title){m.textContent=ar()?'اكتبي عنوان الامتحان.':'Enter the exam title.';return;}
+    if(!grade){m.textContent=ar()?'اختاري المرحلة.':'Select the stage.';return;}
+    if(!rows.length){m.textContent=ar()?'أضيفي سؤالًا واحدًا على الأقل.':'Add at least one question.';return;}
+    if(!window.sb){m.textContent=ar()?'قاعدة البيانات غير متاحة.':'Database connection unavailable.';return;}
+    m.textContent=ar()?'جاري إنشاء الامتحان...':'Creating exam...';
     try{
-      var ex=await window.sb.rpc('teacher_create_exam',{
-        p_title:title,p_grade:grade,p_duration_minutes:dur,p_show_answers:show
-      });
-      if(ex.error||!ex.data?.success)throw(ex.error||new Error(ex.data?.message||'Failed'));
-
+      var ex=await window.sb.rpc('teacher_create_exam',{p_title:title,p_grade:grade,p_duration_minutes:dur,p_show_answers:show});
+      if(ex.error||!ex.data?.success)throw(ex.error||new Error(ex.data?.message||'Failed to create exam'));
       for(var i=0;i<rows.length;i++){
-        var row=rows[i];
-        var q=(row.querySelector('.ce2-q')?.value||'').trim();
-        var opts=[...row.querySelectorAll('.ce2-o')].map(function(x){return (x.value||'').trim();});
-        var correct=row.querySelector('.ce2-c')?.value||null;
+        var row=rows[i],q=(row.querySelector('.cef2-q')?.value||'').trim();
+        var opts=[...row.querySelectorAll('.cef2-o')].map(function(x){return (x.value||'').trim();});
+        var correct=row.querySelector('.cef2-c')?.value||null;
         if(!q)throw new Error((ar()?'السؤال رقم ':'Question ')+(i+1)+(ar()?' فارغ.':' is empty.'));
         var rr=await window.sb.rpc('teacher_add_exam_question',{
-          p_exam_id:ex.data.exam_id,p_question_text:q,p_question_type:'mcq',
-          p_points:1,p_correct_answer:correct,p_options:opts,p_grading_mode:'auto'
+          p_exam_id:ex.data.exam_id,p_question_text:q,p_question_type:'mcq',p_points:1,
+          p_correct_answer:correct,p_options:opts,p_grading_mode:'auto'
         });
         if(rr.error)throw rr.error;
       }
-
       closeBox();
       if(typeof window.refreshTeacher==='function')await window.refreshTeacher();
       alert(ar()?'تم إنشاء الامتحان بنجاح ✅':'Exam created successfully ✅');
     }catch(err){
-      console.error('clean exam v2',err);
-      msg.textContent=(ar()?'حدث خطأ: ':'Error: ')+(err?.message||err);
+      console.error('create-exam-force-clean-v2',err);
+      m.textContent=(ar()?'حدث خطأ: ':'Error: ')+(err?.message||err);
     }
   }
-
-  window.__finalCleanCreateExamV2=function(e){
+  function open(e){
     if(e){e.preventDefault();e.stopImmediatePropagation();e.stopPropagation();}
     closeBox();
-
-    var b=document.createElement('div');
-    b.id='cleanExamV2';
+    var b=document.createElement('div');b.id='ceForce2Modal';
     b.style='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:14px';
     b.innerHTML='<div style="background:#fff;border-radius:18px;width:min(760px,100%);max-height:94vh;overflow:auto;padding:18px;direction:'+(ar()?'rtl':'ltr')+'">'+
-      '<div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0;color:#062b57">📝 '+(ar()?'إنشاء امتحان':'Create Exam')+'</h2><button id="cleanExamV2Close" type="button" class="btn">✕</button></div>'+
-      '<div class="form-grid" style="margin-top:12px"><input id="cleanExamV2Title" class="input" placeholder="'+(ar()?'عنوان الامتحان':'Exam Title')+'">'+
-      '<select id="cleanExamV2Grade" class="input"><option value="">'+(ar()?'اختاري المرحلة':'Select Stage')+'</option><option>أولى إعدادي</option><option>ثانية إعدادي</option><option>ثالثة إعدادي</option><option>أولى ثانوي</option><option>ثانية ثانوي</option><option>ثالثة ثانوي</option><option>كورسات</option></select>'+
-      '<input id="cleanExamV2Dur" class="input" type="number" min="1" value="30">'+
-      '<select id="cleanExamV2Show" class="input"><option value="false">'+(ar()?'إخفاء الإجابات':'Hide Answers')+'</option><option value="true">'+(ar()?'إظهار الإجابات':'Show Answers')+'</option></select></div>'+
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px"><b>'+(ar()?'الأسئلة':'Questions')+'</b><button id="cleanExamV2Add" type="button" class="btn gold">+ '+(ar()?'إضافة سؤال':'Add Question')+'</button></div>'+
-      '<div id="cleanExamV2Questions"></div><div id="cleanExamV2Msg" class="sub" style="margin-top:8px"></div>'+
-      '<button id="cleanExamV2Save" type="button" class="submit" style="width:100%;margin-top:10px">✅ '+(ar()?'إنشاء الامتحان وحفظه':'Create Exam & Save')+'</button></div>';
-
+      '<div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0;color:#062b57">📝 '+(ar()?'إنشاء امتحان':'Create Exam')+'</h2><button id="ceForce2Close" type="button" class="btn">✕</button></div>'+
+      '<div class="form-grid" style="margin-top:12px"><input id="ceForce2Title" class="input" placeholder="'+(ar()?'عنوان الامتحان':'Exam Title')+'">'+
+      '<select id="ceForce2Grade" class="input"><option value="">'+(ar()?'اختاري المرحلة':'Select Stage')+'</option><option>أولى إعدادي</option><option>ثانية إعدادي</option><option>ثالثة إعدادي</option><option>أولى ثانوي</option><option>ثانية ثانوي</option><option>ثالثة ثانوي</option><option>كورسات</option></select>'+
+      '<input id="ceForce2Dur" class="input" type="number" min="1" value="30">'+
+      '<select id="ceForce2Show" class="input"><option value="false">'+(ar()?'إخفاء الإجابات':'Hide Answers')+'</option><option value="true">'+(ar()?'إظهار الإجابات':'Show Answers')+'</option></select></div>'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px"><b>'+(ar()?'الأسئلة':'Questions')+'</b><button id="ceForce2Add" type="button" class="btn gold">+ '+(ar()?'إضافة سؤال':'Add Question')+'</button></div>'+
+      '<div id="ceForce2Qs"></div><div id="ceForce2Msg" class="sub" style="margin-top:8px"></div>'+
+      '<button id="ceForce2Save" type="button" class="submit" style="width:100%;margin-top:10px">✅ '+(ar()?'إنشاء الامتحان وحفظه':'Create Exam & Save')+'</button></div>';
     document.body.appendChild(b);
-    document.getElementById('cleanExamV2Close').onclick=closeBox;
-    document.getElementById('cleanExamV2Add').onclick=addQuestion;
-    document.getElementById('cleanExamV2Save').onclick=saveExam;
-    addQuestion();
-  };
-
+    document.getElementById('ceForce2Close').onclick=closeBox;
+    document.getElementById('ceForce2Add').onclick=addQ;
+    document.getElementById('ceForce2Save').onclick=save;
+    addQ();
+  }
+  window.__createExamForceCleanV2=open;
+  window.__examCreateButton=open;
   function isCreate(el){
     if(!el)return false;
     var t=(el.textContent||'').replace(/\s+/g,' ').trim().toLowerCase();
-    return t.indexOf('create exam')>=0||t.indexOf('إنشاء امتحان')>=0;
+    return t.includes('create exam')||t.includes('إنشاء امتحان');
   }
-
   function wire(){
     document.querySelectorAll('button,a,[role="button"],.dash-action').forEach(function(el){
       if(!isCreate(el))return;
       el.disabled=false;
       el.style.pointerEvents='auto';
-      el.onclick=function(e){return window.__finalCleanCreateExamV2(e);};
+      el.onclick=function(e){return open(e);};
     });
   }
-
-  document.addEventListener('click',function(e){
+  window.addEventListener('click',function(e){
     var el=e.target&&e.target.closest?e.target.closest('button,a,[role="button"],.dash-action'):null;
-    if(!isCreate(el))return;
-    window.__finalCleanCreateExamV2(e);
+    if(isCreate(el))open(e);
   },true);
-
+  window.addEventListener('pointerup',function(e){
+    var el=e.target&&e.target.closest?e.target.closest('button,a,[role="button"],.dash-action'):null;
+    if(isCreate(el)&&!document.getElementById('ceForce2Modal'))open(e);
+  },true);
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire);else wire();
   new MutationObserver(wire).observe(document.documentElement,{childList:true,subtree:true});
   setTimeout(wire,300);setTimeout(wire,1000);setTimeout(wire,2500);
