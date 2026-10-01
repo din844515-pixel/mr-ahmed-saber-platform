@@ -1,4 +1,4 @@
-name: Final Create Exam Button Override
+name: Final Clean Create Exam
 
 on:
   push:
@@ -9,186 +9,208 @@ permissions:
 
 jobs:
   patch:
-    if: ${{ !contains(github.event.head_commit.message, '[create-exam-v7]') }}
+    if: ${{ !contains(github.event.head_commit.message, '[create-exam-final-clean]') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Override broken Create Exam handlers
+      - name: Replace all stale Create Exam handlers
+        shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          p=Path('index.html')
-          s=p.read_text(encoding='utf-8')
           import re
-          # Remove every stale Create Exam v2/fallback handler before adding the final bridge.
-          s=re.sub(r'<script id="robust-create-exam-builder-v2">.*?</script>', '', s, flags=re.S)
-          s=re.sub(r'<script id="robust-create-exam-builder-v1">.*?</script>', '', s, flags=re.S)
-          s=re.sub(r'إنشاء الامتحان غير جاهز، حدّثي الصفحة مرة أخرى.', '', s)
-          marker='id="create-exam-final-v5"'
-          if marker in s:
-              import re
-          # Remove all older Create Exam capture/override scripts that can intercept the click.
-          for pat in [
+
+          p = Path("index.html")
+          s = p.read_text(encoding="utf-8")
+
+          stale = [
               r'<script id="robust-create-exam-builder-v1">.*?</script>',
               r'<script id="robust-create-exam-builder-v2">.*?</script>',
               r'<script id="standalone-create-exam-v1">.*?</script>',
               r'<script id="standalone-create-exam-direct-v2">.*?</script>',
               r'<script id="create-exam-direct-final-fix">.*?</script>',
+              r'<script id="create-exam-final-v[0-9]+">.*?</script>',
+              r'<script id="exam-buttons-guaranteed-fix">.*?</script>',
               r'<!-- EXAMS BUTTONS DIRECT HOTFIX -->.*?</script>',
               r'<!-- EXAMS BUTTONS FINAL FIX -->.*?</script>',
-              r'<script id="exam-buttons-guaranteed-fix">.*?</script>'
-          ]:
-              s=re.sub(pat,'',s,count=0,flags=re.S)
-          # Remove prior clean/fallback injection markers if present.
-          s=re.sub(r'<script id="create-exam-clean-v6">.*?</script>','',s,count=0,flags=re.S)
-          marker='id="create-exam-clean-v7"'
-          if marker not in s:
-              pass
-          p.write_text(s,encoding='utf-8')
-              raise SystemExit(0)
-          js=r'''<script id="create-exam-clean-v6">
+          ]
+          for pat in stale:
+              s = re.sub(pat, '', s, flags=re.S)
+
+          s = re.sub(r'إنشاء الامتحان غير جاهز[^<]*', '', s)
+
+          js = r'''<script id="create-exam-final-clean">
 (function(){
   'use strict';
-  function ar(){return (localStorage.getItem('platformLanguage')||'en')==='ar';}
-  function close(){var x=document.getElementById('cleanExamModal');if(x)x.remove();}
-  function addQ(){
-    var c=document.getElementById('cleanQuestions');
-    if(!c)return;
-    var n=c.children.length+1,d=document.createElement('div');
-    d.className='clean-q';
-    d.style='border:1px solid #e3e8ef;border-radius:12px;padding:12px;margin:10px 0;background:#fff';
-    d.innerHTML='<div style="font-weight:800;margin-bottom:6px">'+(ar()?'السؤال ':'Question ')+n+'</div>'+
-      '<input class="clean-qtext input" style="width:100%;margin:5px 0" placeholder="'+(ar()?'نص السؤال':'Question text')+'">'+
-      '<input class="clean-opt input" style="width:100%;margin:4px 0" placeholder="A">'+
-      '<input class="clean-opt input" style="width:100%;margin:4px 0" placeholder="B">'+
-      '<input class="clean-opt input" style="width:100%;margin:4px 0" placeholder="C">'+
-      '<input class="clean-opt input" style="width:100%;margin:4px 0" placeholder="D">'+
-      '<select class="clean-correct input" style="width:100%;margin:5px 0"><option value="">'+(ar()?'الإجابة الصحيحة':'Correct answer')+'</option><option>A</option><option>B</option><option>C</option><option>D</option></select>'+
-      '<button type="button" class="btn clean-remove">'+(ar()?'حذف السؤال':'Remove question')+'</button>';
-    c.appendChild(d);
-    d.querySelector('.clean-remove').onclick=function(){d.remove();};
+
+  function ar(){ return (localStorage.getItem('platformLanguage')||'en') === 'ar'; }
+
+  function closeModal(){
+    var x=document.getElementById('finalCleanExamModal');
+    if(x) x.remove();
   }
-  async function save(){
-    var m=document.getElementById('cleanMsg');
-    var title=(document.getElementById('cleanTitle')?.value||'').trim();
-    var grade=document.getElementById('cleanGrade')?.value||'';
-    var dur=Number(document.getElementById('cleanDur')?.value||30);
-    var show=document.getElementById('cleanShow')?.value==='true';
-    var rows=[...document.querySelectorAll('#cleanQuestions .clean-q')];
-    if(!title){m.textContent=ar()?'اكتبي عنوان الامتحان.':'Enter the exam title.';return;}
-    if(!grade){m.textContent=ar()?'اختاري المرحلة.':'Select the stage.';return;}
-    if(!rows.length){m.textContent=ar()?'أضيفي سؤالًا واحدًا على الأقل.':'Add at least one question.';return;}
-    if(!window.sb){m.textContent=ar()?'اتصال قاعدة البيانات غير متاح.':'Database connection unavailable.';return;}
-    m.textContent=ar()?'جاري إنشاء الامتحان...':'Creating exam...';
+
+  function addQuestion(){
+    var c=document.getElementById('finalCleanQuestions');
+    if(!c) return;
+    var n=c.children.length+1;
+    var d=document.createElement('div');
+    d.className='final-clean-q';
+    d.style='border:1px solid #e3e8ef;border-radius:12px;padding:12px;margin:10px 0;background:#fff';
+    d.innerHTML=
+      '<div style="font-weight:800;margin-bottom:6px">'+(ar()?'السؤال ':'Question ')+n+'</div>'+
+      '<input class="final-qtext input" style="width:100%;margin:5px 0" placeholder="'+(ar()?'نص السؤال':'Question text')+'">'+
+      '<input class="final-opt input" style="width:100%;margin:4px 0" placeholder="A">'+
+      '<input class="final-opt input" style="width:100%;margin:4px 0" placeholder="B">'+
+      '<input class="final-opt input" style="width:100%;margin:4px 0" placeholder="C">'+
+      '<input class="final-opt input" style="width:100%;margin:4px 0" placeholder="D">'+
+      '<select class="final-correct input" style="width:100%;margin:5px 0">'+
+        '<option value="">'+(ar()?'الإجابة الصحيحة':'Correct answer')+'</option>'+
+        '<option>A</option><option>B</option><option>C</option><option>D</option>'+
+      '</select>'+
+      '<button type="button" class="btn final-remove">'+(ar()?'حذف السؤال':'Remove question')+'</button>';
+    c.appendChild(d);
+    d.querySelector('.final-remove').onclick=function(){ d.remove(); };
+  }
+
+  async function saveExam(){
+    var msg=document.getElementById('finalCleanMsg');
+    var title=(document.getElementById('finalCleanTitle')?.value||'').trim();
+    var grade=document.getElementById('finalCleanGrade')?.value||'';
+    var dur=Number(document.getElementById('finalCleanDur')?.value||30);
+    var show=document.getElementById('finalCleanShow')?.value==='true';
+    var rows=[...document.querySelectorAll('#finalCleanQuestions .final-clean-q')];
+
+    if(!title){ msg.textContent=ar()?'اكتبي عنوان الامتحان.':'Enter the exam title.'; return; }
+    if(!grade){ msg.textContent=ar()?'اختاري المرحلة.':'Select the stage.'; return; }
+    if(!rows.length){ msg.textContent=ar()?'أضيفي سؤالًا واحدًا على الأقل.':'Add at least one question.'; return; }
+    if(!window.sb){ msg.textContent=ar()?'اتصال قاعدة البيانات غير متاح.':'Database connection unavailable.'; return; }
+
+    msg.textContent=ar()?'جاري إنشاء الامتحان...':'Creating exam...';
     try{
-      var ex=await window.sb.rpc('teacher_create_exam',{p_title:title,p_grade:grade,p_duration_minutes:dur,p_show_answers:show});
-      if(ex.error||!ex.data?.success)throw(ex.error||new Error(ex.data?.message||'Failed to create exam'));
-      for(var i=0;i<rows.length;i++){
-        var row=rows[i],q=(row.querySelector('.clean-qtext')?.value||'').trim();
-        var opts=[...row.querySelectorAll('.clean-opt')].map(function(x){return (x.value||'').trim();});
-        var correct=row.querySelector('.clean-correct')?.value||null;
-        if(!q)throw new Error((ar()?'السؤال رقم ':'Question ')+(i+1)+(ar()?' فارغ.':' is empty.'));
-        var rr=await window.sb.rpc('teacher_add_exam_question',{p_exam_id:ex.data.exam_id,p_question_text:q,p_question_type:'mcq',p_points:1,p_correct_answer:correct,p_options:opts,p_grading_mode:'auto'});
-        if(rr.error)throw rr.error;
+      var ex=await window.sb.rpc('teacher_create_exam',{
+        p_title:title,
+        p_grade:grade,
+        p_duration_minutes:dur,
+        p_show_answers:show
+      });
+      if(ex.error || !ex.data?.success){
+        throw ex.error || new Error(ex.data?.message||'Failed to create exam');
       }
-      close();
-      if(typeof window.refreshTeacher==='function')await window.refreshTeacher();
+
+      for(var i=0;i<rows.length;i++){
+        var row=rows[i];
+        var q=(row.querySelector('.final-qtext')?.value||'').trim();
+        var opts=[...row.querySelectorAll('.final-opt')].map(function(x){return (x.value||'').trim();});
+        var correct=row.querySelector('.final-correct')?.value||null;
+
+        if(!q){
+          throw new Error((ar()?'السؤال رقم ':'Question ')+(i+1)+(ar()?' فارغ.':' is empty.'));
+        }
+
+        var rr=await window.sb.rpc('teacher_add_exam_question',{
+          p_exam_id:ex.data.exam_id,
+          p_question_text:q,
+          p_question_type:'mcq',
+          p_points:1,
+          p_correct_answer:correct,
+          p_options:opts,
+          p_grading_mode:'auto'
+        });
+        if(rr.error) throw rr.error;
+      }
+
+      closeModal();
+      if(typeof window.refreshTeacher==='function') await window.refreshTeacher();
       alert(ar()?'تم إنشاء الامتحان بنجاح ✅':'Exam created successfully ✅');
-    }catch(e){
-      console.error('clean create exam',e);
-      m.textContent=(ar()?'حدث خطأ: ':'Error: ')+(e&&e.message||e);
+    }catch(err){
+      console.error('final-clean-create-exam',err);
+      msg.textContent=(ar()?'حدث خطأ: ':'Error: ')+(err?.message||err);
     }
   }
-  window.__cleanCreateExam=function(e){
-    if(e){e.preventDefault();e.stopImmediatePropagation();e.stopPropagation();}
-    close();
+
+  window.__finalCleanCreateExam=function(e){
+    if(e){ e.preventDefault(); e.stopImmediatePropagation(); e.stopPropagation(); }
+    closeModal();
+
     var b=document.createElement('div');
-    b.id='cleanExamModal';
+    b.id='finalCleanExamModal';
     b.style='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:14px';
-    b.innerHTML='<div style="background:#fff;border-radius:18px;width:min(760px,100%);max-height:94vh;overflow:auto;padding:18px;direction:'+(ar()?'rtl':'ltr')+'">'+
-      '<div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0;color:#062b57">📝 '+(ar()?'إنشاء امتحان':'Create Exam')+'</h2><button id="cleanClose" type="button" class="btn">✕</button></div>'+
-      '<div class="form-grid" style="margin-top:12px"><input id="cleanTitle" class="input" placeholder="'+(ar()?'عنوان الامتحان':'Exam Title')+'">'+
-      '<select id="cleanGrade" class="input"><option value="">'+(ar()?'اختاري المرحلة':'Select Stage')+'</option><option>أولى إعدادي</option><option>ثانية إعدادي</option><option>ثالثة إعدادي</option><option>أولى ثانوي</option><option>ثانية ثانوي</option><option>ثالثة ثانوي</option><option>كورسات</option></select>'+
-      '<input id="cleanDur" class="input" type="number" min="1" value="30" placeholder="'+(ar()?'المدة بالدقائق':'Duration in minutes')+'">'+
-      '<select id="cleanShow" class="input"><option value="false">'+(ar()?'إخفاء الإجابات':'Hide Answers')+'</option><option value="true">'+(ar()?'إظهار الإجابات':'Show Answers')+'</option></select></div>'+
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px"><b>'+(ar()?'الأسئلة':'Questions')+'</b><button id="cleanAdd" type="button" class="btn gold">+ '+(ar()?'إضافة سؤال':'Add Question')+'</button></div>'+
-      '<div id="cleanQuestions"></div><div id="cleanMsg" class="sub" style="margin-top:8px"></div>'+
-      '<button id="cleanSave" type="button" class="submit" style="width:100%;margin-top:10px">✅ '+(ar()?'إنشاء الامتحان وحفظه':'Create Exam & Save')+'</button></div>';
+
+    b.innerHTML=
+      '<div style="background:#fff;border-radius:18px;width:min(760px,100%);max-height:94vh;overflow:auto;padding:18px;direction:'+(ar()?'rtl':'ltr')+'">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center">'+
+        '<h2 style="margin:0;color:#062b57">📝 '+(ar()?'إنشاء امتحان':'Create Exam')+'</h2>'+
+        '<button id="finalCleanClose" type="button" class="btn">✕</button>'+
+      '</div>'+
+      '<div class="form-grid" style="margin-top:12px">'+
+        '<input id="finalCleanTitle" class="input" placeholder="'+(ar()?'عنوان الامتحان':'Exam Title')+'">'+
+        '<select id="finalCleanGrade" class="input">'+
+          '<option value="">'+(ar()?'اختاري المرحلة':'Select Stage')+'</option>'+
+          '<option>أولى إعدادي</option><option>ثانية إعدادي</option><option>ثالثة إعدادي</option>'+
+          '<option>أولى ثانوي</option><option>ثانية ثانوي</option><option>ثالثة ثانوي</option><option>كورسات</option>'+
+        '</select>'+
+        '<input id="finalCleanDur" class="input" type="number" min="1" value="30" placeholder="'+(ar()?'المدة بالدقائق':'Duration in minutes')+'">'+
+        '<select id="finalCleanShow" class="input">'+
+          '<option value="false">'+(ar()?'إخفاء الإجابات':'Hide Answers')+'</option>'+
+          '<option value="true">'+(ar()?'إظهار الإجابات':'Show Answers')+'</option>'+
+        '</select>'+
+      '</div>'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px">'+
+        '<b>'+(ar()?'الأسئلة':'Questions')+'</b>'+
+        '<button id="finalCleanAdd" type="button" class="btn gold">+ '+(ar()?'إضافة سؤال':'Add Question')+'</button>'+
+      '</div>'+
+      '<div id="finalCleanQuestions"></div>'+
+      '<div id="finalCleanMsg" class="sub" style="margin-top:8px"></div>'+
+      '<button id="finalCleanSave" type="button" class="submit" style="width:100%;margin-top:10px">✅ '+(ar()?'إنشاء الامتحان وحفظه':'Create Exam & Save')+'</button>'+
+      '</div>';
+
     document.body.appendChild(b);
-    document.getElementById('cleanClose').onclick=close;
-    document.getElementById('cleanAdd').onclick=addQ;
-    document.getElementById('cleanSave').onclick=save;
-    addQ();
+    document.getElementById('finalCleanClose').onclick=closeModal;
+    document.getElementById('finalCleanAdd').onclick=addQuestion;
+    document.getElementById('finalCleanSave').onclick=saveExam;
+    addQuestion();
   };
+
   function isCreate(el){
-    if(!el)return false;
+    if(!el) return false;
     var t=(el.textContent||'').replace(/\s+/g,' ').trim().toLowerCase();
-    return t.indexOf('create exam')>=0||t.indexOf('إنشاء امتحان')>=0;
+    return t.indexOf('create exam')>=0 || t.indexOf('إنشاء امتحان')>=0;
   }
+
   function wire(){
     document.querySelectorAll('button,a,[role="button"],.dash-action').forEach(function(el){
-      if(!isCreate(el))return;
+      if(!isCreate(el)) return;
       el.disabled=false;
       el.style.pointerEvents='auto';
-      el.onclick=function(e){return window.__cleanCreateExam(e);};
+      el.onclick=function(e){ return window.__finalCleanCreateExam(e); };
     });
   }
+
   document.addEventListener('click',function(e){
-    var el=e.target&&e.target.closest?e.target.closest('button,a,[role="button"],.dash-action'):null;
-    if(!isCreate(el))return;
-    window.__cleanCreateExam(e);
+    var el=e.target && e.target.closest ? e.target.closest('button,a,[role="button"],.dash-action') : null;
+    if(!isCreate(el)) return;
+    window.__finalCleanCreateExam(e);
   },true);
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire);else wire();
+
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',wire);
+  else wire();
+
   new MutationObserver(wire).observe(document.documentElement,{childList:true,subtree:true});
-  setTimeout(wire,300);setTimeout(wire,1000);setTimeout(wire,2500);
+  setTimeout(wire,300);
+  setTimeout(wire,1000);
+  setTimeout(wire,2500);
 })();
-</script>'''<script id="create-exam-final-v5">
-          (function(){
-            'use strict';
-            function isCreate(el){
-              if(!el) return false;
-              var t=(el.textContent||'').replace(/\s+/g,' ').trim().toLowerCase();
-              return t.indexOf('create exam')>=0 || t.indexOf('إنشاء امتحان')>=0;
-            }
-            function openDirect(e){
-              if(e){e.preventDefault();e.stopImmediatePropagation();e.stopPropagation();}
-              var fn=window.__robustOpenCreateExam;
-              if(typeof fn==='function') return fn(e);
-              var fn2=window.__standaloneOpenExamDirect||window.__standaloneOpenExam;
-              if(typeof fn2==='function') return fn2(e);
-              return false;
-            }
-            function wire(){
-              document.querySelectorAll('button,a,[role="button"],.dash-action').forEach(function(el){
-                if(!isCreate(el)) return;
-                el.disabled=false;
-                el.style.pointerEvents='auto';
-                el.onclick=openDirect;
-              });
-            }
-            document.addEventListener('click',function(e){
-              var el=e.target&&e.target.closest?e.target.closest('button,a,[role="button"],.dash-action'):null;
-              if(isCreate(el)) openDirect(e);
-            },true);
-            if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire);else wire();
-            new MutationObserver(wire).observe(document.documentElement,{childList:true,subtree:true});
-            setTimeout(wire,300);setTimeout(wire,1000);setTimeout(wire,2500);
-          })();
-          </script>'''
-          s=s.replace('</body>',js+'</body>') if '</body>' in s else s+js
-          import re
-          s=re.sub(r'<!-- CREATE-EXAM-CAPTURE-FIX-2026-09-30 -->.*?</script>', '', s, count=1, flags=re.S)
-          s=re.sub(r'<script id="create-exam-final-override">.*?</script>', '', s, count=1, flags=re.S)
-          # Remove the stale v2 handler that overwrites the working v1 Create Exam button.
-          s=re.sub(r'<script id=\\?"robust-create-exam-builder-v2\\?">.*?</script>', '', s, count=1, flags=re.S)
-          s=s.replace('<script id=\\"robust-create-exam-builder-v2\\">','')
-          p.write_text(s,encoding='utf-8')
+</script>'''
+
+          s = s.replace('</body>', js + '</body>') if '</body>' in s else s + js
+          p.write_text(s, encoding='utf-8')
           PY
-      - name: Commit final fix
+      - name: Commit final clean builder
         run: |
           git config user.name "chatgpt-ui-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html
           git diff --cached --quiet && exit 0
-          git commit -m "Remove stale Create Exam v2 and install clean bridge [create-exam-v5]"
+          git commit -m "Install clean Create Exam builder [create-exam-final-clean]"
           git push
