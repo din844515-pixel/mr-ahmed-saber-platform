@@ -1246,17 +1246,32 @@ document.addEventListener('click',function(e){
   }
 
   function renderStudents(main,d){
-    const ss=d.students||[]; const active=window.__studentCatFilter||'all';
+    const ss=Array.isArray(d.students)?d.students:[];
+    const active=window.__studentCatFilter||'all';
     const visible=active==='all'?ss:ss.filter(s=>catOf(s.grade)===active);
-    const tabs=[['all',tr('All Students','كل الطلاب'),ss.length]].concat(CATS.map(c=>[c[0],tr(c[2],c[1]),ss.filter(s=>catOf(s.grade)===c[0]).length]));
-    
-    const rows=visible.map(s=>`<tr><td><b>${esc(s.name||'')}</b>${!s.parent_phone?'<div class="parent-phone-badge">⚠️ '+tr('Parent phone required','رقم ولي الأمر مطلوب')+'</div>':''}</td><td>${esc(s.student_code||s.code||'')}</td><td>${esc(catLabel(catOf(s.grade)))}</td><td>${esc(s.parent_phone||'—')}</td><td><span class="pill ${s.paid?'':'wait'}">${s.paid?tr('Paid','تم السداد'):tr('Unpaid','لم يتم السداد')}</span></td><td><input type="checkbox" class="v9-student-check" value="${s.id}"></td><td><button class="dash-action" onclick='openStudentEditorV9(${JSON.stringify(s).replace(/'/g,'&#39;')})'>${tr('Edit','تعديل')}</button> <button class="dash-action gold" onclick="manualRenewStudent(${s.id})">✅ ${tr('Manual Renewal','إعادة الاشتراك يدويًا')}</button> <button class="dash-action" style="background:#b33a3a" onclick="deleteStudent(${s.id})">${tr('Delete','حذف')}</button></td></tr>`).join('');
-    main.innerHTML=`<div class="welcome"><div><h1>${tr('Students','الطلاب')}</h1><p>${tr('Choose a stage to see its full student list.','اختاري مرحلة لعرض كل أسماء طلابها.')}</p></div><div class="dash-toolbar"><button class="dash-action" onclick="openStudentEditorV9()">+ ${tr('Add Student','إضافة طالب')}</button><button class="dash-action" onclick="bulkAllV9(true)">${tr('Mark All Paid','الكل تم السداد')}</button><button class="dash-action" onclick="bulkAllV9(false)">${tr('Mark All Unpaid','الكل لم يتم السداد')}</button></div></div>
-      <section class="panel"><div class="v9-pills">${tabs.map(x=>`<button class="v9-pill ${active===x[0]?'active':''}" onclick="setStudentStageFilter(${JSON.stringify(x[0])})">${esc(x[1])} <b>${x[2]}</b></button>`).join('')}</div>
-      <div class="v9-selected-bar"><button class="dash-action" onclick="setSelectedPaidV9(true)">${tr('Selected = Paid','المحدد = تم السداد')}</button><button class="dash-action" onclick="setSelectedPaidV9(false)">${tr('Selected = Unpaid','المحدد = لم يتم السداد')}</button></div>
-      <div class="dash-toolbar"><input class="dash-input" id="studentSearchV9" placeholder="${tr('Search name / code / parent phone','بحث بالاسم / الكود / رقم ولي الأمر')}" oninput="filterStudentsV9()"><span class="badge-soft">${visible.length} ${tr('students','طلاب')}</span></div>
-      <div class="v9-scroll"><table class="dash-table" id="studentsTableV9"><thead><tr><th>${tr('Name','الاسم')}</th><th>${tr('Code','الكود')}</th><th>${tr('Stage','المرحلة')}</th><th>${tr('Parent Phone','ولي الأمر')}</th><th>${tr('Payment','السداد')}</th><th>✓</th><th>${tr('Actions','الإجراءات')}</th></tr></thead><tbody>${rows||`<tr><td colspan="7">${tr('No students in this list yet.','لا يوجد طلاب في هذه القائمة بعد.')}</td></tr>`}</tbody></table></div></section>`;
+    const numberById=new Map(ss.map((s,i)=>[String(s.id),i+1]));
+    const tabs=[['all',tr('All Students','كل الطلاب'),ss.length]].concat(
+      CATS.map(c=>[c[0],tr(c[2],c[1]),ss.filter(s=>catOf(s.grade)===c[0]).length])
+    );
+
+    const rows=visible.map(s=>{
+      const studentNo=numberById.get(String(s.id))||'';
+      const numberBadge='<span data-student-number-v18="1" style="display:inline-flex;align-items:center;justify-content:center;min-width:32px;height:26px;padding:0 7px;margin-inline-end:8px;border-radius:7px;background:#062b57;color:#fff;font-weight:900;font-size:12px;line-height:1;vertical-align:middle;box-sizing:border-box">'+studentNo+'</span>';
+      return '<tr><td><b>'+numberBadge+esc(s.name||'')+'</b>'+(!s.parent_phone?'<div class="parent-phone-badge">⚠️ '+tr('Parent phone required','رقم ولي الأمر مطلوب')+'</div>':'')+
+        '</td><td>'+esc(s.student_code||s.code||'')+'</td><td>'+esc(catLabel(catOf(s.grade)))+'</td><td>'+esc(s.parent_phone||'—')+'</td><td><span class="pill '+(s.paid?'':'wait')+'">'+(s.paid?tr('Paid','تم السداد'):tr('Unpaid','لم يتم السداد'))+
+        '</span></td><td><input type="checkbox" class="v9-student-check" value="'+s.id+'"></td><td><button class="dash-action" onclick='openStudentEditorV9('+JSON.stringify(s).replace(/'/g,'&#39;')+')'>${tr('Edit','تعديل')}</button> <button class="dash-action gold" onclick="manualRenewStudent('+s.id+')">✅ ${tr('Manual Renewal','إعادة الاشتراك يدويًا')}</button> <button class="dash-action" style="background:#b33a3a" onclick="deleteStudent('+s.id+')">${tr('Delete','حذف')}</button></td></tr>';
+    }).join('');
+
+    main.innerHTML='<div class="welcome"><div><h1>'+tr('Students','الطلاب')+'</h1><p>'+tr('Choose a stage to see its full student list.','اختاري مرحلة لعرض كل أسماء طلابها.')+
+      '</p></div><div class="dash-toolbar"><button class="dash-action" onclick="openStudentEditorV9()">+ '+tr('Add Student','إضافة طالب')+'</button><button class="dash-action" onclick="bulkAllV9(true)">'+tr('Mark All Paid','الكل تم السداد')+
+      '</button><button class="dash-action" onclick="bulkAllV9(false)">'+tr('Mark All Unpaid','الكل لم يتم السداد')+'</button></div></div>'+
+      '<section class="panel"><div class="v9-pills">'+tabs.map(x=>'<button class="v9-pill '+(active===x[0]?'active':'')+'" onclick="setStudentStageFilter('+JSON.stringify(x[0])+')">'+esc(x[1])+' <b>'+x[2]+'</b></button>').join('')+'</div>'+
+      '<div class="v9-selected-bar"><button class="dash-action" onclick="setSelectedPaidV9(true)">'+tr('Selected = Paid','المحدد = تم السداد')+'</button><button class="dash-action" onclick="setSelectedPaidV9(false)">'+tr('Selected = Unpaid','المحدد = لم يتم السداد')+'</button></div>'+
+      '<div class="dash-toolbar"><input class="dash-input" id="studentSearchV9" placeholder="'+tr('Search name / code / parent phone','بحث بالاسم / الكود / رقم ولي الأمر')+'" oninput="filterStudentsV9()"><span class="badge-soft">'+visible.length+' '+tr('students','طلاب')+'</span></div>'+
+      '<div class="v9-scroll"><table class="dash-table" id="studentsTableV9"><thead><tr><th>'+tr('Name','الاسم')+'</th><th>'+tr('Code','الكود')+'</th><th>'+tr('Stage','المرحلة')+'</th><th>'+tr('Parent Phone','ولي الأمر')+'</th><th>'+tr('Payment','السداد')+'</th><th>✓</th><th>'+tr('Actions','الإجراءات')+'</th></tr></thead><tbody>'+
+      (rows||'<tr><td colspan="7">'+tr('No students in this list yet.','لا يوجد طلاب في هذه القائمة بعد.')+'</td></tr>')+'</tbody></table></div></section>';
   }
+
   function studentCategoryOptions(selected){return CATS.map(c=>`<option value="${esc(c[1])}" ${selected===c[1]|| (c[0]==='foundation'&&selected==='كورس تأسيس') || (c[0]==='courses'&&(selected==='General English'||selected==='Speaking & Pronunciation'||selected==='كورسات'))?'selected':''}>${esc(tr(c[2],c[1]))}</option>`).join('')}
   window.openStudentEditorV9=function(s){s=s||{};show(`<h2>${s.id?tr('Edit Student','تعديل طالب'):tr('Add Student','إضافة طالب')}</h2><div class="form-grid"><input id="v9_name" class="input" placeholder="${tr('Student Name','اسم الطالب')}" value="${esc(s.name||'')}"><input id="v9_code" class="input" placeholder="${tr('Student Code (leave empty to auto-generate)','كود الطالب (اتركيه فارغًا للتوليد تلقائيًا)')}" value="${esc(s.student_code||s.code||'')}"><select id="v9_grade" class="input">${studentCategoryOptions(s.grade)}</select><input id="v9_parent" class="input" placeholder="${tr('Parent Phone','رقم ولي الأمر')}" value="${esc(s.parent_phone||'')}"><input id="v9_phone" class="input" placeholder="${tr('Student Phone','رقم الطالب')}" value="${esc(s.phone||'')}"><input id="v9_email" class="input" placeholder="Email" value="${esc(s.email||'')}"><select id="v9_gender" class="input"><option value="male" ${s.gender!=='female'?'selected':''}>Male</option><option value="female" ${s.gender==='female'?'selected':''}>Female</option></select><select id="v9_paid" class="input"><option value="true" ${s.paid?'selected':''}>${tr('Paid','تم السداد')}</option><option value="false" ${!s.paid?'selected':''}>${tr('Unpaid','لم يتم السداد')}</option></select><select id="v9_exempt" class="input"><option value="false" ${!s.exempt?'selected':''}>${tr('Normal student','طالب عادي')}</option><option value="true" ${s.exempt?'selected':''}>${tr('Exempt','معفى')}</option></select><textarea id="v9_notes" class="input full" style="height:80px" placeholder="${tr('Notes','ملاحظات')}">${esc(s.notes||'')}</textarea></div><button class="submit" onclick="saveStudentV9(${Number(s.id||0)})">${tr('Save','حفظ')} →</button>`)};
   window.saveStudentV9=async function(id){let code=document.getElementById('v9_code').value.trim();if(!code)code='AS'+Math.floor(100000+Math.random()*900000);const payload={p_name:document.getElementById('v9_name').value.trim(),p_student_code:code,p_grade:document.getElementById('v9_grade').value.trim(),p_parent_phone:document.getElementById('v9_parent').value.trim(),p_phone:document.getElementById('v9_phone').value.trim(),p_email:document.getElementById('v9_email').value.trim(),p_gender:document.getElementById('v9_gender').value,p_paid:document.getElementById('v9_paid').value==='true',p_exempt:document.getElementById('v9_exempt').value==='true'};const params=id?{p_student_id:id,...payload,p_active:true,p_notes:document.getElementById('v9_notes').value.trim()}:payload;const r=await sb.rpc(id?'teacher_update_student':'teacher_create_student',params);if(r.error||!r.data?.success){alert(r.data?.message||r.error?.message||tr('Failed','فشل'));return}closeModal();alert(tr('Student saved. Login code: ','تم حفظ الطالب. كود الدخول: ')+code);await refreshV9();};
@@ -1750,102 +1765,6 @@ setTimeout(async()=>{try{if(!await waitForSupabase())return;const {data}=await s
       }
     }catch(e){ alert('تعذر فتح الأسئلة: '+(e.message||e)); }
   };
-})();
-</script>
-
-
-
-
-<!-- NEW STUDENT NUMBERING V17 -->
-<script id="student-numbering-v17">
-(function () {
-  "use strict";
-  const BADGE = "student-number-v17";
-  const TABLE_IDS = ["studentsTable", "studentsTableV9"];
-
-  function getStudents() {
-    const data = window.__teacherData || {};
-    return Array.isArray(data.students) ? data.students : [];
-  }
-  function clean(value) {
-    return String(value == null ? "" : value).replace(/\s+/g, " ").trim();
-  }
-  function buildMaps(students) {
-    const byId = new Map(), byCode = new Map();
-    students.forEach(function (student, index) {
-      const number = index + 1;
-      const id = clean(student.id);
-      const code = clean(student.student_code || student.code);
-      if (id) byId.set(id, number);
-      if (code) byCode.set(code, number);
-    });
-    return { byId, byCode };
-  }
-  function addBadge(cell, number) {
-    if (!cell || !number) return;
-    const old = cell.querySelector('[data-' + BADGE + ']');
-    if (old) old.remove();
-    const badge = document.createElement("span");
-    badge.setAttribute("data-" + BADGE, "1");
-    badge.textContent = String(number);
-    badge.style.cssText =
-      "display:inline-flex;align-items:center;justify-content:center;" +
-      "min-width:34px;height:28px;padding:0 8px;margin-inline-end:7px;" +
-      "border-radius:7px;background:#062b57;color:#fff;font-weight:900;" +
-      "font-size:13px;line-height:1;vertical-align:middle;box-sizing:border-box;";
-    cell.insertBefore(badge, cell.firstChild);
-  }
-  function applyStudentNumberingV17() {
-    try {
-      const students = getStudents();
-      if (!students.length) return;
-      const maps = buildMaps(students);
-      TABLE_IDS.forEach(function (id) {
-        const table = document.getElementById(id);
-        if (!table) return;
-        const header = table.querySelector("thead th:first-child");
-        if (header && !header.hasAttribute("data-number-header-v17")) {
-          header.setAttribute("data-number-header-v17", "1");
-          header.innerHTML = '<span style="font-weight:900">No.</span> / ' + header.innerHTML;
-        }
-        table.querySelectorAll("tbody tr").forEach(function (row, rowIndex) {
-          const cells = row.querySelectorAll("td");
-          if (!cells.length) return;
-          const firstCell = cells[0];
-          const code = clean(cells[1] ? cells[1].textContent : "");
-          let number = maps.byCode.get(code);
-          if (!number) {
-            const name = clean(firstCell.textContent).replace(/^\d+\s*\/\s*/, "");
-            const match = students.find(function (s) { return clean(s.name) === name; });
-            if (match) {
-              number = maps.byId.get(clean(match.id)) ||
-                maps.byCode.get(clean(match.student_code || match.code));
-            }
-          }
-          addBadge(firstCell, number || rowIndex + 1);
-        });
-      });
-    } catch (error) {
-      console.warn("student numbering v17", error);
-    }
-  }
-  window.applyStudentNumberingV17 = applyStudentNumberingV17;
-  window.renumberStudentsV17 = applyStudentNumberingV17;
-  function start() {
-    applyStudentNumberingV17();
-    if (document.body) {
-      const observer = new MutationObserver(applyStudentNumberingV17);
-      observer.observe(document.body, { childList: true, subtree: true });
-    }
-    [300, 1000, 2500].forEach(function (ms) {
-      setTimeout(applyStudentNumberingV17, ms);
-    });
-  }
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", start, { once: true });
-  } else {
-    start();
-  }
 })();
 </script>
 </body></html>
