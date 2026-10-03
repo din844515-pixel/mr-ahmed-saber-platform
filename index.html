@@ -1755,4 +1755,97 @@ setTimeout(async()=>{try{if(!await waitForSupabase())return;const {data}=await s
 
 
 
+
+<!-- NEW STUDENT NUMBERING V17 -->
+<script id="student-numbering-v17">
+(function () {
+  "use strict";
+  const BADGE = "student-number-v17";
+  const TABLE_IDS = ["studentsTable", "studentsTableV9"];
+
+  function getStudents() {
+    const data = window.__teacherData || {};
+    return Array.isArray(data.students) ? data.students : [];
+  }
+  function clean(value) {
+    return String(value == null ? "" : value).replace(/\s+/g, " ").trim();
+  }
+  function buildMaps(students) {
+    const byId = new Map(), byCode = new Map();
+    students.forEach(function (student, index) {
+      const number = index + 1;
+      const id = clean(student.id);
+      const code = clean(student.student_code || student.code);
+      if (id) byId.set(id, number);
+      if (code) byCode.set(code, number);
+    });
+    return { byId, byCode };
+  }
+  function addBadge(cell, number) {
+    if (!cell || !number) return;
+    const old = cell.querySelector('[data-' + BADGE + ']');
+    if (old) old.remove();
+    const badge = document.createElement("span");
+    badge.setAttribute("data-" + BADGE, "1");
+    badge.textContent = String(number);
+    badge.style.cssText =
+      "display:inline-flex;align-items:center;justify-content:center;" +
+      "min-width:34px;height:28px;padding:0 8px;margin-inline-end:7px;" +
+      "border-radius:7px;background:#062b57;color:#fff;font-weight:900;" +
+      "font-size:13px;line-height:1;vertical-align:middle;box-sizing:border-box;";
+    cell.insertBefore(badge, cell.firstChild);
+  }
+  function applyStudentNumberingV17() {
+    try {
+      const students = getStudents();
+      if (!students.length) return;
+      const maps = buildMaps(students);
+      TABLE_IDS.forEach(function (id) {
+        const table = document.getElementById(id);
+        if (!table) return;
+        const header = table.querySelector("thead th:first-child");
+        if (header && !header.hasAttribute("data-number-header-v17")) {
+          header.setAttribute("data-number-header-v17", "1");
+          header.innerHTML = '<span style="font-weight:900">No.</span> / ' + header.innerHTML;
+        }
+        table.querySelectorAll("tbody tr").forEach(function (row, rowIndex) {
+          const cells = row.querySelectorAll("td");
+          if (!cells.length) return;
+          const firstCell = cells[0];
+          const code = clean(cells[1] ? cells[1].textContent : "");
+          let number = maps.byCode.get(code);
+          if (!number) {
+            const name = clean(firstCell.textContent).replace(/^\d+\s*\/\s*/, "");
+            const match = students.find(function (s) { return clean(s.name) === name; });
+            if (match) {
+              number = maps.byId.get(clean(match.id)) ||
+                maps.byCode.get(clean(match.student_code || match.code));
+            }
+          }
+          addBadge(firstCell, number || rowIndex + 1);
+        });
+      });
+    } catch (error) {
+      console.warn("student numbering v17", error);
+    }
+  }
+  window.applyStudentNumberingV17 = applyStudentNumberingV17;
+  window.renumberStudentsV17 = applyStudentNumberingV17;
+  function start() {
+    applyStudentNumberingV17();
+    if (document.body) {
+      const observer = new MutationObserver(applyStudentNumberingV17);
+      observer.observe(document.body, { childList: true, subtree: true });
+    }
+    [300, 1000, 2500].forEach(function (ms) {
+      setTimeout(applyStudentNumberingV17, ms);
+    });
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", start, { once: true });
+  } else {
+    start();
+  }
+})();
+</script>
 </body></html>
