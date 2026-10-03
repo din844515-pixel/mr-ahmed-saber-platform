@@ -1277,208 +1277,132 @@ document.addEventListener('click',function(e){
     return {canonical,map};
   }
 
-  // STUDENTS MODULE — FIRST PRINCIPLES V3
-  // One renderer, one source of truth, one identity rule.
-  // Student number = deterministic display number derived from DB id.
-  // Stage filters never renumber. CRUD never edits the number.
-  // UI actions are bound with addEventListener; no JSON is injected into onclick attributes.
-  function studentNameKey(v){
-    return String(v||'').trim().replace(/\\s+/g,' ').toLocaleLowerCase('ar-EG');
+  // STUDENTS MODULE — CLEAN REBUILD V1
+  // Single source of truth: teacher_dashboard().students
+  // Numbering is display-only, never stored in the database.
+  // Stage filters, search, selection, CRUD and payment actions are isolated here.
+  const STUDENT_STAGE_OPTIONS_V4=[
+    ['all','كل الطلاب','All Students'],
+    ['prep1','أولى إعدادي','1st Preparatory'],
+    ['prep2','ثانية إعدادي','2nd Preparatory'],
+    ['prep3','ثالثة إعدادي','3rd Preparatory'],
+    ['sec1','أولى ثانوي','1st Secondary'],
+    ['sec2','ثانية ثانوي','2nd Secondary'],
+    ['sec3','ثالثة ثانوي','3rd Secondary'],
+    ['foundation','تأسيس','Foundation'],
+    ['courses','كورسات','Courses']
+  ];
+  function studentStageMatchesV4(student,key){return key==="all"||catOf(student?.grade)===key;}
+  function studentNameKeyV4(v){return String(v||"").trim().replace(/\s+/g," ").toLocaleLowerCase("ar-EG");}
+  function studentNumberMapV4(students){
+    const ordered=(Array.isArray(students)?students:[]).map((s,i)=>({s,i})).sort((a,b)=>{
+      const ac=String(a.s?.created_at||""),bc=String(b.s?.created_at||"");
+      if(ac!==bc)return ac.localeCompare(bc);
+      const ai=Number(a.s?.id),bi=Number(b.s?.id);
+      if(Number.isFinite(ai)&&Number.isFinite(bi)&&ai!==bi)return ai-bi;
+      return a.i-b.i;
+    });
+    const map=new Map(); ordered.forEach((x,i)=>{if(x.s?.id!=null)map.set(String(x.s.id),i+1);}); return map;
   }
-
-  function buildCanonicalStudentNumberMap(students){
-    const source=Array.isArray(students)?students:[];
-    const canonical=source.map((student,sourceIndex)=>({student,sourceIndex})).sort((a,b)=>{
-      const ai=Number(a.student?.id), bi=Number(b.student?.id);
-      if(Number.isFinite(ai)&&Number.isFinite(bi)&&ai!==bi) return ai-bi;
-      const ac=String(a.student?.created_at||''), bc=String(b.student?.created_at||'');
-      if(ac!==bc) return ac.localeCompare(bc);
-      return a.sourceIndex-b.sourceIndex;
-    }).map(x=>x.student);
-    const map=new Map();
-    canonical.forEach((s,i)=>{ if(s?.id!=null) map.set(String(s.id),i+1); });
-    return map;
+  function studentGradeOptionsV4(selected){
+    const rows=[["","— اختاري المرحلة —"],["أولى إعدادي","أولى إعدادي"],["ثانية إعدادي","ثانية إعدادي"],["ثالثة إعدادي","ثالثة إعدادي"],["أولى ثانوي","أولى ثانوي"],["ثانية ثانوي","ثانية ثانوي"],["ثالثة ثانوي","ثالثة ثانوي"],["كورس تأسيس","تأسيس"],["كورسات","كورسات"]];
+    return rows.map(x=>"<option value=\""+esc(x[0])+"\" "+(String(selected||"")===x[0]?"selected":"")+">"+esc(x[1])+"</option>").join("");
   }
-
-  function studentStageOptionsV3(){
-    return [
-      ['all',tr('All Students','كل الطلاب')],
-      ['prep1',tr('1st Preparatory','أولى إعدادي')],
-      ['prep2',tr('2nd Preparatory','ثانية إعدادي')],
-      ['prep3',tr('3rd Preparatory','ثالثة إعدادي')],
-      ['sec1',tr('1st Secondary','أولى ثانوي')],
-      ['sec2',tr('2nd Secondary','ثانية ثانوي')],
-      ['sec3',tr('3rd Secondary','ثالثة ثانوي')],
-      ['foundation',tr('Foundation','تأسيس')],
-      ['courses',tr('Courses','كورسات')]
-    ];
+  function studentNextCodeV4(students){
+    const used=new Set((students||[]).map(s=>String(s.student_code||s.code||"").trim()).filter(Boolean));
+    let code=""; do{code="AS"+String(Date.now()).slice(-7)+String(Math.floor(Math.random()*90+10));}while(used.has(code)); return code;
   }
-
-  function studentStageMatchesV3(student,key){
-    if(key==='all') return true;
-    return catOf(student?.grade)===key;
+  async function studentReloadV4(){
+    const {data,error}=await sb.rpc("teacher_dashboard");
+    if(error||!data?.success){alert(error?.message||data?.message||tr("Could not refresh students.","تعذر تحديث قائمة الطلاب."));return false;}
+    window.__teacherData=data; return true;
   }
-
   function renderStudents(main,d){
     const students=Array.isArray(d?.students)?d.students:[];
-    const numberById=buildCanonicalStudentNumberMap(students);
-    const stage=window.__studentCatFilter||'all';
-    const query=String(window.__studentSearchV3||'').trim().toLocaleLowerCase('ar-EG');
-    const options=studentStageOptionsV3();
+    const numberMap=studentNumberMapV4(students);
+    const state=window.__studentV4State||{stage:"all",search:""};
+    const q=String(state.search||"").trim().toLocaleLowerCase("ar-EG");
     const visible=students.filter(s=>{
-      if(!studentStageMatchesV3(s,stage)) return false;
-      if(!query) return true;
-      return [s.name,s.student_code,s.code,s.parent_phone,s.phone,s.email]
-        .some(v=>String(v||'').toLocaleLowerCase('ar-EG').includes(query));
+      if(!studentStageMatchesV4(s,state.stage))return false;
+      if(!q)return true;
+      return [s.name,s.student_code,s.code,s.parent_phone,s.phone,s.email].some(v=>String(v||"").toLocaleLowerCase("ar-EG").includes(q));
     });
-
-    const stageButtons=options.map(([key,label])=>{
-      const count=students.filter(s=>studentStageMatchesV3(s,key)).length;
-      return '<button type="button" class="v9-pill '+(stage===key?'active':'')+' student-stage-v3" data-stage="'+esc(key)+'">'+esc(label)+' <b>'+count+'</b></button>';
-    }).join('');
-
+    const selected=new Set((window.__studentV4Selected||[]).map(String));
+    const tabs=STUDENT_STAGE_OPTIONS_V4.map(x=>{const n=students.filter(s=>studentStageMatchesV4(s,x[0])).length;return "<button type=\"button\" class=\"v9-pill "+(state.stage===x[0]?"active ":"")+"student-v4-stage\" data-stage=\""+esc(x[0])+"\">"+esc(tr(x[2],x[1]))+" <b>"+n+"</b></button>";}).join("");
     const rows=visible.map(s=>{
-      const no=numberById.get(String(s.id))||'';
-      const paid=!!s.paid;
-      return '<tr data-student-id="'+esc(String(s.id))+'">'+
-        '<td><b><span class="student-number-badge" style="display:inline-flex;min-width:34px;height:28px;align-items:center;justify-content:center;margin-inline-end:8px;border-radius:8px;background:#062b57;color:#fff;font-weight:900">'+no+'</span>'+esc(s.name||'—')+'</b>'+
-        (!String(s.parent_phone||'').trim()?'<div class="parent-phone-badge">⚠️ '+tr('Parent phone required','رقم ولي الأمر مطلوب')+'</div>':'')+
-        '</td>'+
-        '<td>'+esc(s.student_code||s.code||'—')+'</td>'+
-        '<td>'+esc(catLabel(catOf(s.grade)))+'</td>'+
-        '<td>'+esc(s.parent_phone||'—')+'</td>'+
-        '<td><span class="pill '+(paid?'':'wait')+'">'+(paid?tr('Paid','تم السداد'):tr('Unpaid','لم يتم السداد'))+'</span></td>'+
-        '<td><input type="checkbox" class="student-check-v3" value="'+esc(String(s.id))+'" aria-label="'+tr('Select student','اختيار الطالب')+'"></td>'+
-        '<td style="white-space:nowrap">'+
-          '<button type="button" class="dash-action student-edit-v3" data-id="'+esc(String(s.id))+'">'+tr('Edit','تعديل')+'</button> '+
-          '<button type="button" class="dash-action gold student-renew-v3" data-id="'+esc(String(s.id))+'">✅ '+tr('Manual Renewal','إعادة الاشتراك يدويًا')+'</button> '+
-          '<button type="button" class="dash-action student-delete-v3" data-id="'+esc(String(s.id))+'" style="background:#b33a3a">'+tr('Delete','حذف')+'</button>'+
-        '</td>'+
-      '</tr>';
-    }).join('');
-
-    main.innerHTML=
-      '<div class="welcome"><div><h1>'+tr('Students','الطلاب')+'</h1><p>'+tr('One complete student list with fixed numbering and separate stage lists.','قائمة واحدة كاملة للطلاب بترقيم ثابت وقوائم منفصلة لكل مرحلة.')+'</p></div>'+
-      '<div class="dash-toolbar"><button type="button" class="dash-action gold" id="student-add-v3">+ '+tr('Add Student','إضافة طالب')+'</button></div></div>'+
-      '<section class="panel">'+
-        '<div class="v9-pills" id="student-stage-tabs-v3">'+stageButtons+'</div>'+
-        '<div class="v9-selected-bar">'+
-          '<button type="button" class="dash-action" id="student-selected-paid-v3">'+tr('Selected = Paid','المحدد = تم السداد')+'</button>'+
-          '<button type="button" class="dash-action" id="student-selected-unpaid-v3">'+tr('Selected = Unpaid','المحدد = لم يتم السداد')+'</button>'+
-          '<button type="button" class="dash-action" id="student-all-paid-v3">'+tr('All = Paid','الكل = تم السداد')+'</button>'+
-          '<button type="button" class="dash-action" id="student-all-unpaid-v3">'+tr('All = Unpaid','الكل = لم يتم السداد')+'</button>'+
-        '</div>'+
-        '<div class="dash-toolbar"><input class="dash-input" id="student-search-v3" value="'+esc(window.__studentSearchV3||'')+'" placeholder="'+tr('Search name / code / parent phone','بحث بالاسم / الكود / رقم ولي الأمر')+'"><span class="badge-soft">'+visible.length+' '+tr('students','طلاب')+'</span></div>'+
-        '<div class="v9-scroll"><table class="dash-table" id="students-table-v3"><thead><tr>'+
-          '<th>'+tr('Name','الاسم')+'</th><th>'+tr('Code','الكود')+'</th><th>'+tr('Stage','المرحلة')+'</th><th>'+tr('Parent Phone','ولي الأمر')+'</th><th>'+tr('Payment','السداد')+'</th><th>✓</th><th>'+tr('Actions','الإجراءات')+'</th>'+
-        '</tr></thead><tbody>'+ (rows||'<tr><td colspan="7">'+tr('No students in this list yet.','لا يوجد طلاب في هذه القائمة بعد.')+'</td></tr>') +'</tbody></table></div>'+
-      '</section>';
-
-    main.querySelectorAll('.student-stage-v3').forEach(btn=>btn.addEventListener('click',()=>{
-      window.__studentCatFilter=btn.dataset.stage||'all';
-      window.__studentSearchV3='';
-      renderStudents(main,window.__teacherData||d);
-    }));
-    main.querySelector('#student-search-v3')?.addEventListener('input',e=>{
-      window.__studentSearchV3=e.target.value||'';
-      renderStudents(main,window.__teacherData||d);
-      const input=document.getElementById('student-search-v3');
-      if(input){input.focus();input.setSelectionRange(input.value.length,input.value.length);}
-    });
-    main.querySelector('#student-add-v3')?.addEventListener('click',()=>openStudentEditorV3(null));
-    main.querySelectorAll('.student-edit-v3').forEach(btn=>btn.addEventListener('click',()=>{
-      const s=students.find(x=>String(x.id)===String(btn.dataset.id)); if(s) openStudentEditorV3(s);
-    }));
-    main.querySelectorAll('.student-renew-v3').forEach(btn=>btn.addEventListener('click',()=>manualRenewStudent(Number(btn.dataset.id))));
-    main.querySelectorAll('.student-delete-v3').forEach(btn=>btn.addEventListener('click',()=>deleteStudentV3(Number(btn.dataset.id))));
-    main.querySelector('#student-selected-paid-v3')?.addEventListener('click',()=>setStudentsPaymentV3(true,false));
-    main.querySelector('#student-selected-unpaid-v3')?.addEventListener('click',()=>setStudentsPaymentV3(false,false));
-    main.querySelector('#student-all-paid-v3')?.addEventListener('click',()=>setStudentsPaymentV3(true,true));
-    main.querySelector('#student-all-unpaid-v3')?.addEventListener('click',()=>setStudentsPaymentV3(false,true));
+      const id=String(s.id),no=numberMap.get(id)||"",checked=selected.has(id),paid=!!s.paid;
+      return "<tr data-student-id=\""+esc(id)+"\"><td><label style=\"display:flex;align-items:center;gap:8px\"><input type=\"checkbox\" class=\"student-v4-check\" value=\""+esc(id)+"\" "+(checked?"checked":"")+" aria-label=\""+esc(tr("Select student","اختيار الطالب"))+"\"><span><b><span class=\"student-number-badge\" style=\"display:inline-flex;min-width:34px;height:28px;align-items:center;justify-content:center;margin-inline-end:7px;border-radius:8px;background:#062b57;color:#fff;font-weight:900\">"+no+"</span>"+esc(s.name||"—")+"</b>"+(!String(s.parent_phone||"").trim()?"<div class=\"parent-phone-badge\">⚠️ "+tr("Parent phone required","رقم ولي الأمر مطلوب")+"</div>":"")+"</span></label></td>"+
+        "<td>"+esc(s.student_code||s.code||"—")+"</td><td>"+esc(catLabel(catOf(s.grade)))+"</td><td>"+esc(s.parent_phone||"—")+"</td>"+
+        "<td><span class=\"pill "+(paid?"":"wait")+"\">"+(paid?tr("Paid","تم السداد"):tr("Unpaid","لم يتم السداد"))+"</span></td>"+
+        "<td style=\"white-space:nowrap\"><button type=\"button\" class=\"dash-action student-v4-edit\" data-id=\""+esc(id)+"\">✏️ "+tr("Edit","تعديل")+"</button> <button type=\"button\" class=\"dash-action gold student-v4-renew\" data-id=\""+esc(id)+"\">✅ "+tr("Manual Renewal","إعادة الاشتراك يدويًا")+"</button> <button type=\"button\" class=\"dash-action student-v4-delete\" data-id=\""+esc(id)+"\" style=\"background:#b33a3a\">"+tr("Delete","حذف")+"</button></td></tr>";
+    }).join("");
+    const allVisibleSelected=visible.length>0&&visible.every(s=>selected.has(String(s.id)));
+    main.innerHTML="<div class=\"welcome\"><div><h1>"+tr("Students","الطلاب")+"</h1><p>"+tr("Clean student management: numbering, stages, add/edit/delete, renewal and payment status.","إدارة الطلاب من مكان واحد: الترقيم والمراحل والإضافة والتعديل والحذف وإعادة الاشتراك وحالة السداد.")+"</p></div><div class=\"dash-toolbar\"><button type=\"button\" class=\"dash-action gold\" id=\"student-v4-add\">+ "+tr("Add Student","إضافة طالب")+"</button></div></div>"+
+      "<section class=\"panel\"><div class=\"v9-pills\" id=\"student-v4-tabs\">"+tabs+"</div>"+
+      "<div class=\"v9-selected-bar\"><label style=\"display:flex;align-items:center;gap:7px\"><input type=\"checkbox\" id=\"student-v4-select-all\" "+(allVisibleSelected?"checked":"")+"> "+tr("Select visible students","اختيار الطلاب الظاهرين")+"</label><span class=\"badge-soft\">"+selected.size+" "+tr("selected","محدد")+"</span><button type=\"button\" class=\"dash-action\" id=\"student-v4-paid\">"+tr("Selected = Paid","المحدد = تم السداد")+"</button><button type=\"button\" class=\"dash-action\" id=\"student-v4-unpaid\">"+tr("Selected = Unpaid","المحدد = لم يتم السداد")+"</button><button type=\"button\" class=\"dash-action\" id=\"student-v4-all-paid\">"+tr("All = Paid","الكل = تم السداد")+"</button><button type=\"button\" class=\"dash-action\" id=\"student-v4-all-unpaid\">"+tr("All = Unpaid","الكل = لم يتم السداد")+"</button></div>"+
+      "<div class=\"dash-toolbar\"><input class=\"dash-input\" id=\"student-v4-search\" value=\""+esc(state.search||"")+"\" placeholder=\""+tr("Search name / code / parent phone","بحث بالاسم / الكود / رقم ولي الأمر")+"\"><span class=\"badge-soft\">"+visible.length+" / "+students.length+" "+tr("students","طلاب")+"</span></div>"+
+      "<div class=\"v9-scroll\"><table class=\"dash-table\" id=\"student-v4-table\"><thead><tr><th>"+tr("Name","الاسم")+"</th><th>"+tr("Code","الكود")+"</th><th>"+tr("Stage","المرحلة")+"</th><th>"+tr("Parent Phone","ولي الأمر")+"</th><th>"+tr("Payment","السداد")+"</th><th>"+tr("Actions","الإجراءات")+"</th></tr></thead><tbody>"+(rows||"<tr><td colspan=\"6\">"+tr("No students in this list yet.","لا يوجد طلاب في هذه القائمة بعد.")+"</td></tr>")+"</tbody></table></div></section>";
+    main.querySelectorAll(".student-v4-stage").forEach(b=>b.addEventListener("click",()=>{state.stage=b.dataset.stage||"all";state.search="";window.__studentV4State=state;renderStudents(main,window.__teacherData||d);}));
+    main.querySelector("#student-v4-search")?.addEventListener("input",e=>{state.search=e.target.value||"";window.__studentV4State=state;renderStudents(main,window.__teacherData||d);const x=document.getElementById("student-v4-search");if(x){x.focus();x.setSelectionRange(x.value.length,x.value.length);}});
+    main.querySelector("#student-v4-select-all")?.addEventListener("change",e=>{const set=new Set(window.__studentV4Selected||[]);visible.forEach(s=>{const id=String(s.id);if(e.target.checked)set.add(id);else set.delete(id);});window.__studentV4Selected=[...set];renderStudents(main,window.__teacherData||d);});
+    main.querySelectorAll(".student-v4-check").forEach(c=>c.addEventListener("change",()=>{const set=new Set(window.__studentV4Selected||[]),id=String(c.value);if(c.checked)set.add(id);else set.delete(id);window.__studentV4Selected=[...set];renderStudents(main,window.__teacherData||d);}));
+    main.querySelector("#student-v4-add")?.addEventListener("click",()=>openStudentEditorV4(null));
+    main.querySelectorAll(".student-v4-edit").forEach(b=>b.addEventListener("click",()=>{const s=students.find(x=>String(x.id)===String(b.dataset.id));if(s)openStudentEditorV4(s);}));
+    main.querySelectorAll(".student-v4-renew").forEach(b=>b.addEventListener("click",()=>manualRenewStudent(Number(b.dataset.id))));
+    main.querySelectorAll(".student-v4-delete").forEach(b=>b.addEventListener("click",()=>deleteStudentV4(Number(b.dataset.id))));
+    main.querySelector("#student-v4-paid")?.addEventListener("click",()=>setStudentsPaymentV4(true,false));
+    main.querySelector("#student-v4-unpaid")?.addEventListener("click",()=>setStudentsPaymentV4(false,false));
+    main.querySelector("#student-v4-all-paid")?.addEventListener("click",()=>setStudentsPaymentV4(true,true));
+    main.querySelector("#student-v4-all-unpaid")?.addEventListener("click",()=>setStudentsPaymentV4(false,true));
   }
-
-  function openStudentEditorV3(student){
-    const s=student||{};
-    const stageHtml=studentCategoryOptions(s.grade);
-    show('<h2>'+tr(s.id?'Edit Student':'Add Student',s.id?'تعديل طالب':'إضافة طالب')+'</h2>'+
-      '<div class="form-grid">'+
-      '<input id="sv3_name" class="input" placeholder="'+tr('Student Name','اسم الطالب')+'" value="'+esc(s.name||'')+'">'+
-      '<input id="sv3_code" class="input" placeholder="'+tr('Student Code (optional)','كود الطالب (اختياري)')+'" value="'+esc(s.student_code||s.code||'')+'">'+
-      '<select id="sv3_grade" class="input">'+stageHtml+'</select>'+
-      '<input id="sv3_parent" class="input" placeholder="'+tr('Parent Phone','رقم ولي الأمر')+'" value="'+esc(s.parent_phone||'')+'">'+
-      '<input id="sv3_phone" class="input" placeholder="'+tr('Student Phone','رقم الطالب')+'" value="'+esc(s.phone||'')+'">'+
-      '<input id="sv3_email" class="input" placeholder="Email" value="'+esc(s.email||'')+'">'+
-      '<select id="sv3_gender" class="input"><option value="male" '+(s.gender==='female'?'':'selected')+'>Male</option><option value="female" '+(s.gender==='female'?'selected':'')+'>Female</option></select>'+
-      '<select id="sv3_paid" class="input"><option value="true" '+(s.paid?'selected':'')+'>'+tr('Paid','تم السداد')+'</option><option value="false" '+(!s.paid?'selected':'')+'>'+tr('Unpaid','لم يتم السداد')+'</option></select>'+
-      '<select id="sv3_exempt" class="input"><option value="false" '+(!s.exempt?'selected':'')+'>'+tr('Normal student','طالب عادي')+'</option><option value="true" '+(s.exempt?'selected':'')+'>'+tr('Exempt','معفى')+'</option></select>'+
-      '<textarea id="sv3_notes" class="input full" style="height:80px" placeholder="'+tr('Notes','ملاحظات')+'">'+esc(s.notes||'')+'</textarea></div>'+
-      '<button type="button" class="submit" id="sv3_save">'+tr('Save Student','حفظ الطالب')+' →</button>');
-    document.getElementById('sv3_save')?.addEventListener('click',()=>saveStudentV3(Number(s.id||0)));
+  function openStudentEditorV4(student){
+    const s=student||{},isEdit=Number(s.id)>0;
+    show("<h2>"+tr(isEdit?"Edit Student":"Add Student",isEdit?"تعديل طالب":"إضافة طالب")+"</h2><p class=\"sub\">"+tr("The student number is generated automatically and is never edited.","رقم الطالب يتم توليده تلقائيًا ولا يتم إدخاله أو تعديله يدويًا.")+"</p><div class=\"form-grid\">"+
+      "<input id=\"sv4_name\" class=\"input\" placeholder=\""+tr("Student Name","اسم الطالب")+"\" value=\""+esc(s.name||"")+"\">"+
+      "<input id=\"sv4_code\" class=\"input\" placeholder=\""+tr("Student Code (optional)","كود الطالب (اختياري)")+"\" value=\""+esc(s.student_code||s.code||"")+"\">"+
+      "<select id=\"sv4_grade\" class=\"input\">"+studentGradeOptionsV4(s.grade)+"</select>"+
+      "<input id=\"sv4_parent\" class=\"input\" placeholder=\""+tr("Parent Phone","رقم ولي الأمر")+"\" value=\""+esc(s.parent_phone||"")+"\">"+
+      "<input id=\"sv4_phone\" class=\"input\" placeholder=\""+tr("Student Phone","رقم الطالب")+"\" value=\""+esc(s.phone||"")+"\">"+
+      "<input id=\"sv4_email\" class=\"input\" placeholder=\"Email\" value=\""+esc(s.email||"")+"\">"+
+      "<select id=\"sv4_gender\" class=\"input\"><option value=\"male\" "+(s.gender!=="female"?"selected":"")+">Male</option><option value=\"female\" "+(s.gender==="female"?"selected":"")+">Female</option></select>"+
+      "<select id=\"sv4_paid\" class=\"input\"><option value=\"true\" "+(s.paid?"selected":"")+">"+tr("Paid","تم السداد")+"</option><option value=\"false\" "+(!s.paid?"selected":"")+">"+tr("Unpaid","لم يتم السداد")+"</option></select>"+
+      "<select id=\"sv4_exempt\" class=\"input\"><option value=\"false\" "+(!s.exempt?"selected":"")+">"+tr("Normal student","طالب عادي")+"</option><option value=\"true\" "+(s.exempt?"selected":"")+">"+tr("Exempt","معفى")+"</option></select>"+
+      "<textarea id=\"sv4_notes\" class=\"input full\" style=\"height:80px\" placeholder=\""+tr("Notes","ملاحظات")+"\">"+esc(s.notes||"")+"</textarea></div><button type=\"button\" class=\"submit\" id=\"sv4_save\">"+tr("Save Student","حفظ الطالب")+" →</button>");
+    document.getElementById("sv4_save")?.addEventListener("click",()=>saveStudentV4(Number(s.id||0)));
   }
-
-  async function saveStudentV3(id){
-    const name=document.getElementById('sv3_name')?.value.trim()||'';
-    const grade=document.getElementById('sv3_grade')?.value.trim()||'';
-    if(!name){alert(tr('Student name is required.','اسم الطالب مطلوب.'));return;}
-    if(!grade){alert(tr('Choose the student stage.','اختاري مرحلة الطالب.'));return;}
-    const students=teacherData()?.students||[];
-    const key=studentNameKey(name);
-    const duplicate=students.find(x=>studentNameKey(x.name)===key&&Number(x.id)!==Number(id));
-    if(duplicate){alert(tr('This student name already exists.','اسم الطالب موجود بالفعل ولا يمكن تكراره.')+'\\n'+String(duplicate.name||''));return;}
-
-    let code=document.getElementById('sv3_code')?.value.trim()||'';
-    if(!code) code='AS'+Math.floor(100000+Math.random()*900000);
-    const payload={
-      p_name:name,p_student_code:code,p_grade:grade,
-      p_parent_phone:document.getElementById('sv3_parent')?.value.trim()||'',
-      p_phone:document.getElementById('sv3_phone')?.value.trim()||'',
-      p_email:document.getElementById('sv3_email')?.value.trim()||'',
-      p_gender:document.getElementById('sv3_gender')?.value||'male',
-      p_paid:document.getElementById('sv3_paid')?.value==='true',
-      p_exempt:document.getElementById('sv3_exempt')?.value==='true'
-    };
-    const params=Number(id)>0?{p_student_id:Number(id),...payload,p_active:true,p_notes:document.getElementById('sv3_notes')?.value.trim()||''}:payload;
-    const fn=Number(id)>0?'teacher_update_student':'teacher_create_student';
-    const {data,error}=await sb.rpc(fn,params);
-    if(error||!data?.success){alert(data?.message||error?.message||tr('Could not save student.','تعذر حفظ الطالب.'));return;}
-    closeModal();
-    await refreshV9();
+  async function saveStudentV4(id){
+    const name=document.getElementById("sv4_name")?.value.trim()||"",grade=document.getElementById("sv4_grade")?.value.trim()||"";
+    if(!name){alert(tr("Student name is required.","اسم الطالب مطلوب."));return;}
+    if(!grade){alert(tr("Choose the student stage.","اختاري مرحلة الطالب."));return;}
+    const students=teacherData().students||[],key=studentNameKeyV4(name);
+    const duplicate=students.find(x=>studentNameKeyV4(x.name)===key&&Number(x.id)!==Number(id));
+    if(duplicate){alert(tr("This student name already exists.","اسم الطالب موجود بالفعل ولا يمكن تكراره.")+"\n"+String(duplicate.name||""));return;}
+    let code=document.getElementById("sv4_code")?.value.trim()||""; if(!code)code=studentNextCodeV4(students);
+    const payload={p_name:name,p_student_code:code,p_grade:grade,p_parent_phone:document.getElementById("sv4_parent")?.value.trim()||"",p_phone:document.getElementById("sv4_phone")?.value.trim()||"",p_email:document.getElementById("sv4_email")?.value.trim()||"",p_gender:document.getElementById("sv4_gender")?.value||"male",p_paid:document.getElementById("sv4_paid")?.value==="true",p_exempt:document.getElementById("sv4_exempt")?.value==="true"};
+    const params=Number(id)>0?{p_student_id:Number(id),...payload,p_active:true,p_notes:document.getElementById("sv4_notes")?.value.trim()||""}:payload;
+    const result=await sb.rpc(Number(id)>0?"teacher_update_student":"teacher_create_student",params);
+    if(result.error||!result.data?.success){alert(result.data?.message||result.error?.message||tr("Could not save student.","تعذر حفظ الطالب."));return;}
+    closeModal();window.__studentV4Selected=[];await studentReloadV4();renderSections("students");
   }
-  window.openStudentEditorV3=openStudentEditorV3;
-  window.saveStudentV3=saveStudentV3;
-
-  async function deleteStudentV3(id){
-    const s=(teacherData()?.students||[]).find(x=>Number(x.id)===Number(id));
-    if(!s)return;
-    if(!confirm(tr('Delete this student permanently?','حذف هذا الطالب نهائيًا؟')+'\\n'+String(s.name||'')))return;
-    const {data,error}=await sb.rpc('teacher_delete_student',{p_student_id:Number(id)});
-    if(error||!data?.success){alert(data?.message||error?.message||tr('Delete failed.','فشل حذف الطالب.'));return;}
-    await refreshV9();
+  async function deleteStudentV4(id){
+    const s=(teacherData().students||[]).find(x=>Number(x.id)===Number(id));if(!s)return;
+    if(!confirm(tr("Delete this student permanently?","حذف هذا الطالب نهائيًا؟")+"\n"+String(s.name||"")))return;
+    const result=await sb.rpc("teacher_delete_student",{p_student_id:Number(id)});
+    if(result.error||!result.data?.success){alert(result.data?.message||result.error?.message||tr("Delete failed.","فشل حذف الطالب."));return;}
+    window.__studentV4Selected=(window.__studentV4Selected||[]).filter(x=>String(x)!==String(id));await studentReloadV4();renderSections("students");
   }
-  window.deleteStudentV3=deleteStudentV3;
-
-  async function setStudentsPaymentV3(paid,all){
+  async function setStudentsPaymentV4(paid,all){
     let ids=[];
-    if(all){
-      if(!confirm(tr('Apply this status to all students?','تطبيق حالة السداد على كل الطلاب؟')))return;
-      const d=await rpc('teacher_bulk_payment_status',{p_paid:!!paid});
-      if(d) await refreshV9();
-      return;
-    }
-    ids=Array.from(document.querySelectorAll('.student-check-v3:checked')).map(x=>Number(x.value)).filter(Boolean);
-    if(!ids.length){alert(tr('Select at least one student.','اختاري طالبًا واحدًا على الأقل.'));return;}
-    const d=await rpc('teacher_set_students_payment',{p_student_ids:ids,p_paid:!!paid});
-    if(d) await refreshV9();
+    if(all){if(!confirm(paid?tr("Mark all students as paid?","تحديد كل الطلاب تم السداد؟"):tr("Mark all students as unpaid?","تحديد كل الطلاب لم يتم السداد؟")))return;}
+    else{ids=[...(window.__studentV4Selected||[])].map(Number).filter(Number.isFinite);if(!ids.length){alert(tr("Select at least one student.","اختاري طالبًا واحدًا على الأقل."));return;}}
+    const result=all?await sb.rpc("teacher_bulk_payment_status",{p_paid:!!paid}):await sb.rpc("teacher_set_students_payment",{p_student_ids:ids,p_paid:!!paid});
+    if(result.error||!result.data?.success){alert(result.data?.message||result.error?.message||tr("Payment update failed.","فشل تحديث حالة السداد."));return;}
+    window.__studentV4Selected=[];await studentReloadV4();renderSections("students");
   }
-  window.setStudentsPaymentV3=setStudentsPaymentV3;
-  window.setStudentStageFilter=function(k){window.__studentCatFilter=k||'all';window.__studentSearchV3='';window.__teacherSection='students';renderTeacherSection('students');};
-  window.filterStudentsV9=function(){window.__studentSearchV3=document.getElementById('student-search-v3')?.value||'';renderTeacherSection('students');};
-  window.bulkAllV9=function(v){return setStudentsPaymentV3(v,true);};
-  window.setSelectedPaidV9=function(v){return setStudentsPaymentV3(v,false);};
-  window.openStudentEditorV9=openStudentEditorV3;
-  window.saveStudentV9=saveStudentV3;
-
-
+  window.openStudentEditorV4=openStudentEditorV4; window.saveStudentV4=saveStudentV4; window.deleteStudentV4=deleteStudentV4; window.setStudentsPaymentV4=setStudentsPaymentV4;
+  window.setStudentStageFilter=function(k){window.__studentV4State={stage:k||"all",search:""};window.__studentV4Selected=[];renderSections("students");};
+  window.filterStudentsV9=function(){const x=document.getElementById("student-v4-search");window.__studentV4State={...(window.__studentV4State||{}),search:x?.value||""};renderSections("students");};
+  window.openStudentEditorV9=openStudentEditorV4; window.saveStudentV9=saveStudentV4; window.bulkAllV9=(v)=>setStudentsPaymentV4(v,true); window.setSelectedPaidV9=(v)=>setStudentsPaymentV4(v,false);
   function renderPaymentRequests(main,d){const list=(d.payment_requests||[]);const pending=list.filter(x=>x.status==='pending');main.innerHTML=`<div class="welcome"><div><h1>${tr('Payment Requests','طلبات الدفع')}</h1><p>${tr('Approve new subscriptions and renewals after checking the receipt.','راجعي بيانات الطالب والإيصال ثم وافقي على الاشتراك أو التجديد.')}</p></div><button class="dash-action" onclick="refreshV9()">${tr('Refresh','تحديث')}</button></div><section class="panel"><div class="v9-pills"><span class="badge-soft">${pending.length} ${tr('pending','معلقة')}</span></div>${pending.map(r=>`<div class="payment-request-card pending"><div class="payment-request-head"><div><h3>${esc(r.full_name||r.student_name||'Student')}</h3><div class="payment-request-meta">${r.student_id?tr('Renewal','إعادة اشتراك'):tr('New subscription','اشتراك جديد')} • ${esc(r.course_name||'')} • ${esc(r.payment_method||'')}<br>${tr('Parent','ولي الأمر')}: ${esc(r.parent_phone||'—')} • ${tr('Amount','المبلغ')}: ${esc(r.amount||0)}</div></div><span class="pill wait">${tr('Pending','معلق')}</span></div>${r.receipt_path?`<img class="payment-proof" src="${esc(r.receipt_path)}" onclick="window.open(this.src,'_blank')">`:''}<div class="dash-toolbar"><button class="dash-action gold" onclick="approvePaymentRequest(${Number(r.id)})">✅ ${tr('Approve','موافقة')}</button><button class="dash-action" style="background:#b33a3a" onclick="rejectPaymentRequest(${Number(r.id)})">${tr('Reject','رفض')}</button></div></div>`).join('')||`<p class="sub">${tr('No pending payment requests.','لا توجد طلبات دفع معلقة حاليًا.')}</p>`}</section><section class="panel"><h3>${tr('Request History','سجل الطلبات')}</h3><div class="v9-scroll"><table class="dash-table"><thead><tr><th>${tr('Name','الاسم')}</th><th>${tr('Status','الحالة')}</th><th>${tr('Stage','المرحلة')}</th><th>${tr('Date','التاريخ')}</th></tr></thead><tbody>${list.map(r=>`<tr><td>${esc(r.full_name||r.student_name||'')}</td><td>${esc(r.status||'')}</td><td>${esc(r.course_name||'')}</td><td>${esc((r.created_at||'').slice(0,10))}</td></tr>`).join('')}</tbody></table></div></section>`}
 
   async function renderSubscriptions(main,d){const ss=d.students||[];const active=window.__subCatFilter||'all';const visible=active==='all'?ss:ss.filter(s=>catOf(s.grade)===active);const latestByStudent=new Map();(d.subscriptions||[]).forEach(x=>{const prev=latestByStudent.get(x.student_id);if(!prev||new Date(x.created_at)>new Date(prev.created_at))latestByStudent.set(x.student_id,x)});const tabs=[['all',tr('All','الكل'),ss.length]].concat(CATS.map(c=>[c[0],tr(c[2],c[1]),ss.filter(s=>catOf(s.grade)===c[0]).length]));
@@ -1966,77 +1890,4 @@ setTimeout(async()=>{try{if(!await waitForSupabase())return;const {data}=await s
 })();
 </script>
 
-<script id="student-actions-rescue-v4">
-(function(){
-  if(window.__studentActionsRescueV4)return;
-  window.__studentActionsRescueV4=true;
-
-  function studentsData(){return typeof window.teacherData==='function'?window.teacherData():(window.__teacherData||{students:[]});}
-  function selectedIds(){
-    return Array.from(document.querySelectorAll('#students-table-v3 .student-check-v3:checked')).map(x=>Number(x.value)).filter(Number.isFinite);
-  }
-  async function payment(paid,all){
-    try{
-      if(all){
-        if(!confirm(paid?'تطبيق تم السداد على جميع الطلاب؟':'تطبيق لم يتم السداد على جميع الطلاب؟'))return;
-        const r=await sb.rpc('teacher_bulk_payment_status',{p_paid:!!paid});
-        if(r.error||!r.data?.success){alert(r.data?.message||r.error?.message||'تعذر تحديث السداد.');return;}
-      }else{
-        const ids=selectedIds();
-        if(!ids.length){alert('اختاري طالبًا واحدًا على الأقل.');return;}
-        const r=await sb.rpc('teacher_set_students_payment',{p_student_ids:ids,p_paid:!!paid});
-        if(r.error||!r.data?.success){alert(r.data?.message||r.error?.message||'تعذر تحديث السداد.');return;}
-      }
-      if(typeof window.refreshV9==='function')await window.refreshV9();
-      else if(typeof window.refreshTeacher==='function')await window.refreshTeacher();
-      if(typeof window.showTeacherSection==='function')window.showTeacherSection('students');
-    }catch(e){alert(e?.message||'تعذر تنفيذ العملية.');}
-  }
-
-  document.addEventListener('click',function(e){
-    const t=e.target.closest && e.target.closest('button');
-    if(!t)return;
-
-    if(t.id==='student-add-v3'){
-      e.preventDefault();e.stopImmediatePropagation();
-      if(typeof window.openStudentEditorV3==='function')window.openStudentEditorV3(null);
-      return;
-    }
-    if(t.classList.contains('student-edit-v3')){
-      e.preventDefault();e.stopImmediatePropagation();
-      const id=Number(t.dataset.id),s=(studentsData().students||[]).find(x=>Number(x.id)===id);
-      if(s&&typeof window.openStudentEditorV3==='function')window.openStudentEditorV3(s);
-      return;
-    }
-    if(t.classList.contains('student-renew-v3')){
-      e.preventDefault();e.stopImmediatePropagation();
-      const id=Number(t.dataset.id);
-      if(typeof window.manualRenewStudent==='function')window.manualRenewStudent(id);
-      return;
-    }
-    if(t.id==='student-selected-paid-v3'){e.preventDefault();e.stopImmediatePropagation();payment(true,false);return;}
-    if(t.id==='student-selected-unpaid-v3'){e.preventDefault();e.stopImmediatePropagation();payment(false,false);return;}
-    if(t.id==='student-all-paid-v3'){e.preventDefault();e.stopImmediatePropagation();payment(true,true);return;}
-    if(t.id==='student-all-unpaid-v3'){e.preventDefault();e.stopImmediatePropagation();payment(false,true);return;}
-    if(t.classList.contains('student-stage-v3')){
-      e.preventDefault();e.stopImmediatePropagation();
-      window.__studentCatFilter=t.dataset.stage||'all';window.__studentSearchV3='';
-      const main=document.getElementById('teacherMain');
-      if(main&&typeof window.renderTeacherSection==='function')window.renderTeacherSection('students');
-      return;
-    }
-  },true);
-
-  document.addEventListener('input',function(e){
-    if(e.target?.id!=='student-search-v3')return;
-    window.__studentSearchV3=e.target.value||'';
-    clearTimeout(window.__studentSearchRescueTimer);
-    window.__studentSearchRescueTimer=setTimeout(function(){
-      if(typeof window.renderTeacherSection==='function')window.renderTeacherSection('students');
-      const x=document.getElementById('student-search-v3');
-      if(x){x.focus();x.setSelectionRange(x.value.length,x.value.length);}
-    },120);
-  },true);
-})();
-</script>
 </body></html>
