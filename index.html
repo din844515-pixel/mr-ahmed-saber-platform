@@ -1965,4 +1965,78 @@ setTimeout(async()=>{try{if(!await waitForSupabase())return;const {data}=await s
   };
 })();
 </script>
+
+<script id="student-actions-rescue-v4">
+(function(){
+  if(window.__studentActionsRescueV4)return;
+  window.__studentActionsRescueV4=true;
+
+  function studentsData(){return typeof window.teacherData==='function'?window.teacherData():(window.__teacherData||{students:[]});}
+  function selectedIds(){
+    return Array.from(document.querySelectorAll('#students-table-v3 .student-check-v3:checked')).map(x=>Number(x.value)).filter(Number.isFinite);
+  }
+  async function payment(paid,all){
+    try{
+      if(all){
+        if(!confirm(paid?'تطبيق تم السداد على جميع الطلاب؟':'تطبيق لم يتم السداد على جميع الطلاب؟'))return;
+        const r=await sb.rpc('teacher_bulk_payment_status',{p_paid:!!paid});
+        if(r.error||!r.data?.success){alert(r.data?.message||r.error?.message||'تعذر تحديث السداد.');return;}
+      }else{
+        const ids=selectedIds();
+        if(!ids.length){alert('اختاري طالبًا واحدًا على الأقل.');return;}
+        const r=await sb.rpc('teacher_set_students_payment',{p_student_ids:ids,p_paid:!!paid});
+        if(r.error||!r.data?.success){alert(r.data?.message||r.error?.message||'تعذر تحديث السداد.');return;}
+      }
+      if(typeof window.refreshV9==='function')await window.refreshV9();
+      else if(typeof window.refreshTeacher==='function')await window.refreshTeacher();
+      if(typeof window.showTeacherSection==='function')window.showTeacherSection('students');
+    }catch(e){alert(e?.message||'تعذر تنفيذ العملية.');}
+  }
+
+  document.addEventListener('click',function(e){
+    const t=e.target.closest && e.target.closest('button');
+    if(!t)return;
+
+    if(t.id==='student-add-v3'){
+      e.preventDefault();e.stopImmediatePropagation();
+      if(typeof window.openStudentEditorV3==='function')window.openStudentEditorV3(null);
+      return;
+    }
+    if(t.classList.contains('student-edit-v3')){
+      e.preventDefault();e.stopImmediatePropagation();
+      const id=Number(t.dataset.id),s=(studentsData().students||[]).find(x=>Number(x.id)===id);
+      if(s&&typeof window.openStudentEditorV3==='function')window.openStudentEditorV3(s);
+      return;
+    }
+    if(t.classList.contains('student-renew-v3')){
+      e.preventDefault();e.stopImmediatePropagation();
+      const id=Number(t.dataset.id);
+      if(typeof window.manualRenewStudent==='function')window.manualRenewStudent(id);
+      return;
+    }
+    if(t.id==='student-selected-paid-v3'){e.preventDefault();e.stopImmediatePropagation();payment(true,false);return;}
+    if(t.id==='student-selected-unpaid-v3'){e.preventDefault();e.stopImmediatePropagation();payment(false,false);return;}
+    if(t.id==='student-all-paid-v3'){e.preventDefault();e.stopImmediatePropagation();payment(true,true);return;}
+    if(t.id==='student-all-unpaid-v3'){e.preventDefault();e.stopImmediatePropagation();payment(false,true);return;}
+    if(t.classList.contains('student-stage-v3')){
+      e.preventDefault();e.stopImmediatePropagation();
+      window.__studentCatFilter=t.dataset.stage||'all';window.__studentSearchV3='';
+      const main=document.getElementById('teacherMain');
+      if(main&&typeof window.renderTeacherSection==='function')window.renderTeacherSection('students');
+      return;
+    }
+  },true);
+
+  document.addEventListener('input',function(e){
+    if(e.target?.id!=='student-search-v3')return;
+    window.__studentSearchV3=e.target.value||'';
+    clearTimeout(window.__studentSearchRescueTimer);
+    window.__studentSearchRescueTimer=setTimeout(function(){
+      if(typeof window.renderTeacherSection==='function')window.renderTeacherSection('students');
+      const x=document.getElementById('student-search-v3');
+      if(x){x.focus();x.setSelectionRange(x.value.length,x.value.length);}
+    },120);
+  },true);
+})();
+</script>
 </body></html>
