@@ -1245,21 +1245,35 @@ document.addEventListener('click',function(e){
       <section class="panel" style="margin-top:12px"><div class="dash-toolbar"><button class="dash-action" onclick="showTeacherSection('students')">${tr('Manage Students','إدارة الطلاب')}</button><button class="dash-action" onclick="showTeacherSection('exams')">${tr('Manage Exams','إدارة الامتحانات')}</button><button class="dash-action" onclick="showTeacherSection('reports')">${tr('Reports','التقارير')}</button></div></section>`;
   }
 
-  // FIRST-PRINCIPLES STUDENT NUMBERING
-  // Principle 1: the number is presentation-only; never mutate the student record.
-  // Principle 2: numbering must be deterministic; sort by immutable database id.
-  // Principle 3: numbering is global across ALL students; filters only hide rows.
-  // Principle 4: every render recomputes the same mapping from the same source.
+  // FIRST-PRINCIPLES STUDENT NUMBERING V2
+  // 1) A number is a display identity only; it never changes the student record.
+  // 2) The source of truth is the students table primary key (id), not the name.
+  // 3) The sequence is global: filters/search hide rows but never renumber them.
+  // 4) The same dataset always produces the same number for every student.
+  // 5) No name is used as an identity key, so two equal names can never steal each other's number.
   function buildCanonicalStudentNumberMap(students){
-    const canonical=(Array.isArray(students)?students:[]).slice().sort((a,b)=>{
-      const ai=Number(a?.id), bi=Number(b?.id);
+    const source=Array.isArray(students)?students:[];
+    const canonical=source.map((student,sourceIndex)=>({student,sourceIndex})).sort((a,b)=>{
+      const ai=Number(a.student?.id);
+      const bi=Number(b.student?.id);
       if(Number.isFinite(ai)&&Number.isFinite(bi)&&ai!==bi) return ai-bi;
-      return String(a?.student_code||a?.code||a?.name||'').localeCompare(
-        String(b?.student_code||b?.code||b?.name||''),'ar'
-      );
-    });
+
+      const ac=String(a.student?.created_at||'');
+      const bc=String(b.student?.created_at||'');
+      if(ac!==bc) return ac.localeCompare(bc);
+
+      const as=String(a.student?.student_code||a.student?.code||'');
+      const bs=String(b.student?.student_code||b.student?.code||'');
+      if(as!==bs) return as.localeCompare(bs);
+
+      return a.sourceIndex-b.sourceIndex;
+    }).map(x=>x.student);
+
     const map=new Map();
-    canonical.forEach((s,index)=>map.set(String(s?.id),index+1));
+    canonical.forEach((student,index)=>{
+      const id=student?.id;
+      if(id!==undefined&&id!==null&&String(id)!=='') map.set(String(id),index+1);
+    });
     return {canonical,map};
   }
 
@@ -1275,13 +1289,13 @@ document.addEventListener('click',function(e){
 
     const rows=visible.map(s=>{
       const studentNo=numberById.get(String(s.id))||'';
-      const numberBadge='<span class="student-number-badge" aria-label="'+tr('Student number','رقم الطالب')+' '+studentNo+'">'+studentNo+'</span>';
+      const numberBadge='<span class="student-number-badge" aria-label="'+tr('Student number','رقم الطالب')+' '+studentNo+'" style="display:inline-flex;align-items:center;justify-content:center;min-width:32px;height:26px;padding:0 8px;margin-inline-end:8px;border-radius:7px;background:#062b57;color:#fff;font-weight:900;font-size:12px;line-height:1;vertical-align:middle;box-sizing:border-box">'+studentNo+'</span>';
       return '<tr data-student-id="'+esc(String(s.id))+'"><td><b>'+numberBadge+esc(s.name||'')+'</b>'+
         (!s.parent_phone?'<div class="parent-phone-badge">⚠️ '+tr('Parent phone required','رقم ولي الأمر مطلوب')+'</div>':'')+
         '</td><td>'+esc(s.student_code||s.code||'')+'</td><td>'+esc(catLabel(catOf(s.grade)))+'</td><td>'+esc(s.parent_phone||'—')+
         '</td><td><span class="pill '+(s.paid?'':'wait')+'">'+(s.paid?tr('Paid','تم السداد'):tr('Unpaid','لم يتم السداد'))+
         '</span></td><td><input type="checkbox" class="v9-student-check" value="'+esc(String(s.id))+'"></td><td>'+
-        '<button class="dash-action" onclick=\\'openStudentEditorV9('+JSON.stringify(s).replace(/'/g,'&#39;')+')\\'>'+tr('Edit','تعديل')+'</button> '+
+        '<button class="dash-action" onclick=\'openStudentEditorV9('+JSON.stringify(s).replace(/'/g,'&#39;')+')\'>'+tr('Edit','تعديل')+'</button> '+
         '<button class="dash-action gold" onclick="manualRenewStudent('+s.id+')">✅ '+tr('Manual Renewal','إعادة الاشتراك يدويًا')+'</button> '+
         '<button class="dash-action" style="background:#b33a3a" onclick="deleteStudent('+s.id+')">'+tr('Delete','حذف')+'</button></td></tr>';
     }).join('');
