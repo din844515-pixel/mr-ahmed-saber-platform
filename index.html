@@ -1755,4 +1755,52 @@ setTimeout(async()=>{try{if(!await waitForSupabase())return;const {data}=await s
 
 
 
-</body></html>
+<script id="force-student-numbering-v16">
+(function(){
+  function apply(){
+    try{
+      const data=window.__teacherData||{};
+      const students=Array.isArray(data.students)?data.students:[];
+      if(!students.length)return;
+      const byCode=new Map();
+      const byId=new Map();
+      const byName=new Map();
+      students.forEach((st,i)=>{
+        const n=i+1, code=String(st.student_code||st.code||'').trim(), id=String(st.id||'').trim(), name=String(st.name||'').trim();
+        if(code)byCode.set(code,n);
+        if(id)byId.set(id,n);
+        if(name){const a=byName.get(name)||[];a.push(n);byName.set(name,a);}
+      });
+      document.querySelectorAll('#studentsTable,#studentsTableV9').forEach(table=>{
+        const th=table.querySelector('thead th:first-child');
+        if(th&&!th.dataset.numbered){th.innerHTML='No. / '+th.textContent;th.dataset.numbered='1';}
+        const used={};
+        table.querySelectorAll('tbody tr').forEach((row,ri)=>{
+          const cells=row.querySelectorAll('td');
+          if(!cells.length||!cells[0])return;
+          if(cells.length===1)return;
+          const first=cells[0];
+          if(first.querySelector('[data-student-no]'))return;
+          const code=String(cells[1]?.textContent||'').trim();
+          const name=String(first.textContent||'').replace(/⚠️.*$/,'').trim();
+          let n=byCode.get(code);
+          if(!n){
+            const arr=byName.get(name)||[];
+            const k=used[name]||0; n=arr[k]; used[name]=k+1;
+          }
+          if(!n)n=ri+1;
+          const badge=document.createElement('span');
+          badge.setAttribute('data-student-no','1');
+          badge.textContent=String(n);
+          badge.style.cssText='display:inline-flex!important;align-items:center;justify-content:center;min-width:34px;height:28px;padding:0 8px;margin-left:7px;border-radius:7px;background:#062b57;color:#fff;font-weight:900;font-size:13px;vertical-align:middle';
+          first.insertBefore(badge,first.firstChild);
+        });
+      });
+    }catch(e){console.warn('student numbering v16',e);}
+  }
+  apply();
+  const ob=new MutationObserver(apply);
+  ob.observe(document.body,{childList:true,subtree:true});
+  setInterval(apply,1000);
+})();
+</script></body></html>
