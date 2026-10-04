@@ -1340,95 +1340,39 @@ document.addEventListener('click',function(e){
     window.__teacherData=data; return true;
   }
   function renderStudents(main,d){
-    const students=Array.isArray(d?.students)?d.students:[];
-    const numberMap=studentNumberMapV4(students);
-    const state=window.__studentV4State||{stage:"all",search:""};
-    const q=String(state.search||"").trim().toLocaleLowerCase("ar-EG");
-    const visible=students.filter(s=>{
-      if(!studentStageMatchesV4(s,state.stage))return false;
-      if(!q)return true;
-      return [s.name,s.student_code,s.code,s.parent_phone,s.phone,s.email].some(v=>String(v||"").toLocaleLowerCase("ar-EG").includes(q));
-    });
-    const selected=new Set((window.__studentV4Selected||[]).map(String));
-    const tabs=STUDENT_STAGE_OPTIONS_V4.map(x=>{const n=students.filter(s=>studentStageMatchesV4(s,x[0])).length;return "<button type=\"button\" class=\"v9-pill "+(state.stage===x[0]?"active ":"")+"student-v4-stage\" data-stage=\""+esc(x[0])+"\" onclick=\"return window.studentUiStageV5(event,this.dataset.stage)\">"+esc(tr(x[2],x[1]))+" <b>"+n+"</b></button>";}).join("");
-    const rows=visible.map(s=>{
-      const id=String(s.id),no=numberMap.get(id)||"",checked=selected.has(id),paid=!!s.paid;
-      return "<tr data-student-id=\""+esc(id)+"\"><td><label style=\"display:flex;align-items:center;gap:8px\"><input type=\"checkbox\" class=\"student-v4-check\" value=\""+esc(id)+"\" "+(checked?"checked":"")+" aria-label=\""+esc(tr("Select student","اختيار الطالب"))+"\"><span><b><span class=\"student-number-badge\" style=\"display:inline-flex;min-width:34px;height:28px;align-items:center;justify-content:center;margin-inline-end:7px;border-radius:8px;background:#062b57;color:#fff;font-weight:900\">"+no+"</span>"+esc(s.name||"—")+"</b>"+(!String(s.parent_phone||"").trim()?"<div class=\"parent-phone-badge\">⚠️ "+tr("Parent phone required","رقم ولي الأمر مطلوب")+"</div>":"")+"</span></label></td>"+
-        "<td>"+esc(s.student_code||s.code||"—")+"</td><td>"+esc(catLabel(catOf(s.grade)))+"</td><td>"+esc(s.parent_phone||"—")+"</td>"+
-        "<td><span class=\"pill "+(paid?"":"wait")+"\">"+(paid?tr("Paid","تم السداد"):tr("Unpaid","لم يتم السداد"))+"</span></td>"+
-        "<td style=\"white-space:nowrap\"><button type=\"button\" class=\"dash-action student-v4-edit\" data-id=\""+esc(id)+"\" onclick=\"return window.studentUiEditV5(event,this.dataset.id)\">✏️ "+tr("Edit","تعديل")+"</button> <button type=\"button\" class=\"dash-action gold student-v4-renew\" data-id=\""+esc(id)+"\">✅ "+tr("Manual Renewal","إعادة الاشتراك يدويًا")+"</button> <button type=\"button\" class=\"dash-action student-v4-delete\" data-id=\""+esc(id)+"\" style=\"background:#b33a3a\">"+tr("Delete","حذف")+"</button></td></tr>";
-    }).join("");
-    const allVisibleSelected=visible.length>0&&visible.every(s=>selected.has(String(s.id)));
-    main.innerHTML="<div class=\"welcome\"><div><h1>"+tr("Students","الطلاب")+"</h1><p>"+tr("Clean student management: numbering, stages, add/edit/delete and renewal.","إدارة الطلاب من مكان واحد: الترقيم والمراحل والإضافة والتعديل والحذف وإعادة الاشتراك.")+"</p></div><div class=\"dash-toolbar\"><button type=\"button\" class=\"dash-action gold\" id=\"student-v4-add\" onclick=\"return window.studentUiAddV5(event)\">+ "+tr("Add Student","إضافة طالب")+"</button></div></div>"+
-      "<section class=\"panel\"><div class=\"v9-pills\" id=\"student-v4-tabs\">"+tabs+"</div>"+
-      "<div class=\"v9-selected-bar\"><label style=\"display:flex;align-items:center;gap:7px\"><input type=\"checkbox\" id=\"student-v4-select-all\" "+(allVisibleSelected?"checked":"")+"> "+tr("Select visible students","اختيار الطلاب الظاهرين")+"</label><span class=\"badge-soft\">"+selected.size+" "+tr("selected","محدد")+"</span></div>"+
-      "<div class=\"dash-toolbar\"><input class=\"dash-input\" id=\"student-v4-search\" value=\""+esc(state.search||"")+"\" placeholder=\""+tr("Search name / code / parent phone","بحث بالاسم / الكود / رقم ولي الأمر")+"\"><span class=\"badge-soft\">"+visible.length+" / "+students.length+" "+tr("students","طلاب")+"</span></div>"+
-      "<div class=\"v9-scroll\"><table class=\"dash-table\" id=\"student-v4-table\"><thead><tr><th>"+tr("Name","الاسم")+"</th><th>"+tr("Code","الكود")+"</th><th>"+tr("Stage","المرحلة")+"</th><th>"+tr("Parent Phone","ولي الأمر")+"</th><th>"+tr("Payment","السداد")+"</th><th>"+tr("Actions","الإجراءات")+"</th></tr></thead><tbody>"+(rows||"<tr><td colspan=\"6\">"+tr("No students in this list yet.","لا يوجد طلاب في هذه القائمة بعد.")+"</td></tr>")+"</tbody></table></div></section>";
-    main.querySelectorAll(".student-v4-stage").forEach(b=>b.addEventListener("click",()=>{state.stage=b.dataset.stage||"all";state.search="";window.__studentV4State=state;renderStudents(main,window.__teacherData||d);}));
-    main.querySelector("#student-v4-search")?.addEventListener("input",e=>{state.search=e.target.value||"";window.__studentV4State=state;renderStudents(main,window.__teacherData||d);const x=document.getElementById("student-v4-search");if(x){x.focus();x.setSelectionRange(x.value.length,x.value.length);}});
-    main.querySelector("#student-v4-select-all")?.addEventListener("change",e=>{const set=new Set(window.__studentV4Selected||[]);visible.forEach(s=>{const id=String(s.id);if(e.target.checked)set.add(id);else set.delete(id);});window.__studentV4Selected=[...set];renderStudents(main,window.__teacherData||d);});
-    main.querySelectorAll(".student-v4-check").forEach(c=>c.addEventListener("change",()=>{const set=new Set(window.__studentV4Selected||[]),id=String(c.value);if(c.checked)set.add(id);else set.delete(id);window.__studentV4Selected=[...set];renderStudents(main,window.__teacherData||d);}));
-    main.querySelector("#student-v4-add")?.addEventListener("click",()=>openStudentEditorV4(null));
-    main.querySelectorAll(".student-v4-edit").forEach(b=>b.addEventListener("click",()=>{const s=students.find(x=>String(x.id)===String(b.dataset.id));if(s)openStudentEditorV4(s);}));
-    main.querySelectorAll(".student-v4-renew").forEach(b=>b.addEventListener("click",()=>manualRenewStudent(Number(b.dataset.id))));
-    main.querySelectorAll(".student-v4-delete").forEach(b=>b.addEventListener("click",()=>deleteStudentV4(Number(b.dataset.id))));
-    main.querySelector("#student-v4-paid")?.addEventListener("click",()=>setStudentsPaymentV4(true,false));
-    main.querySelector("#student-v4-unpaid")?.addEventListener("click",()=>setStudentsPaymentV4(false,false));
-    main.querySelector("#student-v4-all-paid")?.addEventListener("click",()=>setStudentsPaymentV4(true,true));
-    main.querySelector("#student-v4-all-unpaid")?.addEventListener("click",()=>setStudentsPaymentV4(false,true));
-  }
-  function openStudentEditorV4(student){
-    const s=student||{},isEdit=Number(s.id)>0;
-    show("<h2>"+tr(isEdit?"Edit Student":"Add Student",isEdit?"تعديل طالب":"إضافة طالب")+"</h2><p class=\"sub\">"+tr("The student number is generated automatically and is never edited.","رقم الطالب يتم توليده تلقائيًا ولا يتم إدخاله أو تعديله يدويًا.")+"</p><div class=\"form-grid\">"+
-      "<input id=\"sv4_name\" class=\"input\" placeholder=\""+tr("Student Name","اسم الطالب")+"\" value=\""+esc(s.name||"")+"\">"+
-      "<input id=\"sv4_code\" class=\"input\" placeholder=\""+tr("Student Code (optional)","كود الطالب (اختياري)")+"\" value=\""+esc(s.student_code||s.code||"")+"\">"+
-      "<select id=\"sv4_grade\" class=\"input\">"+studentGradeOptionsV4(s.grade)+"</select>"+
-      "<input id=\"sv4_parent\" class=\"input\" placeholder=\""+tr("Parent Phone","رقم ولي الأمر")+"\" value=\""+esc(s.parent_phone||"")+"\">"+
-      "<input id=\"sv4_phone\" class=\"input\" placeholder=\""+tr("Student Phone","رقم الطالب")+"\" value=\""+esc(s.phone||"")+"\">"+
-      "<input id=\"sv4_email\" class=\"input\" placeholder=\"Email\" value=\""+esc(s.email||"")+"\">"+
-      "<select id=\"sv4_gender\" class=\"input\"><option value=\"male\" "+(s.gender!=="female"?"selected":"")+">Male</option><option value=\"female\" "+(s.gender==="female"?"selected":"")+">Female</option></select>"+
-      "<select id=\"sv4_paid\" class=\"input\"><option value=\"true\" "+(s.paid?"selected":"")+">"+tr("Paid","تم السداد")+"</option><option value=\"false\" "+(!s.paid?"selected":"")+">"+tr("Unpaid","لم يتم السداد")+"</option></select>"+
-      "<select id=\"sv4_exempt\" class=\"input\"><option value=\"false\" "+(!s.exempt?"selected":"")+">"+tr("Normal student","طالب عادي")+"</option><option value=\"true\" "+(s.exempt?"selected":"")+">"+tr("Exempt","معفى")+"</option></select>"+
-      "<textarea id=\"sv4_notes\" class=\"input full\" style=\"height:80px\" placeholder=\""+tr("Notes","ملاحظات")+"\">"+esc(s.notes||"")+"</textarea></div><button type=\"button\" class=\"submit\" id=\"sv4_save\">"+tr("Save Student","حفظ الطالب")+" →</button>");
-    document.getElementById("sv4_save")?.addEventListener("click",()=>saveStudentV4(Number(s.id||0)));
-  }
-  async function saveStudentV4(id){
-    const name=document.getElementById("sv4_name")?.value.trim()||"",grade=document.getElementById("sv4_grade")?.value.trim()||"";
-    if(!name){alert(tr("Student name is required.","اسم الطالب مطلوب."));return;}
-    if(!grade){alert(tr("Choose the student stage.","اختاري مرحلة الطالب."));return;}
-    const students=teacherData().students||[],key=studentNameKeyV4(name);
-    const duplicate=students.find(x=>studentNameKeyV4(x.name)===key&&Number(x.id)!==Number(id));
-    if(duplicate){alert(tr("This student name already exists.","اسم الطالب موجود بالفعل ولا يمكن تكراره.")+"\n"+String(duplicate.name||""));return;}
-    let code=document.getElementById("sv4_code")?.value.trim()||""; if(!code)code=studentNextCodeV4(students);
-    const payload={p_name:name,p_student_code:code,p_grade:grade,p_parent_phone:document.getElementById("sv4_parent")?.value.trim()||"",p_phone:document.getElementById("sv4_phone")?.value.trim()||"",p_email:document.getElementById("sv4_email")?.value.trim()||"",p_gender:document.getElementById("sv4_gender")?.value||"male",p_paid:document.getElementById("sv4_paid")?.value==="true",p_exempt:document.getElementById("sv4_exempt")?.value==="true"};
-    const params=Number(id)>0?{p_student_id:Number(id),...payload,p_active:true,p_notes:document.getElementById("sv4_notes")?.value.trim()||""}:payload;
-    const result=await sb.rpc(Number(id)>0?"teacher_update_student":"teacher_create_student",params);
-    if(result.error||!result.data?.success){alert(result.data?.message||result.error?.message||tr("Could not save student.","تعذر حفظ الطالب."));return;}
-    closeModal();window.__studentV4Selected=[];await studentReloadV4();renderSections("students");
-  }
-  async function deleteStudentV4(id){
-    const s=(teacherData().students||[]).find(x=>Number(x.id)===Number(id));if(!s)return;
-    if(!confirm(tr("Delete this student permanently?","حذف هذا الطالب نهائيًا؟")+"\n"+String(s.name||"")))return;
-    const result=await sb.rpc("teacher_delete_student",{p_student_id:Number(id)});
-    if(result.error||!result.data?.success){alert(result.data?.message||result.error?.message||tr("Delete failed.","فشل حذف الطالب."));return;}
-    window.__studentV4Selected=(window.__studentV4Selected||[]).filter(x=>String(x)!==String(id));await studentReloadV4();renderSections("students");
-  }
-  async function setStudentsPaymentV4(paid,all){
-    let ids=[];
-    if(all){if(!confirm(paid?tr("Mark all students as paid?","تحديد كل الطلاب تم السداد؟"):tr("Mark all students as unpaid?","تحديد كل الطلاب لم يتم السداد؟")))return;}
-    else{ids=[...(window.__studentV4Selected||[])].map(Number).filter(Number.isFinite);if(!ids.length){alert(tr("Select at least one student.","اختاري طالبًا واحدًا على الأقل."));return;}}
-    const result=all?await sb.rpc("teacher_bulk_payment_status",{p_paid:!!paid}):await sb.rpc("teacher_set_students_payment",{p_student_ids:ids,p_paid:!!paid});
-    if(result.error||!result.data?.success){alert(result.data?.message||result.error?.message||tr("Payment update failed.","فشل تحديث حالة السداد."));return;}
-    window.__studentV4Selected=[];await studentReloadV4();renderSections("students");
-  }
-  window.openStudentEditorV4=openStudentEditorV4; window.saveStudentV4=saveStudentV4; window.deleteStudentV4=deleteStudentV4; window.setStudentsPaymentV4=setStudentsPaymentV4;
-  window.studentUiAddV5=function(ev){if(ev){ev.preventDefault();ev.stopPropagation();}openStudentEditorV4(null);return false;};
-  window.studentUiEditV5=function(ev,id){if(ev){ev.preventDefault();ev.stopPropagation();}const s=(teacherData().students||[]).find(x=>String(x.id)===String(id));if(!s){alert(tr("Student not found.","الطالب غير موجود."));return false;}openStudentEditorV4(s);return false;};
-  window.studentUiStageV5=function(ev,key){if(ev){ev.preventDefault();ev.stopPropagation();}window.__studentV4State={stage:key||"all",search:""};window.__studentV4Selected=[];renderSections("students");return false;};
-  window.setStudentStageFilter=function(k){window.__studentV4State={stage:k||"all",search:""};window.__studentV4Selected=[];renderSections("students");};
-  window.filterStudentsV9=function(){const x=document.getElementById("student-v4-search");window.__studentV4State={...(window.__studentV4State||{}),search:x?.value||""};renderSections("students");};
-  window.openStudentEditorV9=openStudentEditorV4; window.saveStudentV9=saveStudentV4; window.bulkAllV9=(v)=>setStudentsPaymentV4(v,true); window.setSelectedPaidV9=(v)=>setStudentsPaymentV4(v,false);
-  function renderPaymentRequests(main,d){const list=(d.payment_requests||[]);const pending=list.filter(x=>x.status==='pending');main.innerHTML=`<div class="welcome"><div><h1>${tr('Payment Requests','طلبات الدفع')}</h1><p>${tr('Approve new subscriptions and renewals after checking the receipt.','راجعي بيانات الطالب والإيصال ثم وافقي على الاشتراك أو التجديد.')}</p></div><button class="dash-action" onclick="refreshV9()">${tr('Refresh','تحديث')}</button></div><section class="panel"><div class="v9-pills"><span class="badge-soft">${pending.length} ${tr('pending','معلقة')}</span></div>${pending.map(r=>`<div class="payment-request-card pending"><div class="payment-request-head"><div><h3>${esc(r.full_name||r.student_name||'Student')}</h3><div class="payment-request-meta">${r.student_id?tr('Renewal','إعادة اشتراك'):tr('New subscription','اشتراك جديد')} • ${esc(r.course_name||'')} • ${esc(r.payment_method||'')}<br>${tr('Parent','ولي الأمر')}: ${esc(r.parent_phone||'—')} • ${tr('Amount','المبلغ')}: ${esc(r.amount||0)}</div></div><span class="pill wait">${tr('Pending','معلق')}</span></div>${r.receipt_path?`<img class="payment-proof" src="${esc(r.receipt_path)}" onclick="window.open(this.src,'_blank')">`:''}<div class="dash-toolbar"><button class="dash-action gold" onclick="approvePaymentRequest(${Number(r.id)})">✅ ${tr('Approve','موافقة')}</button><button class="dash-action" style="background:#b33a3a" onclick="rejectPaymentRequest(${Number(r.id)})">${tr('Reject','رفض')}</button></div></div>`).join('')||`<p class="sub">${tr('No pending payment requests.','لا توجد طلبات دفع معلقة حاليًا.')}</p>`}</section><section class="panel"><h3>${tr('Request History','سجل الطلبات')}</h3><div class="v9-scroll"><table class="dash-table"><thead><tr><th>${tr('Name','الاسم')}</th><th>${tr('Status','الحالة')}</th><th>${tr('Stage','المرحلة')}</th><th>${tr('Date','التاريخ')}</th></tr></thead><tbody>${list.map(r=>`<tr><td>${esc(r.full_name||r.student_name||'')}</td><td>${esc(r.status||'')}</td><td>${esc(r.course_name||'')}</td><td>${esc((r.created_at||'').slice(0,10))}</td></tr>`).join('')}</tbody></table></div></section>`}
+  const students=Array.isArray(d?.students)?d.students:[];
+  const state=window.__cleanStudentsState||{stage:"all",search:""};
+  const cats=[
+    ["all","الكل"],["prep1","أولى إعدادي"],["prep2","ثانية إعدادي"],["prep3","ثالثة إعدادي"],
+    ["sec1","أولى ثانوي"],["sec2","ثانية ثانوي"],["sec3","ثالثة ثانوي"],["foundation","تأسيس"],["courses","كورسات"]
+  ];
+  const match=(x,k)=>k==="all"||catOf(x.grade)===k;
+  const q=String(state.search||"").trim().toLocaleLowerCase("ar-EG");
+  const visible=students.filter(x=>match(x,state.stage)&&(!q||[x.name,x.student_code,x.code,x.parent_phone,x.phone,x.email].some(v=>String(v||"").toLocaleLowerCase("ar-EG").includes(q))));
+  const ordered=[...students].sort((a,b)=>new Date(a.created_at||0)-new Date(b.created_at||0)||Number(a.id)-Number(b.id));
+  const nums=new Map(ordered.map((x,i)=>[String(x.id),i+1]));
+  const tabs=cats.map(([k,label])=>`<button type="button" class="v9-pill ${state.stage===k?'active':''}" data-clean-stage="${k}">${label} <b>${students.filter(x=>match(x,k)).length}</b></button>`).join("");
+  const rows=visible.map(x=>`<tr>
+    <td><b><span class="student-number-badge" style="display:inline-flex;min-width:34px;height:28px;align-items:center;justify-content:center;margin-inline-end:7px;border-radius:8px;background:#062b57;color:#fff">${nums.get(String(x.id))||''}</span>${esc(x.name||'—')}</b></td>
+    <td>${esc(x.student_code||x.code||'—')}</td><td>${esc(catLabel(catOf(x.grade)))}</td><td>${esc(x.parent_phone||'—')}</td>
+    <td><span class="pill ${x.paid?'':'wait'}">${x.paid?'تم السداد':'لم يتم السداد'}</span></td>
+    <td><button type="button" class="dash-action" data-clean-edit="${x.id}">✏️ تعديل</button>
+    <button type="button" class="dash-action gold" data-clean-renew="${x.id}">✅ إعادة الاشتراك</button>
+    <button type="button" class="dash-action" style="background:#b33a3a" data-clean-delete="${x.id}">حذف</button></td>
+  </tr>`).join("")||'<tr><td colspan="6">لا يوجد طلاب في هذه القائمة.</td></tr>';
+  main.innerHTML=`<div class="welcome"><div><h1>الطلاب</h1><p>إدارة الطلاب بالكامل من وحدة واحدة.</p></div><button type="button" class="dash-action gold" id="clean-add-student">+ إضافة طالب</button></div>
+  <section class="panel"><div class="v9-pills" id="clean-stage-tabs">${tabs}</div>
+  <div class="dash-toolbar"><input class="dash-input" id="clean-student-search" value="${esc(state.search||'')}" placeholder="بحث بالاسم أو الكود أو رقم ولي الأمر"><span class="badge-soft">${visible.length} / ${students.length}</span></div>
+  <div class="v9-scroll"><table class="dash-table"><thead><tr><th>الاسم</th><th>الكود</th><th>المرحلة</th><th>ولي الأمر</th><th>السداد</th><th>الإجراءات</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
+  const find=id=>students.find(x=>String(x.id)===String(id));
+  main.querySelector('#clean-add-student')?.addEventListener('click',()=>cleanOpenStudent(null));
+  main.querySelectorAll('[data-clean-stage]').forEach(b=>b.addEventListener('click',()=>{window.__cleanStudentsState={stage:b.dataset.cleanStage,search:""};renderStudents(main,window.__teacherData||d);}));
+  main.querySelector('#clean-student-search')?.addEventListener('input',ev=>{window.__cleanStudentsState={...(window.__cleanStudentsState||{}),search:ev.target.value||''};renderStudents(main,window.__teacherData||d);});
+  main.querySelectorAll('[data-clean-edit]').forEach(b=>b.addEventListener('click',()=>cleanOpenStudent(find(b.dataset.cleanEdit))));
+  main.querySelectorAll('[data-clean-delete]').forEach(b=>b.addEventListener('click',()=>cleanDeleteStudent(Number(b.dataset.cleanDelete))));
+  main.querySelectorAll('[data-clean-renew]').forEach(b=>b.addEventListener('click',()=>window.manualRenewStudent?.(Number(b.dataset.cleanRenew))));
+}
+function renderPaymentRequests(main,d){const list=(d.payment_requests||[]);const pending=list.filter(x=>x.status==='pending');main.innerHTML=`<div class="welcome"><div><h1>${tr('Payment Requests','طلبات الدفع')}</h1><p>${tr('Approve new subscriptions and renewals after checking the receipt.','راجعي بيانات الطالب والإيصال ثم وافقي على الاشتراك أو التجديد.')}</p></div><button class="dash-action" onclick="refreshV9()">${tr('Refresh','تحديث')}</button></div><section class="panel"><div class="v9-pills"><span class="badge-soft">${pending.length} ${tr('pending','معلقة')}</span></div>${pending.map(r=>`<div class="payment-request-card pending"><div class="payment-request-head"><div><h3>${esc(r.full_name||r.student_name||'Student')}</h3><div class="payment-request-meta">${r.student_id?tr('Renewal','إعادة اشتراك'):tr('New subscription','اشتراك جديد')} • ${esc(r.course_name||'')} • ${esc(r.payment_method||'')}<br>${tr('Parent','ولي الأمر')}: ${esc(r.parent_phone||'—')} • ${tr('Amount','المبلغ')}: ${esc(r.amount||0)}</div></div><span class="pill wait">${tr('Pending','معلق')}</span></div>${r.receipt_path?`<img class="payment-proof" src="${esc(r.receipt_path)}" onclick="window.open(this.src,'_blank')">`:''}<div class="dash-toolbar"><button class="dash-action gold" onclick="approvePaymentRequest(${Number(r.id)})">✅ ${tr('Approve','موافقة')}</button><button class="dash-action" style="background:#b33a3a" onclick="rejectPaymentRequest(${Number(r.id)})">${tr('Reject','رفض')}</button></div></div>`).join('')||`<p class="sub">${tr('No pending payment requests.','لا توجد طلبات دفع معلقة حاليًا.')}</p>`}</section><section class="panel"><h3>${tr('Request History','سجل الطلبات')}</h3><div class="v9-scroll"><table class="dash-table"><thead><tr><th>${tr('Name','الاسم')}</th><th>${tr('Status','الحالة')}</th><th>${tr('Stage','المرحلة')}</th><th>${tr('Date','التاريخ')}</th></tr></thead><tbody>${list.map(r=>`<tr><td>${esc(r.full_name||r.student_name||'')}</td><td>${esc(r.status||'')}</td><td>${esc(r.course_name||'')}</td><td>${esc((r.created_at||'').slice(0,10))}</td></tr>`).join('')}</tbody></table></div></section>`}
 
   async function renderSubscriptions(main,d){const ss=d.students||[];const active=window.__subCatFilter||'all';const visible=active==='all'?ss:ss.filter(s=>catOf(s.grade)===active);const latestByStudent=new Map();(d.subscriptions||[]).forEach(x=>{const prev=latestByStudent.get(x.student_id);if(!prev||new Date(x.created_at)>new Date(prev.created_at))latestByStudent.set(x.student_id,x)});const tabs=[['all',tr('All','الكل'),ss.length]].concat(CATS.map(c=>[c[0],tr(c[2],c[1]),ss.filter(s=>catOf(s.grade)===c[0]).length]));
     main.innerHTML=`<div class="welcome"><div><h1>${tr('Subscriptions','الاشتراكات')}</h1><p>${tr('Every student appears under the correct stage, even if the subscription record has not been created yet.','كل طالب يظهر في مرحلته حتى لو لم يُنشأ له سجل اشتراك بعد.')}</p></div></div><section class="panel"><div class="v9-pills">${tabs.map(x=>`<button class="v9-pill ${active===x[0]?'active':''}" onclick="setSubCatV9(${JSON.stringify(x[0])})">${esc(x[1])} <b>${x[2]}</b></button>`).join('')}</div><div class="v9-scroll"><table class="dash-table"><thead><tr><th>${tr('Student','الطالب')}</th><th>${tr('Stage','المرحلة')}</th><th>${tr('Status','الحالة')}</th><th>${tr('Next Due','موعد التجديد')}</th><th>${tr('Action','الإجراء')}</th></tr></thead><tbody>${visible.map(s=>{const sub=latestByStudent.get(s.id);return `<tr><td>${esc(s.name||'')}</td><td>${esc(catLabel(catOf(s.grade)))}</td><td><span class="pill ${sub?.status==='active'?'':'wait'}">${esc(sub?.status|| (s.paid?tr('Paid','تم السداد'):tr('Unpaid','لم يتم السداد')))}</span></td><td>${esc(sub?.next_due_date||'—')}</td><td><button class="dash-action gold" onclick="manualRenewStudent(${s.id})">✅ '+tr('Manual Renewal','إعادة الاشتراك يدويًا')+'</button></td></tr>`}).join('')}</tbody></table></div></section>`}
@@ -1961,4 +1905,37 @@ setTimeout(async()=>{try{if(!await waitForSupabase())return;const {data}=await s
   new MutationObserver(apply).observe(document.body,{subtree:true,childList:true});
 })();
 </script>
+function renderStudents(main,d){
+  const students=Array.isArray(d?.students)?d.students:[];
+  const state=window.__cleanStudentsState||{stage:"all",search:""};
+  const cats=[
+    ["all","الكل"],["prep1","أولى إعدادي"],["prep2","ثانية إعدادي"],["prep3","ثالثة إعدادي"],
+    ["sec1","أولى ثانوي"],["sec2","ثانية ثانوي"],["sec3","ثالثة ثانوي"],["foundation","تأسيس"],["courses","كورسات"]
+  ];
+  const match=(x,k)=>k==="all"||catOf(x.grade)===k;
+  const q=String(state.search||"").trim().toLocaleLowerCase("ar-EG");
+  const visible=students.filter(x=>match(x,state.stage)&&(!q||[x.name,x.student_code,x.code,x.parent_phone,x.phone,x.email].some(v=>String(v||"").toLocaleLowerCase("ar-EG").includes(q))));
+  const ordered=[...students].sort((a,b)=>new Date(a.created_at||0)-new Date(b.created_at||0)||Number(a.id)-Number(b.id));
+  const nums=new Map(ordered.map((x,i)=>[String(x.id),i+1]));
+  const tabs=cats.map(([k,label])=>`<button type="button" class="v9-pill ${state.stage===k?'active':''}" data-clean-stage="${k}">${label} <b>${students.filter(x=>match(x,k)).length}</b></button>`).join("");
+  const rows=visible.map(x=>`<tr>
+    <td><b><span class="student-number-badge" style="display:inline-flex;min-width:34px;height:28px;align-items:center;justify-content:center;margin-inline-end:7px;border-radius:8px;background:#062b57;color:#fff">${nums.get(String(x.id))||''}</span>${esc(x.name||'—')}</b></td>
+    <td>${esc(x.student_code||x.code||'—')}</td><td>${esc(catLabel(catOf(x.grade)))}</td><td>${esc(x.parent_phone||'—')}</td>
+    <td><span class="pill ${x.paid?'':'wait'}">${x.paid?'تم السداد':'لم يتم السداد'}</span></td>
+    <td><button type="button" class="dash-action" data-clean-edit="${x.id}">✏️ تعديل</button>
+    <button type="button" class="dash-action gold" data-clean-renew="${x.id}">✅ إعادة الاشتراك</button>
+    <button type="button" class="dash-action" style="background:#b33a3a" data-clean-delete="${x.id}">حذف</button></td>
+  </tr>`).join("")||'<tr><td colspan="6">لا يوجد طلاب في هذه القائمة.</td></tr>';
+  main.innerHTML=`<div class="welcome"><div><h1>الطلاب</h1><p>إدارة الطلاب بالكامل من وحدة واحدة.</p></div><button type="button" class="dash-action gold" id="clean-add-student">+ إضافة طالب</button></div>
+  <section class="panel"><div class="v9-pills" id="clean-stage-tabs">${tabs}</div>
+  <div class="dash-toolbar"><input class="dash-input" id="clean-student-search" value="${esc(state.search||'')}" placeholder="بحث بالاسم أو الكود أو رقم ولي الأمر"><span class="badge-soft">${visible.length} / ${students.length}</span></div>
+  <div class="v9-scroll"><table class="dash-table"><thead><tr><th>الاسم</th><th>الكود</th><th>المرحلة</th><th>ولي الأمر</th><th>السداد</th><th>الإجراءات</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
+  const find=id=>students.find(x=>String(x.id)===String(id));
+  main.querySelector('#clean-add-student')?.addEventListener('click',()=>cleanOpenStudent(null));
+  main.querySelectorAll('[data-clean-stage]').forEach(b=>b.addEventListener('click',()=>{window.__cleanStudentsState={stage:b.dataset.cleanStage,search:""};renderStudents(main,window.__teacherData||d);}));
+  main.querySelector('#clean-student-search')?.addEventListener('input',ev=>{window.__cleanStudentsState={...(window.__cleanStudentsState||{}),search:ev.target.value||''};renderStudents(main,window.__teacherData||d);});
+  main.querySelectorAll('[data-clean-edit]').forEach(b=>b.addEventListener('click',()=>cleanOpenStudent(find(b.dataset.cleanEdit))));
+  main.querySelectorAll('[data-clean-delete]').forEach(b=>b.addEventListener('click',()=>cleanDeleteStudent(Number(b.dataset.cleanDelete))));
+  main.querySelectorAll('[data-clean-renew]').forEach(b=>b.addEventListener('click',()=>window.manualRenewStudent?.(Number(b.dataset.cleanRenew))));
+}
 </body></html>
