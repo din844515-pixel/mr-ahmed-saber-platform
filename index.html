@@ -1916,4 +1916,49 @@ setTimeout(async()=>{try{if(!await waitForSupabase())return;const {data}=await s
 </script>
 
 
+
+<script id="student-add-repair-v1">
+(function(){
+  function openAddStudent(e){
+    if(e){ e.preventDefault(); e.stopPropagation(); }
+    try{
+      if(typeof window.openStudentEditorV4==='function'){
+        window.openStudentEditorV4(null);
+        return false;
+      }
+      if(typeof window.openStudentEditor==='function'){
+        window.openStudentEditor(null);
+        return false;
+      }
+      if(typeof window.show==='function'){
+        window.show('<h2>إضافة طالب</h2><p class="sub">نموذج إضافة الطالب غير متاح حاليًا.</p>');
+        return false;
+      }
+      alert('تعذر فتح نموذج إضافة الطالب.');
+    }catch(err){
+      console.error('student-add-repair',err);
+      alert(err?.message||'تعذر فتح نموذج إضافة الطالب.');
+    }
+    return false;
+  }
+  window.studentUiAddV5=openAddStudent;
+  document.addEventListener('click',function(ev){
+    const btn=ev.target && ev.target.closest ? ev.target.closest('#student-v4-add') : null;
+    if(!btn)return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    openAddStudent(ev);
+  },true);
+  const apply=function(){
+    const btn=document.getElementById('student-v4-add');
+    if(btn){
+      btn.type='button';
+      btn.onclick=openAddStudent;
+      btn.removeAttribute('disabled');
+    }
+  };
+  apply();
+  new MutationObserver(apply).observe(document.body,{subtree:true,childList:true});
+})();
+</script>
 </body></html>
