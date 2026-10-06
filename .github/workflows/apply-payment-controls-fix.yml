@@ -14,88 +14,74 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
-          p = Path('index.html')
-          s = p.read_text(encoding='utf-8')
-          marker = '<!-- STUDENT PAYMENT CONTROLS V1 -->'
+          p = Path("index.html")
+          s = p.read_text(encoding="utf-8")
+          marker = "<!-- STUDENT PAYMENT CONTROLS V1 -->"
           if marker in s:
               raise SystemExit(0)
-          patch = r'''<!-- STUDENT PAYMENT CONTROLS V1 -->
+          patch = """<!-- STUDENT PAYMENT CONTROLS V1 -->
 <script id="student-payment-controls-v1">
 (function(){
   if(window.__studentPaymentControlsV1)return;
   window.__studentPaymentControlsV1=true;
-  const selected=new Set();
+  var selected=new Set();
   function data(){return window.__teacherData||{}}
   async function setPayment(ids,paid){
-    if(!ids.length){alert('اختاري طالبًا واحدًا على الأقل.');return;}
-    const r=await sb.rpc('teacher_set_students_payment',{p_student_ids:ids.map(Number),p_paid:!!paid});
-    if(r.error || !r.data?.success){
-      alert(r.error?.message||r.data?.message||'تعذر تحديث حالة السداد.');
-      return;
-    }
+    if(!ids.length){alert("اختاري طالبًا واحدًا على الأقل.");return;}
+    var r=await sb.rpc("teacher_set_students_payment",{p_student_ids:ids.map(Number),p_paid:!!paid});
+    if(r.error || !r.data || !r.data.success){alert((r.error&&r.error.message)||(r.data&&r.data.message)||"تعذر تحديث حالة السداد.");return;}
     selected.clear();
     await refreshTeacher();
-    renderTeacherSection('students');
+    renderTeacherSection("students");
   }
   function install(){
-    const add=document.getElementById('hs-add');
-    const main=document.getElementById('teacherMain');
-    if(!add||!main||!document.getElementById('teacherDashboard'))return;
-    if(!main.querySelector('#student-payment-toolbar')){
-      const bar=document.createElement('div');
-      bar.id='student-payment-toolbar';
-      bar.style='display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0';
-      bar.innerHTML='<button type="button" class="dash-action gold" data-pay-action="all-paid">✓ الكل تم السداد</button>'+
-        '<button type="button" class="dash-action" data-pay-action="all-unpaid">✕ الكل لم يتم السداد</button>'+
-        '<button type="button" class="dash-action gold" data-pay-action="selected-paid">✓ المحدد تم السداد</button>'+
-        '<button type="button" class="dash-action" data-pay-action="selected-unpaid">✕ المحدد لم يتم السداد</button>'+
-        '<span class="badge-soft" id="student-selected-count">0 محدد</span>';
-      const toolbar=main.querySelector('.dash-toolbar');
-      (toolbar||add.parentElement)?.after(bar);
-      bar.addEventListener('click',async e=>{
-        const b=e.target.closest('[data-pay-action]');
-        if(!b)return;
-        const a=b.dataset.payAction;
-        if(a==='all-paid')return setPayment((data().students||[]).map(x=>x.id),true);
-        if(a==='all-unpaid')return setPayment((data().students||[]).map(x=>x.id),false);
-        if(a==='selected-paid')return setPayment([...selected],true);
-        if(a==='selected-unpaid')return setPayment([...selected],false);
+    var add=document.getElementById("hs-add"), main=document.getElementById("teacherMain");
+    if(!add||!main||!document.getElementById("teacherDashboard"))return;
+    if(!main.querySelector("#student-payment-toolbar")){
+      var bar=document.createElement("div");
+      bar.id="student-payment-toolbar";
+      bar.style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0";
+      bar.innerHTML='<button type="button" class="dash-action gold" data-pay-action="all-paid">✓ الكل تم السداد</button><button type="button" class="dash-action" data-pay-action="all-unpaid">✕ الكل لم يتم السداد</button><button type="button" class="dash-action gold" data-pay-action="selected-paid">✓ المحدد تم السداد</button><button type="button" class="dash-action" data-pay-action="selected-unpaid">✕ المحدد لم يتم السداد</button><span class="badge-soft" id="student-selected-count">0 محدد</span>';
+      var toolbar=main.querySelector(".dash-toolbar");
+      (toolbar||add.parentElement).after(bar);
+      bar.addEventListener("click",function(e){
+        var b=e.target.closest("[data-pay-action]"); if(!b)return;
+        var a=b.dataset.payAction, ids;
+        if(a==="all-paid")ids=(data().students||[]).map(function(x){return x.id});
+        else if(a==="all-unpaid")ids=(data().students||[]).map(function(x){return x.id});
+        else ids=Array.from(selected);
+        if(a==="all-paid")setPayment(ids,true);
+        else if(a==="all-unpaid")setPayment(ids,false);
+        else if(a==="selected-paid")setPayment(ids,true);
+        else if(a==="selected-unpaid")setPayment(ids,false);
       });
     }
-    main.querySelectorAll('tbody tr').forEach(row=>{
+    main.querySelectorAll("tbody tr").forEach(function(row){
       if(row.dataset.paymentCheckboxReady)return;
-      const nameCell=row.querySelector('td');
-      if(!nameCell)return;
-      const name=nameCell.querySelector('b');
+      var cell=row.querySelector("td"), name=cell&&cell.querySelector("b");
       if(!name)return;
-      const text=name.textContent||'';
-      const m=text.match(/(\d+)\s*[—-]/);
-      const studentId=m?Number(m[1]):null;
-      if(!studentId)return;
-      row.dataset.paymentCheckboxReady='1';
-      const cb=document.createElement('input');
-      cb.type='checkbox'; cb.dataset.studentSelect='1'; cb.style='margin-inline-end:8px';
-      cb.checked=selected.has(studentId);
-      cb.addEventListener('click',e=>e.stopPropagation());
-      cb.addEventListener('change',()=>{
-        if(cb.checked)selected.add(studentId);else selected.delete(studentId);
-        const c=document.getElementById('student-selected-count');if(c)c.textContent=selected.size+' محدد';
-      });
-      nameCell.prepend(cb);
+      var m=(name.textContent||"").match(/(\d+)\s*[—-]/), id=m?Number(m[1]):0;
+      if(!id)return;
+      row.dataset.paymentCheckboxReady="1";
+      var cb=document.createElement("input");
+      cb.type="checkbox"; cb.style="margin-inline-end:8px"; cb.checked=selected.has(id);
+      cb.addEventListener("click",function(e){e.stopPropagation()});
+      cb.addEventListener("change",function(){if(cb.checked)selected.add(id);else selected.delete(id);var c=document.getElementById("student-selected-count");if(c)c.textContent=selected.size+" محدد";});
+      cell.prepend(cb);
     });
-    const c=document.getElementById('student-selected-count');if(c)c.textContent=selected.size+' محدد';
+    var c=document.getElementById("student-selected-count"); if(c)c.textContent=selected.size+" محدد";
   }
   new MutationObserver(install).observe(document.body,{childList:true,subtree:true});
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",install);else install();
 })();
-</script>'''
-          s=s.replace('</body></html>',patch+'\n</body></html>',1)
-          p.write_text(s,encoding='utf-8')
+</script>"""
+          s = s.replace("</body></html>", patch + "\n</body></html>", 1)
+          p.write_text(s, encoding="utf-8")
       - name: Commit patch
         run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html
           git diff --cached --quiet && exit 0
-          git commit -m 'Apply student payment controls [payment-controls-applied]'
+          git commit -m "Apply student payment controls [payment-controls-applied]"
           git push
