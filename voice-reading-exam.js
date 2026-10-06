@@ -205,3 +205,38 @@
     if(typeof window.loadStudentPortalV2==='function')await window.loadStudentPortalV2();
   };
 })();
+
+
+/* student-payment-controls-v1 */
+(function(){
+  if(window.__studentPaymentControlsV1)return;
+  window.__studentPaymentControlsV1=true;
+  var selected=new Set();
+  function data(){return window.__teacherData||{}}
+  async function setPayment(ids,paid){
+    if(!ids.length){alert('اختاري طالبًا واحدًا على الأقل.');return;}
+    var r=await sb.rpc('teacher_set_students_payment',{p_student_ids:ids.map(Number),p_paid:!!paid});
+    if(r.error||!r.data||!r.data.success){alert((r.error&&r.error.message)||(r.data&&r.data.message)||'تعذر تحديث حالة السداد.');return;}
+    selected.clear(); await refreshTeacher(); renderTeacherSection('students');
+  }
+  function install(){
+    var add=document.getElementById('hs-add'),main=document.getElementById('teacherMain');
+    if(!add||!main||!document.getElementById('teacherDashboard'))return;
+    if(!main.querySelector('#student-payment-toolbar')){
+      var bar=document.createElement('div');bar.id='student-payment-toolbar';bar.style='display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0';
+      bar.innerHTML='<button type="button" class="dash-action gold" data-pay-action="all-paid">✓ الكل تم السداد</button><button type="button" class="dash-action" data-pay-action="all-unpaid">✕ الكل لم يتم السداد</button><button type="button" class="dash-action gold" data-pay-action="selected-paid">✓ المحدد تم السداد</button><button type="button" class="dash-action" data-pay-action="selected-unpaid">✕ المحدد لم يتم السداد</button><span class="badge-soft" id="student-selected-count">0 محدد</span>';
+      var toolbar=main.querySelector('.dash-toolbar');(toolbar||add.parentElement).after(bar);
+      bar.addEventListener('click',function(e){var b=e.target.closest('[data-pay-action]');if(!b)return;var a=b.dataset.payAction,all=(data().students||[]).map(function(x){return x.id});if(a==='all-paid')setPayment(all,true);else if(a==='all-unpaid')setPayment(all,false);else if(a==='selected-paid')setPayment(Array.from(selected),true);else if(a==='selected-unpaid')setPayment(Array.from(selected),false);});
+    }
+    main.querySelectorAll('tbody tr').forEach(function(row){
+      if(row.dataset.paymentCheckboxReady)return;
+      var cell=row.querySelector('td'),name=cell&&cell.querySelector('b');if(!name)return;
+      var m=(name.textContent||'').match(/(\\d+)\\s*[—-]/),id=m?Number(m[1]):0;if(!id)return;
+      row.dataset.paymentCheckboxReady='1';var cb=document.createElement('input');cb.type='checkbox';cb.style='margin-inline-end:8px';cb.checked=selected.has(id);
+      cb.addEventListener('click',function(e){e.stopPropagation()});cb.addEventListener('change',function(){if(cb.checked)selected.add(id);else selected.delete(id);var c=document.getElementById('student-selected-count');if(c)c.textContent=selected.size+' محدد';});cell.prepend(cb);
+    });
+    var c=document.getElementById('student-selected-count');if(c)c.textContent=selected.size+' محدد';
+  }
+  new MutationObserver(install).observe(document.body,{childList:true,subtree:true});
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
+})();
