@@ -6,19 +6,74 @@ permissions:
   contents: write
 jobs:
   patch:
-    if: "${{ !contains(github.event.head_commit.message, '[student-fix-applied]') }}"
+    if: "${{ !contains(github.event.head_commit.message, '[payment-controls-applied]') }}"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Patch index
+      - name: Patch student payment controls
         shell: python
         run: |
           from pathlib import Path
           p=Path('index.html')
           s=p.read_text(encoding='utf-8')
-          marker='<!-- STUDENT CONTROLS FINAL V11 -->'
+          marker='<!-- STUDENT PAYMENT CONTROLS V1 -->'
           if marker in s: raise SystemExit(0)
-          patch="<!-- STUDENT CONTROLS FINAL V11 -->\n<script id=\"student-controls-final-v11\">\n(function(){if(window.__studentControlsFinalV11)return;window.__studentControlsFinalV11=true;function students(){return (window.__teacherData&&window.__teacherData.students)||[]}function find(id){return students().find(function(x){return String(x.id)===String(id)})}document.addEventListener(\"click\",function(e){var b=e.target&&e.target.closest?e.target.closest(\"#hs-add,[data-hs],[data-he],[data-hr],[data-hd]\"):null;if(!b||!document.getElementById(\"teacherDashboard\"))return;e.preventDefault();e.stopImmediatePropagation();if(b.id===\"hs-add\"){if(window.hardStudentModal)window.hardStudentModal(null);return}if(b.dataset.hs){window.__hardStudentState={stage:b.dataset.hs,q:\"\"};var m=document.getElementById(\"teacherMain\");if(m&&window.renderStudentsHardRebuild)window.renderStudentsHardRebuild(m,window.__teacherData);return}if(b.dataset.he){var s=find(b.dataset.he);if(window.hardStudentModal)window.hardStudentModal(s);return}if(b.dataset.hr){if(window.manualRenewStudent)window.manualRenewStudent(Number(b.dataset.hr));return}if(b.dataset.hd){if(window.hardStudentDelete)window.hardStudentDelete(Number(b.dataset.hd));return}},true);document.addEventListener(\"input\",function(e){if(e.target&&e.target.id===\"hs-q\"&&document.getElementById(\"teacherDashboard\")){window.__hardStudentState={stage:(window.__hardStudentState&&window.__hardStudentState.stage)||\"all\",q:e.target.value||\"\"};var m=document.getElementById(\"teacherMain\");if(m&&window.renderStudentsHardRebuild)window.renderStudentsHardRebuild(m,window.__teacherData)}},true)})();\n</script>"
+          patch="""<!-- STUDENT PAYMENT CONTROLS V1 -->
+<script id="student-payment-controls-v1">
+(function(){
+  if(window.__studentPaymentControlsV1)return;
+  window.__studentPaymentControlsV1=true;
+  var selected=new Set();
+  function data(){return window.__teacherData||{}}
+  async function setPayment(ids,paid){
+    if(!ids.length){alert('اختاري طالبًا واحدًا على الأقل.');return;}
+    var r=await sb.rpc('teacher_set_students_payment',{p_student_ids:ids.map(Number),p_paid:!!paid});
+    if(r.error || !r.data || !r.data.success){alert((r.error&&r.error.message)||(r.data&&r.data.message)||'تعذر تحديث حالة السداد.');return;}
+    selected.clear();
+    await refreshTeacher();
+    renderTeacherSection('students');
+  }
+  function install(){
+    var add=document.getElementById('hs-add'), main=document.getElementById('teacherMain');
+    if(!add||!main||!document.getElementById('teacherDashboard'))return;
+    if(!main.querySelector('#student-payment-toolbar')){
+      var bar=document.createElement('div');
+      bar.id='student-payment-toolbar';
+      bar.style='display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0';
+      bar.innerHTML='<button type="button" class="dash-action gold" data-pay-action="all-paid">✓ الكل تم السداد</button><button type="button" class="dash-action" data-pay-action="all-unpaid">✕ الكل لم يتم السداد</button><button type="button" class="dash-action gold" data-pay-action="selected-paid">✓ المحدد تم السداد</button><button type="button" class="dash-action" data-pay-action="selected-unpaid">✕ المحدد لم يتم السداد</button><span class="badge-soft" id="student-selected-count">0 محدد</span>';
+      var toolbar=main.querySelector('.dash-toolbar');
+      (toolbar||add.parentElement).after(bar);
+      bar.addEventListener('click',function(e){
+        var b=e.target.closest('[data-pay-action]'); if(!b)return;
+        var a=b.dataset.payAction, ids=(data().students||[]).map(function(x){return x.id});
+        if(a==='all-paid')setPayment(ids,true);
+        else if(a==='all-unpaid')setPayment(ids,false);
+        else if(a==='selected-paid')setPayment(Array.from(selected),true);
+        else if(a==='selected-unpaid')setPayment(Array.from(selected),false);
+      });
+    }
+    main.querySelectorAll('tbody tr').forEach(function(row){
+      if(row.dataset.paymentCheckboxReady)return;
+      var cell=row.querySelector('td'), name=cell&&cell.querySelector('b');
+      if(!name)return;
+      var m=(name.textContent||'').match(/(\d+)\s*[—-]/), id=m?Number(m[1]):0;
+      if(!id)return;
+      row.dataset.paymentCheckboxReady='1';
+      var cb=document.createElement('input');
+      cb.type='checkbox'; cb.style='margin-inline-end:8px'; cb.checked=selected.has(id);
+      cb.addEventListener('click',function(e){e.stopPropagation()});
+      cb.addEventListener('change',function(){
+        if(cb.checked)selected.add(id);else selected.delete(id);
+        var c=document.getElementById('student-selected-count');if(c)c.textContent=selected.size+' محدد';
+      });
+      cell.prepend(cb);
+    });
+    var c=document.getElementById('student-selected-count');if(c)c.textContent=selected.size+' محدد';
+  }
+  new MutationObserver(install).observe(document.body,{childList:true,subtree:true});
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
+})();
+</script>"""
           s=s.replace('</body></html>',patch+'\n</body></html>',1)
           p.write_text(s,encoding='utf-8')
       - name: Commit patch
@@ -27,5 +82,5 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
           git diff --cached --quiet && exit 0
-          git commit -m 'Apply student controls final fix [student-fix-applied]'
+          git commit -m 'Apply student payment controls [payment-controls-applied]'
           git push
