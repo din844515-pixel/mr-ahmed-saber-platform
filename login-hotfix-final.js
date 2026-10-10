@@ -5,7 +5,6 @@
   'use strict';
   const norm=s=>String(s||'').replace(/\s+/g,' ').trim().toLowerCase();
   const isImport=t=>{t=norm(t);return t.includes('استيراد')&&t.includes('pdf') || t.includes('import')&&t.includes('pdf');};
-  const isCreate=t=>{t=norm(t);return (t==='إنشاء امتحان'||t==='انشاء امتحان'||t==='create exam'||t.includes('create exam'))&&!t.includes('قراءة')&&!t.includes('pronunciation');};
   const get=(id)=>document.getElementById(id);
   const tr=(en,ar)=>((localStorage.getItem('platformLanguage')||'en')==='ar'?ar:en);
 
@@ -110,10 +109,6 @@
         }
         input.click(); return;
       }
-      if(isCreate(text)){
-        e.preventDefault(); e.stopPropagation();
-        if(typeof window.__standaloneOpenExamDirect==='function') window.__standaloneOpenExamDirect(e); else if(typeof window.__robustOpenCreateExam==='function') window.__robustOpenCreateExam(e); else window.openCreateExam(e); return;
-      }
       el=el.parentElement;
     }
   }
@@ -121,45 +116,3 @@
   document.addEventListener('click',handleClick,true);
 })();
 
-/* exams-buttons-final-v2 */
-(function(){
-  function ar(){return (localStorage.getItem('platformLanguage')||'en')==='ar';}
-  function close(){var x=document.getElementById('examFinalBox');if(x)x.remove();}
-  function addQuestion(){
-    var c=document.getElementById('efQuestions'), n=c.children.length+1, d=document.createElement('div');
-    d.style='border:1px solid #e2e8f0;border-radius:12px;padding:10px;margin:8px 0;background:#fff';
-    d.innerHTML='<b>'+(ar()?'السؤال ':'Question ')+n+'</b><input class="input efq" style="width:100%;margin:7px 0" placeholder="'+(ar()?'نص السؤال':'Question text')+'">'+
-      '<input class="input efo" style="width:100%;margin:4px 0" placeholder="A"><input class="input efo" style="width:100%;margin:4px 0" placeholder="B"><input class="input efo" style="width:100%;margin:4px 0" placeholder="C"><input class="input efo" style="width:100%;margin:4px 0" placeholder="D">'+
-      '<select class="input efc" style="width:100%;margin-top:5px"><option value="">'+(ar()?'الإجابة الصحيحة':'Correct answer')+'</option><option>A</option><option>B</option><option>C</option><option>D</option></select>'+
-      '<button type="button" class="btn efremove" style="margin-top:7px">'+(ar()?'حذف السؤال':'Remove question')+'</button>';
-    c.appendChild(d);d.querySelector('.efremove').onclick=function(){d.remove();};
-  }
-  async function save(){
-    var msg=document.getElementById('efmsg'), title=document.getElementById('efTitle').value.trim(), grade=document.getElementById('efGrade').value, dur=Number(document.getElementById('efDur').value||30), show=document.getElementById('efShow').value==='true', rows=[...document.querySelectorAll('#efQuestions>div')];
-    if(!title){msg.textContent=ar()?'اكتبي عنوان الامتحان.':'Enter the exam title.';return;}
-    if(!rows.length){msg.textContent=ar()?'أضيفي سؤالًا واحدًا على الأقل.':'Add at least one question.';return;}
-    if(!window.sb){msg.textContent=ar()?'اتصال قاعدة البيانات غير متاح.':'Database connection unavailable.';return;}
-    msg.textContent=ar()?'جاري الحفظ...':'Saving...';
-    try{
-      var ex=await window.sb.rpc('teacher_create_exam',{p_title:title,p_grade:grade,p_duration_minutes:dur,p_show_answers:show});
-      if(ex.error||!ex.data?.success)throw(ex.error||new Error(ex.data?.message||'Create exam failed'));
-      for(var i=0;i<rows.length;i++){
-        var r=rows[i], q=(r.querySelector('.efq').value||'').trim(), opts=[...r.querySelectorAll('.efo')].map(x=>(x.value||'').trim()), c=r.querySelector('.efc').value||null;
-        if(!q)throw new Error((ar()?'السؤال رقم ':'Question ')+(i+1)+(ar()?' فارغ':' is empty'));
-        var rr=await window.sb.rpc('teacher_add_exam_question',{p_exam_id:ex.data.exam_id,p_question_text:q,p_question_type:'mcq',p_points:1,p_correct_answer:c,p_options:opts,p_grading_mode:'auto'});
-        if(rr.error)throw rr.error;
-      }
-      close();if(typeof window.refreshTeacher==='function')await window.refreshTeacher();
-      alert(ar()?'تم إنشاء الامتحان بنجاح ✅':'Exam created successfully ✅');
-    }catch(e){msg.textContent=(ar()?'حدث خطأ: ':'Error: ')+(e?.message||e);}
-  }
-  window.__finalOpenExam=function(e){
-    if(e){e.preventDefault();e.stopImmediatePropagation();}
-    close();var b=document.createElement('div');b.id='examFinalBox';
-    b.style='position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:14px';
-    b.innerHTML='<div style="background:#fff;border-radius:18px;width:min(760px,100%);max-height:94vh;overflow:auto;padding:18px;direction:'+(ar()?'rtl':'ltr')+'"><div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0;color:#062b57">📝 '+(ar()?'إنشاء امتحان':'Create Exam')+'</h2><button id="efx" type="button" class="btn">✕</button></div><div class="form-grid" style="margin-top:12px"><input id="efTitle" class="input" placeholder="'+(ar()?'عنوان الامتحان':'Exam Title')+'"><select id="efGrade" class="input"><option value="">'+(ar()?'اختاري المرحلة':'Select Stage')+'</option><option>أولى إعدادي</option><option>ثانية إعدادي</option><option>ثالثة إعدادي</option><option>أولى ثانوي</option><option>ثانية ثانوي</option><option>ثالثة ثانوي</option><option>كورسات</option></select><input id="efDur" class="input" type="number" min="1" value="30"><select id="efShow" class="input"><option value="false">'+(ar()?'إخفاء الإجابات':'Hide Answers')+'</option><option value="true">'+(ar()?'إظهار الإجابات':'Show Answers')+'</option></select></div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px"><b>'+(ar()?'الأسئلة':'Questions')+'</b><button id="efadd" type="button" class="btn gold">+ '+(ar()?'إضافة سؤال':'Add Question')+'</button></div><div id="efQuestions"></div><div id="efmsg" class="sub" style="margin-top:8px"></div><button id="efsave" type="button" class="submit" style="width:100%;margin-top:10px">✅ '+(ar()?'إنشاء الامتحان وحفظه':'Create Exam & Save')+'</button></div>';
-    document.body.appendChild(b);document.getElementById('efx').onclick=close;document.getElementById('efadd').onclick=addQuestion;document.getElementById('efsave').onclick=save;addQuestion();
-  };
-  window.__examCreateButton=window.__finalOpenExam;
-  window.openCreateExam=window.__finalOpenExam;
-})();
