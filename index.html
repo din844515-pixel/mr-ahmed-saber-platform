@@ -398,7 +398,7 @@ html[dir="rtl"] .dash-main{margin-right:260px;margin-left:0}
 <footer class="footer" id="contact"><div class="wrap foot"><div><div class="logo">A<span>S</span> <small style="letter-spacing:0;font-size:9px">Mr. Ahmed Saber</small></div><p>Learn • Practice • Achieve</p></div><div><h4>Quick Links</h4><a href="#home">Home</a><a href="#level">اختبار المستوى</a><a href="#free">Free Lessons</a><a href="#courses">Our Courses</a></div><div><h4>Contact</h4><a href="https://wa.me/201553438138" target="_blank">واتساب</a><a href="tel:+201064443212">01064443212</a><a href="tel:+201278211301">01278211301</a><a href="mailto:info@mrahmedsaber.com">info@mrahmedsaber.com</a><a href="https://whatsapp.com/channel/0029VbEB6wYIHphCcWMBTi26" target="_blank" class="wa">Follow our WhatsApp Channel</a></div><div><h4>Our Message</h4><p>"التعليم هو أقوى وسيلة يمكنك استخدامها لتغيير مستقبلك."</p><p>— Mr. Ahmed Saber</p></div></div></footer>
 <button class="support" onclick="openWhatsAppSupport()">💬</button>
 <div class="modal" id="modal"><div class="box" id="modalBox"><button class="close" onclick="closeModal()">×</button></div></div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SUPABASE_URL="https://gfzzuxzrvysuodehjkyq.supabase.co";
@@ -564,7 +564,7 @@ function renderTeacherSection(sec){
    const safeStudent=JSON.stringify(s).replace(/'/g,'&#39;');
    return `<tr><td>${index+1}</td><td><div>${escapeHtml(s.name||'')}</div>${(!s.parent_phone||String(s.parent_phone).trim()==='')?'<span class="parent-phone-badge">⚠️ Parent phone required</span>':''}</td><td>${escapeHtml(s.student_code||s.code||'')}</td><td>${escapeHtml(stageLabel(s.grade))}</td><td>${escapeHtml(s.parent_phone||'')}</td><td><span class="pill ${sub&&sub.status==='expired'?'fail':sub&&sub.status!=='active'&&sub.status!=='grace'?'wait':''}">${escapeHtml(subStatus)}</span></td><td><span class="pill ${s.active?'':'wait'}">${s.active?'Active':'Blocked'}</span></td><td><button class="dash-action" onclick='openStudentEditor(${safeStudent})'>Edit</button> ${!s.exempt?`<button class="dash-action" onclick="openRenewFor(${Number(s.id)})">Renew</button> `:''}<button class="dash-action" style="background:#b33a3a" onclick="deleteStudent(${Number(s.id)})">Delete</button></td></tr>`;
   }).join('');
-  main.innerHTML=`<div class="welcome"><div><h1>Students</h1><p>Manage student details, stages, access and renewals. Each student appears in the matching stage or course list.</p></div><div class="dash-toolbar"><button class="dash-action" onclick="openStudentEditor()">+ Add Student</button></div></div><section class="panel"><div class="stage-tabs">${stageButtons}</div><div class="dash-toolbar"><input class="dash-input" id="studentSearch" placeholder="Search name / code / parent phone" oninput="filterStudents()"><span class="badge-soft">${visible.length} students</span></div><div class="stage-list-title"><b>${stageOptions.find(x=>x[0]===active)?.[1]||'Students'}</b><span>${visible.length}</span></div><div style="overflow-x:auto"><table class="dash-table" id="studentsTable"><thead><tr><th>#</th><th>Name</th><th>Code</th><th>Stage / Level</th><th>Parent Phone</th><th>Subscription</th><th>Access</th><th>Actions</th></tr></thead><tbody>${rows||'<tr><td colspan="8">No students in this list yet.</td></tr>'}</tbody></table></div></section>`;return;
+  main.innerHTML=`<div class="welcome"><div><h1>Students</h1><p>Manage student details, stages, access and renewals. Each student appears in the matching stage or course list.</p></div><div class="dash-toolbar"><button class="dash-action" onclick="openStudentEditor(null,${active==='all'||active==='__blank__'?'undefined':JSON.stringify(active)})">+ Add Student</button></div></div><section class="panel"><div class="stage-tabs">${stageButtons}</div><div class="dash-toolbar"><input class="dash-input" id="studentSearch" placeholder="Search name / code / parent phone" oninput="filterStudents()"><span class="badge-soft">${visible.length} students</span></div><div class="stage-list-title"><b>${stageOptions.find(x=>x[0]===active)?.[1]||'Students'}</b><span>${visible.length}</span></div><div style="overflow-x:auto"><table class="dash-table" id="studentsTable"><thead><tr><th>#</th><th>Name</th><th>Code</th><th>Stage / Level</th><th>Parent Phone</th><th>Subscription</th><th>Access</th><th>Actions</th></tr></thead><tbody>${rows||'<tr><td colspan="8">No students in this list yet.</td></tr>'}</tbody></table></div></section>`;return;
  }
  if(sec==='exams'){
   const exams=d.exams||[];
@@ -597,8 +597,9 @@ function setStudentStageFilter(stage){window.__studentStageFilter=stage;renderTe
 function setExamStageFilter(stage){window.__examStageFilter=stage;renderTeacherSection('exams');}
 function stageLabel(g){const m={'أولى إعدادي':'1st Preparatory','ثانية إعدادي':'2nd Preparatory','ثالثة إعدادي':'3rd Preparatory','أولى ثانوي':'1st Secondary','ثانية ثانوي':'2nd Secondary','ثالثة ثانوي':'3rd Secondary','كورسات':'Courses'};const v=(g||'').trim();return v?(m[v]&&((localStorage.getItem('platformLanguage')||'en')==='en')?m[v]:v):'Unassigned';}
 function filterStudents(){const q=(document.getElementById('studentSearch')?.value||'').toLowerCase();document.querySelectorAll('#studentsTable tbody tr').forEach(r=>r.style.display=r.innerText.toLowerCase().includes(q)?'':'none')}
-function openStudentEditor(s){
+function openStudentEditor(s,presetGrade){
  s=s||{};
+ if(!s.grade&&presetGrade)s.grade=presetGrade;
  const baseGrades=[['أولى إعدادي','1st Preparatory'],['ثانية إعدادي','2nd Preparatory'],['ثالثة إعدادي','3rd Preparatory'],['أولى ثانوي','1st Secondary'],['ثانية ثانوي','2nd Secondary'],['ثالثة ثانوي','3rd Secondary'],['التأسيس','Foundation'],['كورسات','Courses']];
  const known=baseGrades.map(x=>x[0]);
  const gradeOptions=baseGrades.map(([value,label])=>`<option value="${value}" ${s.grade===value?'selected':''}>${label}</option>`).join('')+(s.grade&&!known.includes(s.grade)?`<option value="${escapeHtml(s.grade)}" selected>${escapeHtml(s.grade)}</option>`:'');
@@ -643,49 +644,6 @@ async function deleteStudent(id){if(!confirm('Delete this student and related re
 async function bulkPayment(v){const {data,error}=await sb.rpc('teacher_bulk_payment_status',{p_paid:v});if(error||!data?.success){alert(data?.message||error?.message||'Update failed');return}await refreshTeacher()}
 function openCreateExam(){show('<h2>Create Exam</h2><div class="form-grid"><input id="ex_title" class="input" placeholder="Exam Title"><select id="ex_grade" class="input"><option value="">Unassigned</option><option value="أولى إعدادي">1st Preparatory</option><option value="ثانية إعدادي">2nd Preparatory</option><option value="ثالثة إعدادي">3rd Preparatory</option><option value="أولى ثانوي">1st Secondary</option><option value="ثانية ثانوي">2nd Secondary</option><option value="ثالثة ثانوي">3rd Secondary</option><option value="كورسات">Courses</option></select><input id="ex_dur" class="input" type="number" value="30" placeholder="Minutes"><select id="ex_answers" class="input"><option value="false">Hide Answers</option><option value="true">Show Answers</option></select></div><button class="submit" onclick="createExamNow()">Create Exam →</button>')}
 async function createExamNow(){const {data,error}=await sb.rpc('teacher_create_exam',{p_title:document.getElementById('ex_title').value.trim(),p_grade:document.getElementById('ex_grade').value.trim(),p_duration_minutes:Number(document.getElementById('ex_dur').value||30),p_show_answers:document.getElementById('ex_answers').value==='true'});if(error||!data?.success){alert(data?.message||error?.message||'Failed');return}closeModal();await refreshTeacher()}
-function openPdfImport(){show('<h2>Import PDF → Exam</h2><p class="sub">اختاري ملف PDF للامتحان. المنصة هتقرأ الأسئلة والاختيارات وتحوّلها لمسودة امتحان مباشرة، وبعدها تقدري تراجعيها وتنشريها.</p><input id="pdfFile" class="input" type="file" accept="application/pdf"><input id="pdfTitle" class="input" placeholder="Exam Title"><input id="pdfGrade" class="input" placeholder="Stage / Course"><button class="submit" onclick="parsePdfToExam()">Read PDF & Build Exam →</button><div id="pdfStatus" class="sub" style="margin-top:8px"></div>')}
-async function parsePdfToExam(){
- const file=document.getElementById('pdfFile').files[0];
- if(!file){document.getElementById('pdfStatus').textContent='اختاري ملف PDF أولًا.';return;}
- if(!window.pdfjsLib){document.getElementById('pdfStatus').textContent='PDF reader is still loading. Try again.';return;}
- window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
- const buf=await file.arrayBuffer();
- const pdf=await window.pdfjsLib.getDocument({data:buf}).promise;
- let text='';
- for(let i=1;i<=pdf.numPages;i++){
-   const page=await pdf.getPage(i); const tc=await page.getTextContent();
-   text+=tc.items.map(x=>x.str).join(' ')+'\n';
- }
- const qs=parseImportedExamText(text);
- window.__pdfExam={fileName:file.name,text,questions:qs,title:document.getElementById('pdfTitle').value.trim()||file.name.replace(/\.pdf$/i,''),grade:document.getElementById('pdfGrade').value.trim()||'General English'};
- document.getElementById('pdfStatus').innerHTML='Found <b>'+qs.length+'</b> question(s). Ready to save as a draft.';
- document.getElementById('pdfStatus').insertAdjacentHTML('afterend','<button class="dash-action" style="margin-top:8px" onclick="saveImportedPdfExam()">Save Draft Exam →</button>');
-}
-function parseImportedExamText(text){
- const raw=text.split(/\n+/).map(x=>x.trim()).filter(Boolean), out=[];
- for(let i=0;i<raw.length;i++){
-   const m=raw[i].match(/^(?:Q\s*)?(\d+)[\).:-]\s*(.+)$/i); if(!m) continue;
-   const q=m[2], opts=[]; let j=i+1;
-   while(j<raw.length&&opts.length<5){
-     const om=raw[j].match(/^([A-E])[\).:-]\s*(.+)$/i); if(!om) break;
-     opts.push({key:om[1].toUpperCase(),text:om[2].trim()}); j++;
-   }
-   let correct='';
-   const cm=q.match(/\b(?:answer|correct)\s*[:=-]\s*([A-E])\b/i); if(cm) correct=cm[1].toUpperCase();
-   if(!correct){ for(let k=j;k<Math.min(j+3,raw.length);k++){ const c=raw[k].match(/^(?:answer|correct answer)\s*[:=-]\s*([A-E])\b/i); if(c){correct=c[1].toUpperCase();break;} } }
-   out.push({question:q,type:opts.length>=2?'mcq':'written',points:1,correct,options:opts,grading_mode:opts.length>=2?'auto':'manual'});
-   i=Math.max(i,j-1);
- }
- if(!out.length){
-   const sentences=raw.filter(x=>/[A-Za-z]{8,}/.test(x)).slice(0,12);
-   sentences.forEach(line=>{
-     const clean=line.replace(/^\d+[\).:-]\s*/,''); const m=clean.match(/^(.+?)\s+is\s+(.+)$/i);
-     if(m) out.push({question:'What is '+m[1]+'?',type:'mcq',points:1,correct:'A',options:[{key:'A',text:m[2]},{key:'B',text:'Not specified in the text'},{key:'C',text:'A different answer'},{key:'D',text:'None of these'}],grading_mode:'auto'});
-   });
- }
- return out;
-}
-async function saveImportedPdfExam(){const p=window.__pdfExam;if(!p)return;const ex=await sb.rpc('teacher_create_exam',{p_title:p.title,p_grade:p.grade,p_duration_minutes:30,p_show_answers:false});if(ex.error||!ex.data?.success){alert(ex.data?.message||ex.error?.message||'Failed');return}for(const q of p.questions){await sb.rpc('teacher_add_exam_question',{p_exam_id:ex.data.exam_id,p_question_text:q.question,p_question_type:q.type,p_points:q.points,p_correct_answer:q.correct||null,p_options:q.options||[],p_grading_mode:q.grading_mode||'manual'});}await sb.from('exam_imports').insert({owner_id:(await sb.auth.getUser()).data.user.id,exam_id:ex.data.exam_id,file_name:p.fileName,source_text:p.text,question_count:p.questions.length,status:'draft'});closeModal();await refreshTeacher()}
 async function toggleExam(id,active){const {data,error}=await sb.rpc('teacher_set_exam_active',{p_exam_id:id,p_active:active});if(error||!data?.success){alert(data?.message||error?.message||'Failed');return}await refreshTeacher()}
 function openRenewFor(studentId){show('<h2>Renew Subscription</h2><div class="form-grid"><input id="ren_course" class="input" placeholder="Course Name"><select id="ren_type" class="input"><option value="academic">Academic</option><option value="general">General English</option><option value="foundation">Foundation & Speaking</option></select><input id="ren_amount" class="input" type="number" placeholder="Amount"><select id="ren_method" class="input"><option>فوري</option><option>تحويل بنكي</option><option>Vodafone Cash</option><option>Orange Money</option><option>Instapay</option></select></div><button class="submit" onclick="activateSubscription(${studentId})">Activate Subscription →</button>')}
 async function activateSubscription(studentId){const {data,error}=await sb.rpc('teacher_activate_subscription',{p_student_id:studentId,p_course_name:document.getElementById('ren_course').value.trim(),p_course_type:document.getElementById('ren_type').value,p_amount:Number(document.getElementById('ren_amount').value||0),p_payment_method:document.getElementById('ren_method').value});if(error||!data?.success){alert(data?.message||error?.message||'Failed');return}closeModal();await refreshTeacher()}
@@ -1048,7 +1006,7 @@ document.addEventListener('click',function(e){
   "Normal student (payment required)":"طالب عادي (الاشتراك مطلوب)","Exempt (free access)":"معفى (دخول مجاني)","Notes":"ملاحظات","Save Student →":"حفظ الطالب ←","Could not save":"تعذر الحفظ","Student saved. Login code:":"تم حفظ الطالب. كود الدخول:",
   "Delete this student and related records?":"هل تريد حذف هذا الطالب وكل السجلات المرتبطة به؟","Delete failed":"فشل الحذف","Update failed":"فشل التحديث",
   "Create Exam":"إنشاء امتحان","Exam Title":"عنوان الامتحان","Minutes":"الدقائق","Hide Answers":"إخفاء الإجابات","Show Answers":"إظهار الإجابات","Create Exam →":"إنشاء الامتحان ←",
-  "Import PDF → Exam":"استيراد PDF ← امتحان","Exam Title":"عنوان الامتحان","Read PDF & Build Exam →":"قراءة PDF وإنشاء الامتحان ←","Save Draft Exam →":"حفظ الامتحان كمسودة ←",
+  "Exam Title":"عنوان الامتحان",
   "Exam Results":"نتائج الامتحانات","Score":"الدرجة","Evaluation":"التقييم","Note":"ملاحظة","No results yet.":"لا توجد نتائج بعد.",
   "No support messages.":"لا توجد رسائل دعم.","No reviews yet.":"لا توجد آراء بعد.","Approved":"تمت الموافقة","Pending approval":"في انتظار الموافقة",
   "Speaking & Pronunciation":"التحدث والنطق","Separate activities for Foundation, Speaking and General English.":"أنشطة منفصلة للفونديشن والمحادثة والإنجليزية العامة.","+ New Practice":"+ تدريب جديد","Practice":"التدريب","Course":"الكورس","Target":"النص المستهدف","Attempts":"المحاولات","No pronunciation practices yet.":"لا توجد تدريبات نطق بعد.",
