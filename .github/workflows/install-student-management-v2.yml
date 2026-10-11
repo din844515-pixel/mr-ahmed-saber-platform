@@ -1,0 +1,57 @@
+name: Install student management V2 (preview branch only)
+on:
+  push:
+    branches:
+      - fix/student-management-production-v2
+permissions:
+  contents: write
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Decode and validate student management module
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f .student-management-v2.payload.gz.b64 || { echo "Payload already consumed; nothing to do."; exit 0; }
+          base64 --decode .student-management-v2.payload.gz.b64 | gzip -dc > student-management-v2.js
+          echo "7932846dc757fb2611fc71a06aab11572412f62dd6b0152a8487173bea62ce8d  student-management-v2.js" | sha256sum --check -
+          node --check student-management-v2.js
+      - name: Add guarded loader to existing platform without touching exam modules
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path("index.html")
+          s = p.read_text(encoding="utf-8")
+          marker = '<script src="./student-management-v2.js"></script>'
+          if marker not in s:
+              if "</body></html>" not in s:
+                  raise SystemExit("Could not find the end of the current HTML document; refusing to modify it.")
+              if "function renderTeacherSection(sec)" not in s:
+                  raise SystemExit("Existing teacher dashboard renderer not found; refusing to modify this source.")
+              s = s.replace("</body></html>", marker + "\n</body></html>", 1)
+              p.write_text(s, encoding="utf-8")
+          Path(".student-management-v2.payload.gz.b64").unlink(missing_ok=True)
+      - name: Validate loader and keep standalone exam modules intact
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check student-management-v2.js
+          grep -q '<script src="./student-management-v2.js"></script>' index.html
+          grep -q 'create-exam-rebuild-v1.js' index.html
+          grep -q 'voice-reading-exam.js' index.html
+      - name: Commit preview-only changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html student-management-v2.js .student-management-v2.payload.gz.b64 || true
+          git add -u
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "Add guarded student management V2 for preview"
+          git push
