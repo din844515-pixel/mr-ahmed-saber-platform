@@ -398,7 +398,7 @@ html[dir="rtl"] .dash-main{margin-right:260px;margin-left:0}
 <footer class="footer" id="contact"><div class="wrap foot"><div><div class="logo">A<span>S</span> <small style="letter-spacing:0;font-size:9px">Mr. Ahmed Saber</small></div><p>Learn • Practice • Achieve</p></div><div><h4>Quick Links</h4><a href="#home">Home</a><a href="#level">اختبار المستوى</a><a href="#free">Free Lessons</a><a href="#courses">Our Courses</a></div><div><h4>Contact</h4><a href="https://wa.me/201553438138" target="_blank">واتساب</a><a href="tel:+201064443212">01064443212</a><a href="tel:+201278211301">01278211301</a><a href="mailto:info@mrahmedsaber.com">info@mrahmedsaber.com</a><a href="https://whatsapp.com/channel/0029VbEB6wYIHphCcWMBTi26" target="_blank" class="wa">Follow our WhatsApp Channel</a></div><div><h4>Our Message</h4><p>"التعليم هو أقوى وسيلة يمكنك استخدامها لتغيير مستقبلك."</p><p>— Mr. Ahmed Saber</p></div></div></footer>
 <button class="support" onclick="openWhatsAppSupport()">💬</button>
 <div class="modal" id="modal"><div class="box" id="modalBox"><button class="close" onclick="closeModal()">×</button></div></div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SUPABASE_URL="https://gfzzuxzrvysuodehjkyq.supabase.co";
@@ -540,16 +540,31 @@ function renderTeacherSection(sec){
  }
  if(sec==='students'){
   const ss=d.students||[];
-  const stageOptions=[
-   ['all','All Students'],['أولى إعدادي','1st Preparatory'],['ثانية إعدادي','2nd Preparatory'],['ثالثة إعدادي','3rd Preparatory'],
-   ['أولى ثانوي','1st Secondary'],['ثانية ثانوي','2nd Secondary'],['ثالثة ثانوي','3rd Secondary'],['كورسات','Courses'],['__blank__','Unassigned']
+  const fixedStages=[
+   ['أولى إعدادي','1st Preparatory'],['ثانية إعدادي','2nd Preparatory'],['ثالثة إعدادي','3rd Preparatory'],
+   ['أولى ثانوي','1st Secondary'],['ثانية ثانوي','2nd Secondary'],['ثالثة ثانوي','3rd Secondary']
   ];
+  const stageOptions=[['all','All Students'],...fixedStages,['التأسيس','Foundation'],['كورسات','Courses'],['__blank__','Unassigned']];
   const active=window.__studentStageFilter||'all';
-  const matchesStage=(s,key)=>{const g=(s.grade||'').trim();if(key==='all')return true;if(key==='__blank__')return !g;return g===key;};
+  const isFoundation=g=>/^(التأسيس|تأسيس|foundation)(\s|$)/i.test((g||'').trim());
+  const matchesStage=(s,key)=>{
+   const g=(s.grade||'').trim();
+   if(key==='all')return true;
+   if(key==='__blank__')return !g;
+   if(key==='التأسيس')return isFoundation(g);
+   if(key==='كورسات')return g==='كورسات'||(!!g&&!fixedStages.some(([v])=>v===g)&&!isFoundation(g));
+   return g===key;
+  };
   const visible=ss.filter(s=>matchesStage(s,active));
   const stageButtons=stageOptions.map(([key,label])=>{const n=ss.filter(s=>matchesStage(s,key)).length;return `<button class="stage-tab ${active===key?'active':''}" onclick="setStudentStageFilter(${JSON.stringify(key)})">${label}<span>${n}</span></button>`}).join('');
-  const rows=visible.map(s=>`<tr><td><div>${escapeHtml(s.name||'')}</div>${(!s.parent_phone||String(s.parent_phone).trim()==='')?'<span class="parent-phone-badge">⚠️ Parent phone required</span>':''}</td><td>${escapeHtml(s.student_code||s.code||'')}</td><td>${escapeHtml(stageLabel(s.grade))}</td><td>${escapeHtml(s.parent_phone||'')}</td><td><span class="pill ${s.paid?'':'wait'}">${s.paid?'Paid':'Unpaid'}</span></td><td><span class="pill ${s.exempt?'':'wait'}">${s.exempt?'Exempt':'Payment required'}</span></td><td><button class="dash-action" onclick='openStudentEditor(${JSON.stringify(s).replace(/'/g,"&#39;")})'>Edit</button> <button class="dash-action" style="background:#b33a3a" onclick="deleteStudent(${s.id})">Delete</button></td></tr>`).join('');
-  main.innerHTML=`<div class="welcome"><div><h1>Students</h1><p>All student records from the platform are kept here. Each stage has its own list, with a separate Courses list for students who join a course.</p></div><div class="dash-toolbar"><button class="dash-action" onclick="openStudentEditor()">+ Add Student</button><button class="dash-action" onclick="bulkPayment(true)">Mark All Paid</button><button class="dash-action" onclick="bulkPayment(false)">Mark All Unpaid</button></div></div><section class="panel"><div class="stage-tabs">${stageButtons}</div><div class="dash-toolbar"><input class="dash-input" id="studentSearch" placeholder="Search name / code / parent phone" oninput="filterStudents()"><span class="badge-soft">${visible.length} students</span></div><div class="stage-list-title"><b>${stageOptions.find(x=>x[0]===active)?.[1]||'Students'}</b><span>${visible.length}</span></div><table class="dash-table" id="studentsTable"><thead><tr><th>Name</th><th>Code</th><th>Stage</th><th>Parent Phone</th><th>Payment</th><th>Access</th><th>Actions</th></tr></thead><tbody>${rows||'<tr><td colspan="7">No students in this list yet.</td></tr>'}</tbody></table></section>`;return;
+  const subscriptions=d.subscriptions||[];
+  const rows=visible.map((s,index)=>{
+   const sub=subscriptions.filter(x=>Number(x.student_id)===Number(s.id)).sort((a,b)=>String(b.created_at||b.start_date||'').localeCompare(String(a.created_at||a.start_date||'')))[0];
+   const subStatus=sub?(sub.status==='active'||sub.status==='grace'?'Active':sub.status==='expired'?'Expired':String(sub.status||'Unknown')):(s.exempt?'Exempt':'No subscription');
+   const safeStudent=JSON.stringify(s).replace(/'/g,'&#39;');
+   return `<tr><td>${index+1}</td><td><div>${escapeHtml(s.name||'')}</div>${(!s.parent_phone||String(s.parent_phone).trim()==='')?'<span class="parent-phone-badge">⚠️ Parent phone required</span>':''}</td><td>${escapeHtml(s.student_code||s.code||'')}</td><td>${escapeHtml(stageLabel(s.grade))}</td><td>${escapeHtml(s.parent_phone||'')}</td><td><span class="pill ${sub&&sub.status==='expired'?'fail':sub&&sub.status!=='active'&&sub.status!=='grace'?'wait':''}">${escapeHtml(subStatus)}</span></td><td><span class="pill ${s.active?'':'wait'}">${s.active?'Active':'Blocked'}</span></td><td><button class="dash-action" onclick='openStudentEditor(${safeStudent})'>Edit</button> ${!s.exempt?`<button class="dash-action" onclick="openRenewFor(${Number(s.id)})">Renew</button> `:''}<button class="dash-action" style="background:#b33a3a" onclick="deleteStudent(${Number(s.id)})">Delete</button></td></tr>`;
+  }).join('');
+  main.innerHTML=`<div class="welcome"><div><h1>Students</h1><p>Manage student details, stages, access and renewals. Each student appears in the matching stage or course list.</p></div><div class="dash-toolbar"><button class="dash-action" onclick="openStudentEditor(null,${active==='all'||active==='__blank__'?'undefined':JSON.stringify(active)})">+ Add Student</button></div></div><section class="panel"><div class="stage-tabs">${stageButtons}</div><div class="dash-toolbar"><input class="dash-input" id="studentSearch" placeholder="Search name / code / parent phone" oninput="filterStudents()"><span class="badge-soft">${visible.length} students</span></div><div class="stage-list-title"><b>${stageOptions.find(x=>x[0]===active)?.[1]||'Students'}</b><span>${visible.length}</span></div><div style="overflow-x:auto"><table class="dash-table" id="studentsTable"><thead><tr><th>#</th><th>Name</th><th>Code</th><th>Stage / Level</th><th>Parent Phone</th><th>Subscription</th><th>Access</th><th>Actions</th></tr></thead><tbody>${rows||'<tr><td colspan="8">No students in this list yet.</td></tr>'}</tbody></table></div></section>`;return;
  }
  if(sec==='exams'){
   const exams=d.exams||[];
@@ -561,7 +576,7 @@ function renderTeacherSection(sec){
   const examMatches=(e,key)=>{const g=(e.grade||'').trim();if(key==='all')return true;if(key==='__blank__')return !g;return g===key;};
   const visibleExams=exams.filter(e=>examMatches(e,activeExamStage));
   const examTabs=examStageOptions.map(([key,label])=>{const n=exams.filter(e=>examMatches(e,key)).length;return `<button class="stage-tab ${activeExamStage===key?'active':''}" onclick="setExamStageFilter(${JSON.stringify(key)})">${label}<span>${n}</span></button>`}).join('');
-  main.innerHTML=`<div class="welcome"><div><h1>Exams</h1><p>Create as many exams as you need. Exams are stored separately by stage/course and there is no dashboard cap.</p></div><div class="dash-toolbar"><button class="dash-action" onclick="openPdfImport()">📄 Import PDF Exam</button><button class="dash-action" onclick="openExamBuilderV3()">+ Create Exam</button></div></div><section class="panel"><div class="stage-tabs">${examTabs}</div><div class="stage-list-title"><b>${examStageOptions.find(x=>x[0]===activeExamStage)?.[1]||'Exams'}</b><span>${visibleExams.length}</span></div><table class="dash-table"><thead><tr><th>Exam</th><th>Stage / Course</th><th>Questions</th><th>Status</th><th>Actions</th></tr></thead><tbody>${visibleExams.map(e=>`<tr><td>${escapeHtml(e.title||'')}</td><td>${escapeHtml(stageLabel(e.grade))}</td><td>${escapeHtml(e.question_count||0)}</td><td><span class="pill ${e.active?'':'wait'}">${e.active?'Active':'Draft'}</span></td><td><button class="dash-action" onclick="toggleExam(${e.id},${!e.active})">${e.active?'Unpublish':'Publish'}</button> <button class="dash-action" onclick="openExamAttempts(${e.id},${JSON.stringify(e.title||'Exam')})">Results</button></td></tr>`).join('')||'<tr><td colspan="5">No exams in this list yet.</td></tr>'}</tbody></table></section>`;return;
+  main.innerHTML=`<div class="welcome"><div><h1>Exams</h1><p>Create as many exams as you need. Exams are stored separately by stage/course and there is no dashboard cap.</p></div><div class="dash-toolbar"><button class="dash-action" onclick="openExamBuilderV3()">+ Create Exam</button></div></div><section class="panel"><div class="stage-tabs">${examTabs}</div><div class="stage-list-title"><b>${examStageOptions.find(x=>x[0]===activeExamStage)?.[1]||'Exams'}</b><span>${visibleExams.length}</span></div><table class="dash-table"><thead><tr><th>Exam</th><th>Stage / Course</th><th>Questions</th><th>Status</th><th>Actions</th></tr></thead><tbody>${visibleExams.map(e=>`<tr><td>${escapeHtml(e.title||'')}</td><td>${escapeHtml(stageLabel(e.grade))}</td><td>${escapeHtml(e.question_count||0)}</td><td><span class="pill ${e.active?'':'wait'}">${e.active?'Active':'Draft'}</span></td><td><button class="dash-action" onclick="toggleExam(${e.id},${!e.active})">${e.active?'Unpublish':'Publish'}</button> <button class="dash-action" onclick="openExamAttempts(${e.id},${JSON.stringify(e.title||'Exam')})">Results</button></td></tr>`).join('')||'<tr><td colspan="5">No exams in this list yet.</td></tr>'}</tbody></table></section>`;return;
  }
  if(sec==='subscriptions'){
   main.innerHTML=`<div class="welcome"><div><h1>Subscriptions</h1><p>Monthly access; access closes on the renewal date until payment is approved.</p></div></div><section class="panel"><table class="dash-table"><thead><tr><th>Student</th><th>Course</th><th>Type</th><th>Status</th><th>Next Due</th><th>Action</th></tr></thead><tbody>${(d.subscriptions||[]).map(s=>`<tr><td>${escapeHtml(s.student_name||'')}</td><td>${escapeHtml(s.course_name||'')}</td><td>${escapeHtml(s.course_type||'')}</td><td><span class="pill ${s.status==='expired'?'fail':s.status==='grace'?'wait':''}">${escapeHtml(s.status||'')}</span></td><td>${escapeHtml(s.next_due_date||'')}</td><td><button class="dash-action" onclick="openRenewFor(${s.student_id})">Renew</button></td></tr>`).join('')||'<tr><td colspan="6">No subscriptions yet.</td></tr>'}</tbody></table></section>`;return;
@@ -582,55 +597,53 @@ function setStudentStageFilter(stage){window.__studentStageFilter=stage;renderTe
 function setExamStageFilter(stage){window.__examStageFilter=stage;renderTeacherSection('exams');}
 function stageLabel(g){const m={'أولى إعدادي':'1st Preparatory','ثانية إعدادي':'2nd Preparatory','ثالثة إعدادي':'3rd Preparatory','أولى ثانوي':'1st Secondary','ثانية ثانوي':'2nd Secondary','ثالثة ثانوي':'3rd Secondary','كورسات':'Courses'};const v=(g||'').trim();return v?(m[v]&&((localStorage.getItem('platformLanguage')||'en')==='en')?m[v]:v):'Unassigned';}
 function filterStudents(){const q=(document.getElementById('studentSearch')?.value||'').toLowerCase();document.querySelectorAll('#studentsTable tbody tr').forEach(r=>r.style.display=r.innerText.toLowerCase().includes(q)?'':'none')}
-function openStudentEditor(s){s=s||{};show(`<h2>${s.id?'Edit Student':'Add Student'}</h2><p class="sub">${s.id?'Edit student data and access.':'Add a student; if you leave the code empty, the platform will generate a unique login code automatically.'}</p><div class="form-grid"><input id="st_name" class="input" placeholder="Student Name" value="${escapeHtml(s.name||'')}"><input id="st_code" class="input" placeholder="Student Code (leave empty to auto-generate)" value="${escapeHtml(s.student_code||s.code||'')}"><select id="st_grade" class="input"><option value="" ${!s.grade?'selected':''}>Unassigned</option><option value="أولى إعدادي" ${s.grade==='أولى إعدادي'?'selected':''}>1st Preparatory</option><option value="ثانية إعدادي" ${s.grade==='ثانية إعدادي'?'selected':''}>2nd Preparatory</option><option value="ثالثة إعدادي" ${s.grade==='ثالثة إعدادي'?'selected':''}>3rd Preparatory</option><option value="أولى ثانوي" ${s.grade==='أولى ثانوي'?'selected':''}>1st Secondary</option><option value="ثانية ثانوي" ${s.grade==='ثانية ثانوي'?'selected':''}>2nd Secondary</option><option value="ثالثة ثانوي" ${s.grade==='ثالثة ثانوي'?'selected':''}>3rd Secondary</option><option value="كورسات" ${s.grade==='كورسات'?'selected':''}>Courses</option></select><input id="st_parent" class="input" placeholder="Parent Phone" value="${escapeHtml(s.parent_phone||'')}"><input id="st_phone" class="input" placeholder="Student Phone" value="${escapeHtml(s.phone||'')}"><input id="st_email" class="input" placeholder="Email" value="${escapeHtml(s.email||'')}"><select id="st_gender" class="input"><option value="male" ${s.gender==='male'?'selected':''}>Male</option><option value="female" ${s.gender==='female'?'selected':''}>Female</option></select><select id="st_paid" class="input"><option value="true" ${s.paid?'selected':''}>Paid</option><option value="false" ${!s.paid?'selected':''}>Unpaid</option></select><select id="st_exempt" class="input"><option value="false" ${!s.exempt?'selected':''}>Normal student (payment required)</option><option value="true" ${s.exempt?'selected':''}>Exempt (free access)</option></select><textarea id="st_notes" class="input full" style="height:80px" placeholder="Notes">${escapeHtml(s.notes||'')}</textarea></div><button class="submit" onclick="saveStudent(${Number(s.id||0)})">Save Student →</button>`)}
-async function saveStudent(id){let code=document.getElementById('st_code').value.trim();if(!code)code='MS'+Date.now().toString().slice(-8)+Math.floor(Math.random()*90+10);const payload={p_name:document.getElementById('st_name').value.trim(),p_student_code:code,p_grade:document.getElementById('st_grade').value.trim(),p_parent_phone:document.getElementById('st_parent').value.trim(),p_phone:document.getElementById('st_phone').value.trim(),p_email:document.getElementById('st_email').value.trim(),p_gender:document.getElementById('st_gender').value,p_paid:document.getElementById('st_paid').value==='true',p_exempt:document.getElementById('st_exempt').value==='true',p_active:true,p_notes:document.getElementById('st_notes').value.trim()};const res=id?await sb.rpc('teacher_update_student',{p_student_id:id,...payload}):await sb.rpc('teacher_create_student',{...payload});if(res.error||!res.data?.success){show('<h2>Could not save</h2><p class="sub">'+escapeHtml(res.data?.message||res.error?.message||'Error')+'</p>');return}alert('Student saved. Login code: '+code);closeModal();await refreshTeacher()}
+function openStudentEditor(s,presetGrade){
+ s=s||{};
+ if(!s.grade&&presetGrade)s.grade=presetGrade;
+ const baseGrades=[['أولى إعدادي','1st Preparatory'],['ثانية إعدادي','2nd Preparatory'],['ثالثة إعدادي','3rd Preparatory'],['أولى ثانوي','1st Secondary'],['ثانية ثانوي','2nd Secondary'],['ثالثة ثانوي','3rd Secondary'],['التأسيس','Foundation'],['كورسات','Courses']];
+ const known=baseGrades.map(x=>x[0]);
+ const gradeOptions=baseGrades.map(([value,label])=>`<option value="${value}" ${s.grade===value?'selected':''}>${label}</option>`).join('')+(s.grade&&!known.includes(s.grade)?`<option value="${escapeHtml(s.grade)}" selected>${escapeHtml(s.grade)}</option>`:'');
+ show(`<h2>${s.id?'Edit Student':'Add Student'}</h2><p class="sub">${s.id?'Edit student data and access.':'Enter the student details. A unique code is generated if you leave the code empty.'}</p><div class="form-grid"><input id="st_name" class="input" placeholder="Student Name" value="${escapeHtml(s.name||'')}"><input id="st_code" class="input" placeholder="Student Code (leave empty to auto-generate)" value="${escapeHtml(s.student_code||s.code||'')}"><select id="st_grade" class="input"><option value="">Choose Stage / Level</option>${gradeOptions}</select><input id="st_parent" class="input" placeholder="Parent Phone (required)" value="${escapeHtml(s.parent_phone||'')}"><input id="st_phone" class="input" placeholder="Student Phone" value="${escapeHtml(s.phone||'')}"><input id="st_email" class="input" type="email" placeholder="Email (required)" value="${escapeHtml(s.email||'')}"><select id="st_gender" class="input"><option value="male" ${s.gender!=='female'?'selected':''}>Male</option><option value="female" ${s.gender==='female'?'selected':''}>Female</option></select><select id="st_paid" class="input"><option value="true" ${s.paid?'selected':''}>Paid</option><option value="false" ${!s.paid?'selected':''}>Unpaid</option></select><select id="st_exempt" class="input"><option value="false" ${!s.exempt?'selected':''}>Normal student (payment required)</option><option value="true" ${s.exempt?'selected':''}>Exempt (free access)</option></select><textarea id="st_notes" class="input full" style="height:80px" placeholder="Notes">${escapeHtml(s.notes||'')}</textarea></div><div id="st_msg" class="sub" role="status" aria-live="polite" style="color:#a22;margin-top:8px"></div><button id="saveStudentBtn" class="submit" onclick="saveStudent(${Number(s.id||0)})">Save Student →</button>`);
+}
+async function saveStudent(id){
+ const byId=x=>document.getElementById(x);
+ const msg=byId('st_msg'),btn=byId('saveStudentBtn');
+ const name=(byId('st_name')?.value||'').trim(),grade=(byId('st_grade')?.value||'').trim();
+ const parent=(byId('st_parent')?.value||'').trim(),email=(byId('st_email')?.value||'').trim();
+ const phone=(byId('st_phone')?.value||'').trim();
+ const fail=t=>{if(msg)msg.textContent=t;};
+ if(!name||!grade||!parent||!email){fail('Enter the student name, stage, guardian phone and email.');return;}
+ if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){fail('Enter a valid email address.');return;}
+ const phoneDigits=parent.replace(/\D/g,'');
+ if(phoneDigits.length<8||phoneDigits.length>15){fail('Check the guardian phone number.');return;}
+ const all=(window.__teacherData&&window.__teacherData.students)||[];
+ const existing=all.find(x=>Number(x.id)===Number(id));
+ let code=(byId('st_code')?.value||'').trim();
+ if(!code&&id)code=String(existing?.student_code||existing?.code||'').trim();
+ if(!code&&!id){
+  do{code='MS'+Date.now().toString().slice(-8)+Math.floor(Math.random()*90+10);}
+  while(all.some(x=>String(x.student_code||x.code||'').toUpperCase()===code.toUpperCase()));
+ }
+ if(all.some(x=>Number(x.id)!==Number(id)&&String(x.student_code||x.code||'').trim().toUpperCase()===code.toUpperCase())){fail('This student code is already used. Enter a different code.');return;}
+ const payload={p_name:name,p_student_code:code,p_grade:grade,p_parent_phone:parent,p_phone:phone,p_email:email,p_gender:byId('st_gender').value,p_paid:byId('st_paid').value==='true',p_exempt:byId('st_exempt').value==='true',p_active:true,p_notes:(byId('st_notes')?.value||'').trim()};
+ if(btn){btn.disabled=true;btn.textContent='Saving...';}
+ fail('Saving student...');
+ try{
+  const res=id?await sb.rpc('teacher_update_student',{p_student_id:Number(id),...payload}):await sb.rpc('teacher_create_student',payload);
+  if(res.error||!res.data?.success)throw new Error(res.data?.message||res.error?.message||'Could not save student.');
+  if(typeof closeModal==='function')closeModal();
+  alert('Student saved. Login code: '+code);
+  await refreshTeacher();
+  renderTeacherSection('students');
+ }catch(e){
+  fail(e?.message||'Could not save student. Please try again.');
+  if(btn){btn.disabled=false;btn.textContent='Save Student →';}
+ }
+}
 async function deleteStudent(id){if(!confirm('Delete this student and related records?'))return;const {data,error}=await sb.rpc('teacher_delete_student',{p_student_id:id});if(error||!data?.success){alert(data?.message||error?.message||'Delete failed');return}await refreshTeacher()}
 async function bulkPayment(v){const {data,error}=await sb.rpc('teacher_bulk_payment_status',{p_paid:v});if(error||!data?.success){alert(data?.message||error?.message||'Update failed');return}await refreshTeacher()}
 function openCreateExam(){show('<h2>Create Exam</h2><div class="form-grid"><input id="ex_title" class="input" placeholder="Exam Title"><select id="ex_grade" class="input"><option value="">Unassigned</option><option value="أولى إعدادي">1st Preparatory</option><option value="ثانية إعدادي">2nd Preparatory</option><option value="ثالثة إعدادي">3rd Preparatory</option><option value="أولى ثانوي">1st Secondary</option><option value="ثانية ثانوي">2nd Secondary</option><option value="ثالثة ثانوي">3rd Secondary</option><option value="كورسات">Courses</option></select><input id="ex_dur" class="input" type="number" value="30" placeholder="Minutes"><select id="ex_answers" class="input"><option value="false">Hide Answers</option><option value="true">Show Answers</option></select></div><button class="submit" onclick="createExamNow()">Create Exam →</button>')}
 async function createExamNow(){const {data,error}=await sb.rpc('teacher_create_exam',{p_title:document.getElementById('ex_title').value.trim(),p_grade:document.getElementById('ex_grade').value.trim(),p_duration_minutes:Number(document.getElementById('ex_dur').value||30),p_show_answers:document.getElementById('ex_answers').value==='true'});if(error||!data?.success){alert(data?.message||error?.message||'Failed');return}closeModal();await refreshTeacher()}
-function openPdfImport(){show('<h2>Import PDF → Exam</h2><p class="sub">اختاري ملف PDF للامتحان. المنصة هتقرأ الأسئلة والاختيارات وتحوّلها لمسودة امتحان مباشرة، وبعدها تقدري تراجعيها وتنشريها.</p><input id="pdfFile" class="input" type="file" accept="application/pdf"><input id="pdfTitle" class="input" placeholder="Exam Title"><input id="pdfGrade" class="input" placeholder="Stage / Course"><button class="submit" onclick="parsePdfToExam()">Read PDF & Build Exam →</button><div id="pdfStatus" class="sub" style="margin-top:8px"></div>')}
-async function parsePdfToExam(){
- const file=document.getElementById('pdfFile').files[0];
- if(!file){document.getElementById('pdfStatus').textContent='اختاري ملف PDF أولًا.';return;}
- if(!window.pdfjsLib){document.getElementById('pdfStatus').textContent='PDF reader is still loading. Try again.';return;}
- window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
- const buf=await file.arrayBuffer();
- const pdf=await window.pdfjsLib.getDocument({data:buf}).promise;
- let text='';
- for(let i=1;i<=pdf.numPages;i++){
-   const page=await pdf.getPage(i); const tc=await page.getTextContent();
-   text+=tc.items.map(x=>x.str).join(' ')+'\n';
- }
- const qs=parseImportedExamText(text);
- window.__pdfExam={fileName:file.name,text,questions:qs,title:document.getElementById('pdfTitle').value.trim()||file.name.replace(/\.pdf$/i,''),grade:document.getElementById('pdfGrade').value.trim()||'General English'};
- document.getElementById('pdfStatus').innerHTML='Found <b>'+qs.length+'</b> question(s). Ready to save as a draft.';
- document.getElementById('pdfStatus').insertAdjacentHTML('afterend','<button class="dash-action" style="margin-top:8px" onclick="saveImportedPdfExam()">Save Draft Exam →</button>');
-}
-function parseImportedExamText(text){
- const raw=text.split(/\n+/).map(x=>x.trim()).filter(Boolean), out=[];
- for(let i=0;i<raw.length;i++){
-   const m=raw[i].match(/^(?:Q\s*)?(\d+)[\).:-]\s*(.+)$/i); if(!m) continue;
-   const q=m[2], opts=[]; let j=i+1;
-   while(j<raw.length&&opts.length<5){
-     const om=raw[j].match(/^([A-E])[\).:-]\s*(.+)$/i); if(!om) break;
-     opts.push({key:om[1].toUpperCase(),text:om[2].trim()}); j++;
-   }
-   let correct='';
-   const cm=q.match(/\b(?:answer|correct)\s*[:=-]\s*([A-E])\b/i); if(cm) correct=cm[1].toUpperCase();
-   if(!correct){ for(let k=j;k<Math.min(j+3,raw.length);k++){ const c=raw[k].match(/^(?:answer|correct answer)\s*[:=-]\s*([A-E])\b/i); if(c){correct=c[1].toUpperCase();break;} } }
-   out.push({question:q,type:opts.length>=2?'mcq':'written',points:1,correct,options:opts,grading_mode:opts.length>=2?'auto':'manual'});
-   i=Math.max(i,j-1);
- }
- if(!out.length){
-   const sentences=raw.filter(x=>/[A-Za-z]{8,}/.test(x)).slice(0,12);
-   sentences.forEach(line=>{
-     const clean=line.replace(/^\d+[\).:-]\s*/,''); const m=clean.match(/^(.+?)\s+is\s+(.+)$/i);
-     if(m) out.push({question:'What is '+m[1]+'?',type:'mcq',points:1,correct:'A',options:[{key:'A',text:m[2]},{key:'B',text:'Not specified in the text'},{key:'C',text:'A different answer'},{key:'D',text:'None of these'}],grading_mode:'auto'});
-   });
- }
- return out;
-}
-async function saveImportedPdfExam(){const p=window.__pdfExam;if(!p)return;const ex=await sb.rpc('teacher_create_exam',{p_title:p.title,p_grade:p.grade,p_duration_minutes:30,p_show_answers:false});if(ex.error||!ex.data?.success){alert(ex.data?.message||ex.error?.message||'Failed');return}for(const q of p.questions){await sb.rpc('teacher_add_exam_question',{p_exam_id:ex.data.exam_id,p_question_text:q.question,p_question_type:q.type,p_points:q.points,p_correct_answer:q.correct||null,p_options:q.options||[],p_grading_mode:q.grading_mode||'manual'});}await sb.from('exam_imports').insert({owner_id:(await sb.auth.getUser()).data.user.id,exam_id:ex.data.exam_id,file_name:p.fileName,source_text:p.text,question_count:p.questions.length,status:'draft'});closeModal();await refreshTeacher()}
 async function toggleExam(id,active){const {data,error}=await sb.rpc('teacher_set_exam_active',{p_exam_id:id,p_active:active});if(error||!data?.success){alert(data?.message||error?.message||'Failed');return}await refreshTeacher()}
 function openRenewFor(studentId){show('<h2>Renew Subscription</h2><div class="form-grid"><input id="ren_course" class="input" placeholder="Course Name"><select id="ren_type" class="input"><option value="academic">Academic</option><option value="general">General English</option><option value="foundation">Foundation & Speaking</option></select><input id="ren_amount" class="input" type="number" placeholder="Amount"><select id="ren_method" class="input"><option>فوري</option><option>تحويل بنكي</option><option>Vodafone Cash</option><option>Orange Money</option><option>Instapay</option></select></div><button class="submit" onclick="activateSubscription(${studentId})">Activate Subscription →</button>')}
 async function activateSubscription(studentId){const {data,error}=await sb.rpc('teacher_activate_subscription',{p_student_id:studentId,p_course_name:document.getElementById('ren_course').value.trim(),p_course_type:document.getElementById('ren_type').value,p_amount:Number(document.getElementById('ren_amount').value||0),p_payment_method:document.getElementById('ren_method').value});if(error||!data?.success){alert(data?.message||error?.message||'Failed');return}closeModal();await refreshTeacher()}
@@ -993,7 +1006,7 @@ document.addEventListener('click',function(e){
   "Normal student (payment required)":"طالب عادي (الاشتراك مطلوب)","Exempt (free access)":"معفى (دخول مجاني)","Notes":"ملاحظات","Save Student →":"حفظ الطالب ←","Could not save":"تعذر الحفظ","Student saved. Login code:":"تم حفظ الطالب. كود الدخول:",
   "Delete this student and related records?":"هل تريد حذف هذا الطالب وكل السجلات المرتبطة به؟","Delete failed":"فشل الحذف","Update failed":"فشل التحديث",
   "Create Exam":"إنشاء امتحان","Exam Title":"عنوان الامتحان","Minutes":"الدقائق","Hide Answers":"إخفاء الإجابات","Show Answers":"إظهار الإجابات","Create Exam →":"إنشاء الامتحان ←",
-  "Import PDF → Exam":"استيراد PDF ← امتحان","Exam Title":"عنوان الامتحان","Read PDF & Build Exam →":"قراءة PDF وإنشاء الامتحان ←","Save Draft Exam →":"حفظ الامتحان كمسودة ←",
+  "Exam Title":"عنوان الامتحان",
   "Exam Results":"نتائج الامتحانات","Score":"الدرجة","Evaluation":"التقييم","Note":"ملاحظة","No results yet.":"لا توجد نتائج بعد.",
   "No support messages.":"لا توجد رسائل دعم.","No reviews yet.":"لا توجد آراء بعد.","Approved":"تمت الموافقة","Pending approval":"في انتظار الموافقة",
   "Speaking & Pronunciation":"التحدث والنطق","Separate activities for Foundation, Speaking and General English.":"أنشطة منفصلة للفونديشن والمحادثة والإنجليزية العامة.","+ New Practice":"+ تدريب جديد","Practice":"التدريب","Course":"الكورس","Target":"النص المستهدف","Attempts":"المحاولات","No pronunciation practices yet.":"لا توجد تدريبات نطق بعد.",
@@ -1004,7 +1017,7 @@ document.addEventListener('click',function(e){
   "No students yet.":"لا يوجد طلاب بعد.","No subscriptions yet.":"لا توجد اشتراكات بعد.","No payment requests yet.":"لا توجد طلبات دفع بعد.",
   "Payment Requests":"طلبات الدفع","Payment proof":"إثبات الدفع","Approve":"موافقة","Reject":"رفض","Renewal":"إعادة الاشتراك","Subscription Start":"بداية الاشتراك","Renewal Date":"موعد إعادة الاشتراك",
   "Please wait...":"برجاء الانتظار...","Loading...":"جاري التحميل...","Save":"حفظ","Cancel":"إلغاء","Close":"إغلاق","Logout":"تسجيل الخروج",
-  "All Students":"كل الطلاب","1st Preparatory":"أولى إعدادي","2nd Preparatory":"ثانية إعدادي","3rd Preparatory":"ثالثة إعدادي","1st Secondary":"أولى ثانوي","2nd Secondary":"ثانية ثانوي","3rd Secondary":"ثالثة ثانوي","Courses":"كورسات","Unassigned":"غير محدد","students":"طلاب","All Exams":"كل الامتحانات","No students in this list yet.":"لا يوجد طلاب في هذه القائمة بعد.","No exams in this list yet.":"لا توجد امتحانات في هذه القائمة بعد.","Student records from the platform are kept here. Each stage has its own list, with a separate Courses list for students who join a course.":"كل سجلات الطلاب الموجودة في المنصة محفوظة هنا. كل مرحلة لها قائمة مستقلة، مع قائمة منفصلة للكورسات.","Create as many exams as you need. Exams are stored separately by stage/course and there is no dashboard cap.":"أنشئ العدد الذي تحتاجه من الامتحانات. يتم حفظ الامتحانات بشكل منفصل حسب المرحلة أو الكورس بدون حد أقصى في لوحة التحكم.","Stage / Course":"المرحلة / الكورس","Courses":"كورسات"
+  "Foundation":"التأسيس","No subscription":"لا يوجد اشتراك","Expired":"منتهي","Active":"نشط","Blocked":"موقوف","Choose Stage / Level":"اختر المرحلة / المستوى","Parent Phone (required)":"رقم ولي الأمر (مطلوب)","Email (required)":"البريد الإلكتروني (مطلوب)","All Students":"كل الطلاب","1st Preparatory":"أولى إعدادي","2nd Preparatory":"ثانية إعدادي","3rd Preparatory":"ثالثة إعدادي","1st Secondary":"أولى ثانوي","2nd Secondary":"ثانية ثانوي","3rd Secondary":"ثالثة ثانوي","Courses":"كورسات","Unassigned":"غير محدد","students":"طلاب","All Exams":"كل الامتحانات","No students in this list yet.":"لا يوجد طلاب في هذه القائمة بعد.","No exams in this list yet.":"لا توجد امتحانات في هذه القائمة بعد.","Student records from the platform are kept here. Each stage has its own list, with a separate Courses list for students who join a course.":"كل سجلات الطلاب الموجودة في المنصة محفوظة هنا. كل مرحلة لها قائمة مستقلة، مع قائمة منفصلة للكورسات.","Create as many exams as you need. Exams are stored separately by stage/course and there is no dashboard cap.":"أنشئ العدد الذي تحتاجه من الامتحانات. يتم حفظ الامتحانات بشكل منفصل حسب المرحلة أو الكورس بدون حد أقصى في لوحة التحكم.","Stage / Course":"المرحلة / الكورس","Courses":"كورسات"
  };
  const R=Object.fromEntries(Object.entries(T).map(([a,b])=>[b,a]));
  const attrNames=['placeholder','title','aria-label'];
