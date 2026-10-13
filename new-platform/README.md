@@ -1,27 +1,36 @@
 # Mr. Ahmed Saber — New Platform
 
-This directory is the isolated rebuild based on the approved reference note. It is intentionally separate from the legacy root site.
+This is the isolated rebuild based on the approved reference note. The legacy site and its Supabase database remain untouched.
 
-## Current milestone: public UI foundation
-- Arabic RTL layout with the approved navy/gold/beige/brown direction.
-- Public landing sections: courses, eight learning stages, placement-test UI, subscription/payment UI, testimonials placeholder, about/contact.
-- Vodafone Cash details appear only after selecting Vodafone Cash.
-- Placement test has 15 questions and calculates a local, advisory score.
-- Student/teacher entry and student registration are clearly marked as not connected until secure authentication and database work is implemented.
-- Teacher portrait is deliberately a placeholder; replace it only with the owner's approved image.
+## Completed UI milestone
+- Public landing page with the approved navy/gold/beige/brown visual direction, RTL layout, course cards, all eight learning stages, placement-test UI, subscription/payment UI, testimonials placeholder, about/contact.
+- Vodafone Cash details appear only when selected: 01064443212, recipient أحمد صابر غريب, and the reminder to save a screenshot after transfer.
+- A 15-question placement test renders all questions in one page, shows a local advisory score, and clearly says the result is not saved.
+- Responsive student dashboard preview: sidebar/navigation, student welcome, course cards/progress placeholders, lessons, exams, assignments, files, results, and contact.
+- Responsive teacher dashboard preview: right-hand navigation, overview, stage lists, student management UI, courses, exams/assignments, files, results, subscriptions, and settings.
+- Dashboard previews explicitly indicate that there are no live student records or connected management functions yet. No fictitious student data is presented as real data.
+- Teacher portrait remains a placeholder until the approved image is available.
+
+## Preview URLs
+- Landing page: /
+- Student dashboard UI preview: /student-dashboard.html
+- Teacher dashboard UI preview: /teacher-dashboard.html
 
 ## Not production-ready yet
-No database or authentication is connected. The registration/login forms do not create accounts or authenticate users. Placement-test results are not saved. Course cards and testimonials are placeholders rather than live content. Do not collect real student information through this static prototype.
+No separate database or secure authentication is connected. Login and registration do not create accounts or authenticate users. Student management actions, subscription approval/renewal, course content, comments, files, exams, assignments, grading, result publication, audit history and notifications need database/API implementation and end-to-end tests. Do not enter real student information in these previews.
 
-## Next implementation milestones
-1. Review/approve the UI and insert the approved teacher image.
-2. Design a fresh database schema and RLS policies in an isolated Supabase project; do not touch the legacy database.
-3. Implement secure student registration/approval, student and teacher authentication, and role-based access.
-4. Implement student lists, payment review, monthly subscriptions, renewals, and exemption/block controls.
-5. Implement course/unit/lesson/video/files and shared lesson comments/replies.
-6. Implement exam/assignment authoring, attempts, grading, publication, audit history, and results.
-7. Add dashboards, activity summaries, notifications and reporting.
-8. Run acceptance tests on mobile/desktop and against test accounts before a separate production deployment.
+## Next milestones
+1. Create an isolated Supabase project without modifying the legacy project.
+2. Implement a fresh schema with row-level security and role checks; use server-side/Edge Function operations for privileged changes.
+3. Connect secure teacher/student authentication and approval flows.
+4. Implement the eight student lists, duplicate prevention, code generation, guardian phone requirement, payment review, monthly subscriptions, renewals, exemptions, and access blocking.
+5. Implement courses/units/lessons/videos/files with access controls and course-visible comments/replies.
+6. Implement question builder, exams, timers/attempt limits, assignment submission, grading, result publication and grade-change audit trail.
+7. Verify each feature on mobile and desktop with test accounts before any production deployment.
 
-## Safety
-Never place Supabase service-role credentials in browser code. Use environment variables and server-side/Edge Function operations for privileged actions. Do not connect this rebuild to production data until schema, access policies, and migration/backup plans have been reviewed.
+## Safety and acceptance
+- Do not modify the old project or database as part of this rebuild.
+- Never expose a Supabase service-role/secret key in browser code.
+- Enable RLS for every exposed table and test access with student and teacher accounts separately.
+- Do not claim a function works until the saved data survives reload and authorization tests pass.
+- No PDF-import-to-exam feature is included unless its status is explicitly re-approved.
