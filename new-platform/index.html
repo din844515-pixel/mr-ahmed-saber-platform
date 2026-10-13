@@ -46,6 +46,12 @@
 .course-art.art-foundation,.course-art.art-grammar,.course-art.art-exam{background-size:cover!important;background-position:center center!important;background-repeat:no-repeat!important}
 .course-art .art-icon{z-index:2}
 .course-art .course-type{max-width:100%;text-shadow:0 2px 8px #07172fcc}
+
+/* Course photography replacement: use real educational photography, not decorative SVG cards. */
+.course-art.art-foundation{background-image:linear-gradient(0deg,#07172f9c,#07172f08 78%),url("https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=1000&q=85")!important;background-size:cover!important;background-position:center 48%!important}
+.course-art.art-grammar{background-image:linear-gradient(0deg,#07172f9c,#07172f08 78%),url("https://images.unsplash.com/photo-1516979187457-637abb4f9353?auto=format&fit=crop&w=1000&q=85")!important;background-size:cover!important;background-position:center 48%!important}
+.course-art.art-exam{background-image:linear-gradient(0deg,#07172f9c,#07172f08 78%),url("https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=1000&q=85")!important;background-size:cover!important;background-position:center 48%!important}
+.course-art:before,.course-art:after{pointer-events:none}
 </style>
 <style>
 /* Premium polish pass */
@@ -72,7 +78,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 <section class="hero" id="home">
  <div class="container hero-grid">
   <div class="hero-portrait" aria-label="موضع صورة المستر المعتمدة">
-   <div class="portrait-halo teacher-photo-halo"><img class="teacher-photo" src="/teacher.webp" alt="الأستاذ أحمد صابر" loading="eager"><div class="photo-caption"><strong>Mr. Ahmed Saber</strong><span>English Online Platform</span></div></div>
+   <div class="portrait-halo teacher-photo-halo"><img class="teacher-photo" src="/teacher.webp?rev=20261014b" alt="الأستاذ أحمد صابر" loading="eager"><div class="photo-caption"><strong>Mr. Ahmed Saber</strong><span>English Online Platform</span></div></div>
    <div class="floating-chip chip-top"><b>8 مراحل تعليمية</b><span>من التأسيس حتى الثانوية</span></div>
    <div class="floating-chip chip-bottom"><b>تعلم بخطوات واضحة</b><span>محاضرات · تدريبات · امتحانات</span></div>
   
