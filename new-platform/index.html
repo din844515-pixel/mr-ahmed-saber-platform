@@ -14,13 +14,19 @@
 @media(max-width:450px){.brand{gap:7px}.brand-mark{width:38px;height:38px;font-size:16px}.brand-name{font-size:14px}.brand-name small{font-size:8px;letter-spacing:.9px}.nav{gap:7px}.nav-actions{gap:6px}.icon-btn{width:36px;height:36px}.hero-actions .btn{flex:1}.hero-stat{padding:0 9px}.hero-stat b{font-size:17px}.hero-stat span{font-size:9px}.floating-chip{padding:8px 10px;font-size:10px}.floating-chip b{font-size:14px}.portrait-halo{height:315px}.hero-portrait{min-height:335px}.portrait-label{font-size:10px;bottom:19px}.course-card{grid-template-columns:.75fr 1.25fr}.course-art{min-height:210px}.course-meta{font-size:10px}.course-content .btn{padding:8px 10px;font-size:11px}.field-grid{grid-template-columns:1fr;gap:0}.panel{padding:19px}.options{grid-template-columns:1fr}.footer-grid{grid-template-columns:1fr}.footer-grid>div:first-child{grid-column:auto}.contact-strip .btn{width:100%}.section-heading h2{font-size:27px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{transition:none!important}}
 </style>
-</head>
+<style>
+/* Premium polish pass */
+:root{scroll-behavior:smooth}
+button,a{transition:transform .18s ease,box-shadow .18s ease,background-color .18s ease,border-color .18s ease}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #d6ad5d;outline-offset:3px}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+</style><meta name="description" content="منصة Mr. Ahmed Saber لتعلم اللغة الإنجليزية، الكورسات والاختبارات ومتابعة المستوى."></head>
 <body>
 <header class="topbar">
  <div class="container nav">
   <a class="brand" href="#home" aria-label="Mr. Ahmed Saber الصفحة الرئيسية"><span class="brand-mark">AS</span><span class="brand-name"><b>MR.</b> Ahmed Saber<small>ENGLISH ONLINE PLATFORM</small></span></a>
   <button class="menu-toggle" id="menuToggle" aria-label="فتح القائمة" aria-expanded="false">☰</button>
-  <nav class="navlinks" id="navLinks" aria-label="القائمة الرئيسية">
+  <nav class="navlinks" id="navLinks" aria-label="القائمة الرئيسية"><a href="student-dashboard.html" class="nav-link">بوابة الطالب</a><a href="teacher-dashboard.html" class="nav-link">لوحة المستر</a>
    <a class="active" href="#home">الرئيسية</a><a href="#courses">الكورسات</a><a href="#stages">المراحل الدراسية</a><a href="#placement">اختبار المستوى</a><a href="#subscribe">طريقة الاشتراك</a><a href="#about">عن المستر</a>
   </nav>
   <div class="nav-actions">
