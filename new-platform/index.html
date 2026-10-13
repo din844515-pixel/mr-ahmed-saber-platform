@@ -41,6 +41,11 @@
 .hero-portrait{min-height:495px}
 @media(max-width:800px){.portrait-halo.teacher-photo-halo{height:440px;width:min(335px,90%)}.hero-portrait{min-height:455px}}
 @media(max-width:450px){.portrait-halo.teacher-photo-halo{height:415px}.hero-portrait{min-height:430px}}
+
+/* FIX: render each embedded course illustration at the card's actual dimensions, not at its 800px intrinsic size. */
+.course-art.art-foundation,.course-art.art-grammar,.course-art.art-exam{background-size:cover!important;background-position:center center!important;background-repeat:no-repeat!important}
+.course-art .art-icon{z-index:2}
+.course-art .course-type{max-width:100%;text-shadow:0 2px 8px #07172fcc}
 </style>
 <style>
 /* Premium polish pass */
