@@ -35,3 +35,8 @@ No separate database or secure authentication is connected. Login and registrati
 - Enable RLS for every exposed table and test access with student and teacher accounts separately.
 - Do not claim a function works until the saved data survives reload and authorization tests pass.
 - No PDF-import-to-exam feature is included unless its status is explicitly re-approved.
+
+## Fixed UI decisions (do not change without approval)
+- The registration/payment form layout shown in the approved user screenshot is fixed. Preserve its existing colors, spacing, field order, typography, and visual design; do not redesign this form without explicit approval.
+- The payment-receipt field must use `type="file"` with `accept="image/*"` and must not include a `capture` attribute. On mobile, let the operating system/browser open the image/photo picker rather than forcing direct camera capture.
+- The receipt attachment is required, and the registration remains pending until the teacher reviews the payment and approves the account.
