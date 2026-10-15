@@ -44,6 +44,6 @@ No separate database or secure authentication is connected. Login and registrati
 
 ## Approved homepage media — 15 Oct 2026
 - A dedicated introductory/promotional video section is placed immediately after the hero and before courses, linked from a `شاهد فيديو تعريفي` hero button.
-- It uses the available 10.6-second educational promotional clip sourced from the user's existing media library; it is separate from course lessons.
+- It uses the 47-second branded teacher-introduction clip (`99452.mp4`) from the existing media library; it is separate from course lessons. A mobile-friendly web copy is hosted separately and does not change the legacy database or video bucket.
 - The approved original teacher portrait is referenced through an immutable deployment containing `new-platform/teacher.png`; preserve its exact bytes and do not re-encode or substitute it.
 - Acceptance requires checking the portrait in the homepage hero, homepage About, student dashboard, teacher dashboard, plus video playback on mobile and desktop.
