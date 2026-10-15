@@ -47,3 +47,9 @@ No separate database or secure authentication is connected. Login and registrati
 - It uses the 47-second branded teacher-introduction clip (`99452.mp4`) from the existing media library; it is separate from course lessons. A mobile-friendly web copy is hosted separately and does not change the legacy database or video bucket.
 - The approved original teacher portrait is referenced through an immutable deployment containing `new-platform/teacher.png`; preserve its exact bytes and do not re-encode or substitute it.
 - Acceptance requires checking the portrait in the homepage hero, homepage About, student dashboard, teacher dashboard, plus video playback on mobile and desktop.
+
+
+## Homepage intro video and teacher photo — 15 Oct 2026
+- The homepage contains a dedicated introductory video section immediately after the hero and before courses. Video is the available short promo clip, separate from lesson videos.
+- The original teacher portrait is referenced through the same immutable static deployment that contains `new-platform/teacher.png`; preserve exact bytes and do not re-encode.
+- Acceptance checklist: homepage hero photo, About photo, teacher dashboard portrait, student dashboard portrait, promo video playback.
