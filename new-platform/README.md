@@ -61,3 +61,12 @@ No separate database or secure authentication is connected. Login and registrati
 - No isolated Supabase project is available in the connected project list; the one visible project is named `Mr. Ahmed Saber`, so it is not assumed safe to modify. Do not attach the new platform to it or change its schema, buckets, RLS, student data, or secrets. Secure persistent video upload remains blocked until an isolated backend/storage and teacher authentication are available. Never expose a storage token in browser code or enable an unauthenticated upload endpoint.
 - Keep the old site/database untouched, keep the exam/question system unchanged, and continue using small edits with deployment and browser checks. Student management actions remain UI previews, not live database operations.
 - The exact original `teacher.png` bytes were restored into the new-platform branch from the last Vercel deployment artifact (PNG signature verified; no image re-encoding or compression was performed). The image is now committed as `new-platform/teacher.png` so future Git-based deployments retain the asset.
+
+
+## Execution checkpoint — 16 Oct 2026
+- Corrected the five teacher-portrait references in `new-platform/index.html`, `new-platform/student-dashboard.html`, and `new-platform/teacher-dashboard.html` that pointed at an older deployment. All now use the project-local `/new-platform/teacher.png` path.
+- Verified the three HTML files on branch `rebuild/new-platform-from-note-2026-10-13` contain no stale portrait URL. Verified the staging deployment `dpl_FxuNA8HdnvVU5mCRt1E6TVjgrLvo` reached `READY`; the homepage and both dashboard HTML paths return HTTP 200, and `/new-platform/teacher.png` returns HTTP 200 with `image/png`.
+- Source/reference verification confirms the five portrait references are present and the original PNG asset is served. This is a path/HTTP check, not a visual pixel-by-pixel comparison; no claim is made that a manual visual browser review was completed.
+- Verified the receipt picker in the deployed homepage uses `type="file"` and `accept="image/*"` with no `capture` attribute.
+- The student management interface remains a preview with no live database/authentication, as stated above. No student data, Supabase schema, legacy project, or exam/question code was modified in this step.
+- Next safe step: review the current student-management markup and handlers in isolation before implementing any student CRUD behavior; do not connect to or mutate the legacy database.
