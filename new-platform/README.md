@@ -53,3 +53,10 @@ No separate database or secure authentication is connected. Login and registrati
 - The homepage contains a dedicated introductory video section immediately after the hero and before courses. Video is the available short promo clip, separate from lesson videos.
 - The original teacher portrait is referenced through the same immutable static deployment that contains `new-platform/teacher.png`; preserve exact bytes and do not re-encode.
 - Acceptance checklist: homepage hero photo, About photo, teacher dashboard portrait, student dashboard portrait, promo video playback.
+
+## Execution checkpoint — 15 Oct 2026
+- Fixed all five teacher portrait references in the new platform pages to use the approved image at `/new-platform/teacher.png` on the new deployment origin. This keeps the original deployed PNG asset and does not re-encode, compress, crop, or replace the source file.
+- Acceptance check from the Vercel deployment file manifest confirms `new-platform/teacher.png` is present in the deployed asset tree. The new HTML source changes must still be deployed and visually checked at the preview URL before calling the image fix complete.
+- The teacher promo video picker currently supports selecting a local `video/*` file, previewing it, and cancelling the selection only. It does not upload, persist, hide, or publish a saved video yet; local preview is not a save.
+- No isolated Supabase project is available in the connected project list; the one visible project is named `Mr. Ahmed Saber`, so it is not assumed safe to modify. Do not attach the new platform to it or change its schema, buckets, RLS, student data, or secrets. Secure persistent video upload remains blocked until an isolated backend/storage and teacher authentication are available. Never expose a storage token in browser code or enable an unauthenticated upload endpoint.
+- Keep the old site/database untouched, keep the exam/question system unchanged, and continue using small edits with deployment and browser checks. Student management actions remain UI previews, not live database operations.
