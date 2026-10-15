@@ -40,3 +40,10 @@ No separate database or secure authentication is connected. Login and registrati
 - The registration/payment form layout shown in the approved user screenshot is fixed. Preserve its existing colors, spacing, field order, typography, and visual design; do not redesign this form without explicit approval.
 - The payment-receipt field must use `type="file"` with `accept="image/*"` and must not include a `capture` attribute. On mobile, let the operating system/browser open the image/photo picker rather than forcing direct camera capture.
 - The receipt attachment is required, and the registration remains pending until the teacher reviews the payment and approves the account.
+
+
+## Approved homepage media — 15 Oct 2026
+- A dedicated introductory/promotional video section is placed immediately after the hero and before courses, linked from a `شاهد فيديو تعريفي` hero button.
+- It uses the available 10.6-second educational promotional clip sourced from the user's existing media library; it is separate from course lessons.
+- The approved original teacher portrait is referenced through an immutable deployment containing `new-platform/teacher.png`; preserve its exact bytes and do not re-encode or substitute it.
+- Acceptance requires checking the portrait in the homepage hero, homepage About, student dashboard, teacher dashboard, plus video playback on mobile and desktop.
