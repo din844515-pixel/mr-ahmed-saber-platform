@@ -88,3 +88,9 @@ No separate database or secure authentication is connected. Login and registrati
 - The migration has not been executed or validated by a live PostgreSQL instance. It must be reviewed and tested on a newly approved isolated project before use. No SQL has been run against the existing `Mr. Ahmed Saber` Supabase project.
 - The student CRUD screen remains a local-browser prototype until the separate backend, authenticated teacher operations, and private Storage buckets/policies are in place. Do not use it for real student records yet.
 - The portrait remains intentionally last and unresolved. Keep the agreed image/design fixed, and do not claim success without a visual check.
+
+
+## Execution checkpoint — 16 Oct 2026 (subscription follow-up UI)
+- Added a local-preview subscription follow-up queue on the teacher's subscriptions page for unpaid students, expired subscriptions, and subscriptions ending within 7 days. It shares the same local student records as the stage lists.
+- The queue exposes manual payment approval/renewal and a WhatsApp compose shortcut for guardians. WhatsApp is opened with prefilled text after a click; messages are not sent automatically.
+- Latest teacher dashboard commit: `0fb8ff613bc6870c8744c64ece510e5bc87e0dd9`. Before calling it live, redeploy the latest branch head and verify the student/renewal/WhatsApp UI again. The earlier READY deployment predates this last queue update.
