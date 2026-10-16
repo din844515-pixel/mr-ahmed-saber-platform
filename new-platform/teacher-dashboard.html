@@ -396,7 +396,7 @@ $('#examForm').addEventListener('submit',async e=>{
  e.preventDefault();const err=$('#examFormError'),save=$('#examFormSave');err.classList.add('hidden');err.textContent='';
  const uploadPending=$$('#examQuestionList [data-question-row]').some(card=>card.dataset.audioUploading==='true'||card.dataset.audioRecording==='true');
  if(uploadPending){err.textContent='انتظري حتى ينتهي تسجيل أو رفع ملف الصوت قبل حفظ الامتحان.';err.classList.remove('hidden');return}
- const questions=$('#examQuestionList [data-question-row]').map((card,i)=>{
+ const questions=$$('#examQuestionList [data-question-row]').map((card,i)=>{
   const value=k=>card.querySelector('[data-q-field="'+k+'"]').value.trim();
   const question_type=value('question_type'),rawOptions=value('options'),rawAnswer=value('answer'),options=rawOptions?rawOptions.split(/\r?\n/).map(x=>x.trim()).filter(Boolean):[];
   let answer_key=null;
