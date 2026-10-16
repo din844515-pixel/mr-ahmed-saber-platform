@@ -193,3 +193,7 @@ No separate database or secure authentication is connected. Login and registrati
 - Isolated Edge Function `platform-academics` is ACTIVE version 5. Results publishing now requires every exam attempt to be submitted, graded, and have a saved result row.
 - Latest edits include teacher/student dashboard JavaScript syntax checks and the student-only proxy syntax check. Database/RLS/private-bucket checks passed. **End-to-end mobile interactions still require testing with an approved test account**, including student sign-in, microphone permissions, file upload, teacher playback/marking, and result publication. Do not use real student records or promote this branch to production until those tests pass.
 - The approved design, legacy database, old exam/question implementation, student recovery checkpoint, and frozen PDF manager remain out of scope and must stay unchanged.
+
+
+- Follow-up safety pass: student can also choose an existing voice recording from the phone if browser microphone recording is unavailable; saved recordings are restored on a resumed attempt, and the final-submit button blocks while recording is still active. Teacher exam save now blocks while source audio upload/recording is still in progress.
+- Current test deployment is still a preview; no production alias has been promoted. The visual/mobile workflow must be tested using a dedicated, approved test student before real use.
