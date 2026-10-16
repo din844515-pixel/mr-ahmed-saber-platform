@@ -144,7 +144,15 @@ async function savePricing(body: any) {
   const price_egp = Number(p.price_egp);
   if (!Number.isFinite(price_egp) || price_egp < 0 || price_egp > 1000000) throw new ApiError("اكتبي سعرًا صحيحًا بالجنيه المصري.");
   const item_key = pricingKey(item_type, item_name, education_stage);
-  const rows = await db("platform_pricing?on_conflict=item_key", { method: "POST", body: { item_type, item_key, item_name, education_stage, price_egp, is_active: p.is_active !== false, updated_at: new Date().toISOString() }, prefer: "resolution=merge-duplicates,return=representation" }) as any[];
+  const value = { item_type, item_key, item_name, education_stage, price_egp, is_active: p.is_active !== false, updated_at: new Date().toISOString() };
+  let rows: any[];
+  if (p.id) {
+    const id = escFilter(String(p.id));
+    rows = await db("platform_pricing?id=eq." + id, { method: "PATCH", body: value, prefer: "return=representation" }) as any[];
+    if (!rows.length) throw new ApiError("السعر المطلوب تعديله غير موجود.",404);
+  } else {
+    rows = await db("platform_pricing?on_conflict=item_key", { method: "POST", body: value, prefer: "resolution=merge-duplicates,return=representation" }) as any[];
+  }
   return { ok: true, pricing: rows[0] };
 }
 async function setPricingActive(body: any) {
