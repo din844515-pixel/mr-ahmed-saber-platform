@@ -127,6 +127,33 @@ async function setExamFlag(body: any, field: "is_published" | "results_published
   }
   return { ok: true, exam: rows[0] };
 }
+async function listPricing() {
+  const rows = await db("platform_pricing?select=*&order=item_type.asc,education_stage.asc,item_name.asc") as any[];
+  return { ok: true, pricing: rows };
+}
+function pricingKey(type: string, name: string, stage: string) {
+  const normalize = (s: string) => s.trim().toLocaleLowerCase("ar").replace(/\\s+/g, " ");
+  return type === "stage" ? "stage:" + stage : "course:" + normalize(name) + "|stage:" + stage;
+}
+async function savePricing(body: any) {
+  const p = body.pricing && typeof body.pricing === "object" ? body.pricing : {};
+  const item_type = String(p.item_type || "");
+  if (!["stage","course"].includes(item_type)) throw new ApiError("اختاري نوع السعر.");
+  const education_stage = needStage(p.education_stage);
+  const item_name = item_type === "stage" ? education_stage : needString(p.item_name, "اسم الكورس", 180);
+  const price_egp = Number(p.price_egp);
+  if (!Number.isFinite(price_egp) || price_egp < 0 || price_egp > 1000000) throw new ApiError("اكتبي سعرًا صحيحًا بالجنيه المصري.");
+  const item_key = pricingKey(item_type, item_name, education_stage);
+  const rows = await db("platform_pricing?on_conflict=item_key", { method: "POST", body: { item_type, item_key, item_name, education_stage, price_egp, is_active: p.is_active !== false, updated_at: new Date().toISOString() }, prefer: "resolution=merge-duplicates,return=representation" }) as any[];
+  return { ok: true, pricing: rows[0] };
+}
+async function setPricingActive(body: any) {
+  const id = escFilter(String(body.id || ""));
+  if (!id) throw new ApiError("معرّف السعر غير صحيح.");
+  const rows = await db("platform_pricing?id=eq." + id, { method: "PATCH", body: { is_active: Boolean(body.value), updated_at: new Date().toISOString() }, prefer: "return=representation" }) as any[];
+  if (!rows.length) throw new ApiError("السعر غير موجود.",404);
+  return { ok: true, pricing: rows[0] };
+}
 async function listAssignments() {
   const assignments = await db("platform_assignments?select=*&order=created_at.desc") as any[];
   const mapped=[];
@@ -247,7 +274,7 @@ Deno.serve(async (req: Request) => {
       case "deleteExam": result = await deleteExam(body); break;
       case "setExamPublished": result = await setExamFlag(body, "is_published"); break;
       case "setResultsPublished": result = await setExamFlag(body, "results_published"); break;
-      case "listAssignments": result = await listAssignments(); break;
+      case "listPricing": result = await listPricing(); break;\n      case "savePricing": result = await savePricing(body); break;\n      case "setPricingActive": result = await setPricingActive(body); break;\n      case "listAssignments": result = await listAssignments(); break;
       case "saveAssignment": result = await saveAssignment(body); break;
       case "deleteAssignment": result = await deleteAssignment(body); break;
       case "setAssignmentPublished": result = await setAssignmentPublished(body); break;
