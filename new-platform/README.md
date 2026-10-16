@@ -136,3 +136,11 @@ No separate database or secure authentication is connected. Login and registrati
 - Reported symptom: the approved teacher photo is still not appearing correctly/consistently in the intended locations. A previous source URL returned HTTP 200, but that alone did not prove that the image renders visibly in the app.
 - At the end, visually inspect the approved original portrait on the homepage hero and About section, student dashboard, and teacher dashboard on mobile and desktop. Confirm the exact approved image, keep its original quality, and do not substitute the tiny `new-platform/teacher.png` file.
 - Treat the portrait issue as unresolved until it is visually verified; HTTP 200 or a matching URL is not enough. Keep this issue paired with the deferred student-code-generator issue below.
+
+
+## Execution checkpoint — 16 Oct 2026 (PDF files and notes preview)
+- Recorded the teacher-photo display problem as deferred until the final pass, paired with the already-deferred student-code generator. Do not change the approved portrait or code generator while progressing through other features.
+- Replaced the files/notes placeholder with a separate PDF manager preview: select a stage, optionally group under course and unit, set access to the whole stage or a specific student, save a PDF, edit metadata, replace the PDF, download it locally, search/filter, and delete it.
+- PDF bytes and metadata are stored in a dedicated IndexedDB database on the current browser/device. This is a local preview only, NOT shared storage and NOT live access control for students; do not enter sensitive/private documents until an isolated backend, authentication and storage policies are connected.
+- The PDF file module uses a separate store and code path. The exam/question area was not edited, the old Supabase project was not touched, and no PDF-import-to-exam function was added.
+- Before claiming release, run JavaScript syntax checks, deploy the latest branch head, verify the three platform routes return HTTP 200, and request mobile interaction confirmation for file add/edit/replace/download/delete and stage/student access controls.
