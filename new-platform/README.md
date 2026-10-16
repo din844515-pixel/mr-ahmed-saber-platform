@@ -113,3 +113,11 @@ No separate database or secure authentication is connected. Login and registrati
 - The confirmed student-management bindings and student form remain in place, including the critical multi-element selectors `$$('[data-stage]')` and `$$('#studentModalClose, #studentFormCancel')`. The exam/assignment section remains present and was not modified by the course UI work.
 - Staging deployment `dpl_EGgNDm3RTyZfTc5vmBj6kKTdH4BB` reached READY at https://mr-ahmed-saber-ajcilea8y-mr-ahmed-saber.vercel.app/new-platform/teacher-dashboard.html. HTTP 200 and presence of course/unit/lesson forms, the student selectors, student code field, course initialization, and exam section were verified in the deployed HTML. Interactive testing of the new course controls still needs user confirmation on mobile.
 - Stable student-only recovery branch remains `checkpoint/student-management-working-2026-10-16` at commit `db8d49751080dce7b4bcab9b415f92397a3f21b0`. Do not merge changes back into that checkpoint or overwrite it.
+
+
+## Verified checkpoint — 16 Oct 2026 (dashboard controls restored)
+- User confirmed the teacher dashboard buttons work again after the course-rendering JavaScript syntax error was corrected.
+- Confirmed working deployment: `dpl_75r8YJmqVoKdjijS343VS2FwXiJR`, URL https://mr-ahmed-saber-od7xwyvhp-mr-ahmed-saber.vercel.app/new-platform/teacher-dashboard.html, READY.
+- Corrected `renderCourses()` by rewriting the nested course/unit/lesson rendering with balanced template-string concatenation. JavaScript syntax check via `new Function(script)` passes. Deployed HTML returns HTTP 200 and includes student-stage controls, course management, and the exam section.
+- Treat this deployment as the current known-good dashboard state. Preserve the separate recovery branch `checkpoint/student-management-working-2026-10-16` and do not overwrite it. Do not change the exam/question builder or the student form/event handlers while proceeding.
+- Next work should proceed only after a fresh fetch of the latest branch head and be isolated to one feature. Run a full JavaScript syntax check before every deployment and verify the deployed route returns HTTP 200. Ask the user to confirm mobile interactions after each new feature. Do not claim browser-level interactions are tested when only source/HTTP checks were performed.
