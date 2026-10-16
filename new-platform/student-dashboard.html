@@ -112,7 +112,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 <div class="modal hidden" id="infoModal"><div class="modal-card"><button class="close" data-close>×</button><h2 id="infoTitle">تنبيه</h2><p id="infoText"></p><button class="btn btn-gold" data-close>حسنًا</button></div></div>
 <style>.modal{position:fixed;z-index:100;inset:0;background:#061226ba;display:grid;place-items:center;padding:16px}.modal-card{background:#fffdf7;border:1px solid #d6ad5d;border-radius:18px;padding:25px;width:min(430px,100%);position:relative}.modal-card h2{color:var(--navy);margin-top:0}.modal-card p{font-size:13px;color:#6f7782}.close{position:absolute;left:12px;top:12px;background:#f2e6d1;border:0;border-radius:8px;width:31px;height:31px;font-size:20px}.hidden{display:none!important}</style>
 <script>
-const $=s=>document.querySelector(s),$=s=>[...document.querySelectorAll(s)];
+const $=s=>document.querySelector(s);const $=s=>[...document.querySelectorAll(s)];
 const STUDENT_TOKEN_KEY='mas.student.token.v1',STUDENT_PROFILE_KEY='mas.student.profile.v1';
 let studentSessionToken='',studentProfile=null,academicExams=[],academicAssignments=[],academicResults=[],examCurrentAttempt=null,examCurrentQuestions=[],examAnswerState={},examTimerHandle=null;
 function studentEscape(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
@@ -150,7 +150,7 @@ $$('[data-jump]').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.j
 const messages={course:'محتوى الكورس والفيديوهات سيظهر بعد ربط قاعدة البيانات وإضافة المحاضرات. هذه المعاينة لا تفتح فيديو حقيقيًا.',exams:'ستظهر الامتحانات المنشورة والمناسبة لمرحلتك بعد تفعيل الحساب وربط نظام الامتحانات.',renew:'التجديد الفعلي يحتاج إرسال طلب ومراجعة التحويل من المستر. نموذج الاشتراك موجود على الصفحة الرئيسية.'};
 function info(title,msg){$('#infoTitle').textContent=title;$('#infoText').textContent=msg;$('#infoModal').classList.remove('hidden')}
 $$('[data-action]').forEach(b=>b.addEventListener('click',()=>{if(b.dataset.action==='exams')showView('exams');else info('معاينة فقط',messages[b.dataset.action]||'هذه الوظيفة ستعمل بعد ربط قاعدة البيانات.')}));
-$$('[data-exam-tab]').forEach(b=>b.addEventListener('click',()=>{$$('[data-exam-tab]').forEach(x=>x.className=x===b?'btn btn-gold':'btn btn-outline');const map={available:'الامتحانات التي ينشرها المستر وتكون متاحة لك ستظهر هنا.',finished:'بعد أداء الامتحان، سيظهر في قائمة الامتحانات المنتهية.',results:'لن تظهر الدرجات هنا إلا بعد اعتماد النتائج ونشرها من المستر.'};$('#examPane').textContent=map[b.dataset.examTab]}));
+$$('[data-exam-tab]').forEach(b=>b.addEventListener('click',()=>{/* legacy exam-tab preview handler removed; live handlers are defined above */
 $$('[data-close]').forEach(b=>b.addEventListener('click',()=>$('#infoModal').classList.add('hidden')));
 $('#infoModal').addEventListener('click',e=>{if(e.target.id==='infoModal')$('#infoModal').classList.add('hidden')});
 $('#noticeBtn').addEventListener('click',()=>info('الإشعارات','ستظهر الإعلانات والتنبيهات بعد ربط النظام، ولا توجد إشعارات فعلية في المعاينة.'));
