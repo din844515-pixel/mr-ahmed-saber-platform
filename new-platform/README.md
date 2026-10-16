@@ -197,3 +197,12 @@ No separate database or secure authentication is connected. Login and registrati
 
 - Follow-up safety pass: student can also choose an existing voice recording from the phone if browser microphone recording is unavailable; saved recordings are restored on a resumed attempt, and the final-submit button blocks while recording is still active. Teacher exam save now blocks while source audio upload/recording is still in progress.
 - Current test deployment is still a preview; no production alias has been promoted. The visual/mobile workflow must be tested using a dedicated, approved test student before real use.
+
+
+## Follow-up checkpoint — 16 Oct 2026 (pronunciation and assignment UX)
+- Confirmed the isolated academic storage bucket `platform-academic-media` exists, is private, and has a 50 MiB file-size limit with the approved audio/video/document/image MIME types.
+- Confirmed the existing academic backend already includes secure signed uploads for teacher MP3/MP4/audio recording, student pronunciation recordings, assignment resources/submissions, private signed read URLs, student-side timed exam attempts, one-attempt enforcement, and assignment review states.
+- Updated the teacher question editor so the MP3/MP4 upload and teacher microphone-recording controls are shown specifically for the Listening and Speaking/Pronunciation question types, instead of crowding every question type. The media path field accepts the internal private-storage path as well as an external URL; JavaScript syntax check passed.
+- Assignment workflow already includes teacher attachment upload, student written/file submission, one-final-submission enforcement, teacher access to submission attachments, and review states (not reviewed / reviewed / needs rework).
+- Preview deployment `dpl_2kmUtPmt2uFvgqy7ic4wqXAhdaw8` was triggered for commit `3464789ca4dcfd317d2d07cf98dc052a4e046ffa`. This checkpoint is **not yet verified end-to-end on a phone**; do not claim the upload, microphone permission, student recording, or assignment submission works in production until these interactions are tested.
+- Preserve the approved design and PDF manager, and do not publish this preview to production without a successful teacher upload → save exam → student playback/record → teacher review flow.
