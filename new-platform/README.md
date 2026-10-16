@@ -150,3 +150,10 @@ No separate database or secure authentication is connected. Login and registrati
 - Updated the local PDF file manager to list courses across all stages (showing each course's stage in the option) instead of limiting the course dropdown to the currently selected stage. Units populate from the selected course, listing every unit configured under that course.
 - Changed file access from one student to multi-select. A file can be assigned to multiple selected students; selected student IDs/names are stored in the local IndexedDB record and shown in the saved-file summary. Legacy records with one student remain readable.
 - JavaScript syntax was checked successfully after this change. Still local-only; no shared student permissions are enforced until a backend is connected.
+
+
+## PDF file manager correction — 16 Oct 2026
+- Reworked the student-specific access picker from a native multi-select to a mobile-friendly checkbox list with name/code search. Multiple checked student IDs are preserved while searching and saved together in the PDF record.
+- Fixed the save handler's compatibility reference so the form can submit after the picker changed from a native select to checkboxes.
+- The unit dropdown now explains its empty state: choose a course first, or it will say if no units are registered for the selected course. All units defined for the selected course are listed.
+- Verified the current teacher-dashboard JavaScript parses successfully. The latest source still requires deployment verification and user confirmation of mobile form submission. Local-only storage/access caveat remains unchanged.
