@@ -94,3 +94,14 @@ No separate database or secure authentication is connected. Login and registrati
 - Added a local-preview subscription follow-up queue on the teacher's subscriptions page for unpaid students, expired subscriptions, and subscriptions ending within 7 days. It shares the same local student records as the stage lists.
 - The queue exposes manual payment approval/renewal and a WhatsApp compose shortcut for guardians. WhatsApp is opened with prefilled text after a click; messages are not sent automatically.
 - Latest teacher dashboard commit: `0fb8ff613bc6870c8744c64ece510e5bc87e0dd9`. Before calling it live, redeploy the latest branch head and verify the student/renewal/WhatsApp UI again. The earlier READY deployment predates this last queue update.
+
+
+## Verified checkpoint — 16 Oct 2026 (student tools confirmed by user)
+- User manually confirmed on mobile that the teacher student section is working: opening the Add Student form, auto-generated student code field, close (×), Cancel, the eight stage cards, and the student search/filter area.
+- Last known-good teacher dashboard commit: `db8d49751080dce7b4bcab9b415f92397a3f21b0`.
+- Last known-good staging deployment: `dpl_GhrMZVqyuAWyrfaM4JpWsnXeq3QT`, URL: https://mr-ahmed-saber-n4dxwlmk2-mr-ahmed-saber.vercel.app/new-platform/teacher-dashboard.html (READY; HTTP 200).
+- Created immutable recovery branch `checkpoint/student-management-working-2026-10-16` at that exact commit. If a future change regresses student tools, restore only the teacher dashboard from this checkpoint; do not reset other platform files indiscriminately.
+- Technical reason for the recent breakage: code used the single-element helper `$` where a multi-element collection helper `$$` was required, interrupting script initialization. The stage-card binding and modal close-control binding now use `$$`. Do not change those bindings without testing.
+- Student code field shows the next available local code in the form and assigns a code on save. This remains localStorage preview behavior, not persistent/shared student accounts.
+- Freeze this working checkpoint: no redesign, no changes to the student form markup/handlers, student rendering, search/filter, or exam/question section while implementing the next milestone. Keep changes isolated and deploy/test after each distinct feature.
+- Next milestone to work on separately: course/unit/lesson administration UI (local preview only while the isolated backend is unavailable). Do not label it production-ready or store real student records. Before any real course/video/file persistence, obtain and validate an isolated backend without modifying the legacy Supabase project.
