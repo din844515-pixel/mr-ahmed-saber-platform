@@ -35,7 +35,7 @@ module.exports = async function handler(req, res) {
   }
 
   const authorization = String(req.headers.authorization || '');
-  if (action !== 'studentLogin' && !/^Bearer\\s+[^\\s]+$/i.test(authorization)) {
+  if (action !== 'studentLogin' && !/^Bearer\s+[^\s]+$/i.test(authorization)) {
     return res.status(401).json({ error: 'سجلي الدخول بحساب الطالب أولًا.' });
   }
 
