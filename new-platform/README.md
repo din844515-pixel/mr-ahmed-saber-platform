@@ -165,3 +165,10 @@ No separate database or secure authentication is connected. Login and registrati
 - Last deployment checked: `dpl_5nAS7qC7ti8qKo5F7J4RxnPaEHqE`, URL `https://mr-ahmed-saber-new-611emzut8-mr-ahmed-saber.vercel.app` (READY). Teacher dashboard, student dashboard, and homepage returned HTTP 200; teacher HTML includes the checkbox list, search handlers, explicit unit empty-state messages and unchanged exam section. JavaScript syntax check passed. Note: HTTP/syntax checks are not an end-to-end mobile file-save test; user is asked to confirm saving on her phone.
 - Do not overwrite or reset either student recovery checkpoint. Do not modify the approved PDF section when working on the next feature unless the user specifically requests it.
 - Next safe UI milestone: student-facing course/unit/lesson browsing and lesson comment/reply presentation, still clearly marked local preview until a newly approved isolated backend exists. Do not modify the legacy Supabase project or exam/question code.
+
+
+## Execution checkpoint — 16 Oct 2026 (teacher replies to lesson comments)
+- Added a teacher-side comment/reply panel beneath the teacher course manager. It reads the same localStorage key as the student-dashboard comment preview (`mas.teacher.lessonComments.v1`), displays the course/unit/lesson and student comment, and allows Mr. Ahmed Saber to add replies.
+- Replies are stored on the same browser under each comment and are rendered by the student lesson view as “رد المستر” entries. This is a same-browser preview only; students on other devices will not see them until the approved isolated backend and authenticated API/storage are connected.
+- JavaScript syntax passed. The teacher dashboard still contains the exam section and the frozen PDF manager. Do not edit the PDF manager or exam/question system during subsequent work.
+- Next backend-dependent steps remain blocked until a separate Supabase project is approved and provisioned. Do not modify the existing legacy Supabase project; draft schema is not deployed.
