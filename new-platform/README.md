@@ -157,3 +157,11 @@ No separate database or secure authentication is connected. Login and registrati
 - Fixed the save handler's compatibility reference so the form can submit after the picker changed from a native select to checkboxes.
 - The unit dropdown now explains its empty state: choose a course first, or it will say if no units are registered for the selected course. All units defined for the selected course are listed.
 - Verified the current teacher-dashboard JavaScript parses successfully. The latest source still requires deployment verification and user confirmation of mobile form submission. Local-only storage/access caveat remains unchanged.
+
+
+## Frozen approved checkpoint — PDF manager on mobile — 16 Oct 2026
+- User approved the current PDF manager behavior and explicitly instructed not to change it again. Preserve the course selector showing courses across all stages, all units belonging to the selected course, the mobile-friendly student checkbox list/search, multi-student selection persistence while searching, and save/replace/edit behavior.
+- Recovery branch: `checkpoint/pdf-manager-final-approved-2026-10-16` anchored at commit `961548cf593f8b57e9f336e64009738434484c3c`. Also retained `checkpoint/pdf-manager-mobile-working-2026-10-16` at `aa4d297161831d9d4023aba41ce8c159f9a8a702`.
+- Last deployment checked: `dpl_5nAS7qC7ti8qKo5F7J4RxnPaEHqE`, URL `https://mr-ahmed-saber-new-611emzut8-mr-ahmed-saber.vercel.app` (READY). Teacher dashboard, student dashboard, and homepage returned HTTP 200; teacher HTML includes the checkbox list, search handlers, explicit unit empty-state messages and unchanged exam section. JavaScript syntax check passed. Note: HTTP/syntax checks are not an end-to-end mobile file-save test; user is asked to confirm saving on her phone.
+- Do not overwrite or reset either student recovery checkpoint. Do not modify the approved PDF section when working on the next feature unless the user specifically requests it.
+- Next safe UI milestone: student-facing course/unit/lesson browsing and lesson comment/reply presentation, still clearly marked local preview until a newly approved isolated backend exists. Do not modify the legacy Supabase project or exam/question code.
