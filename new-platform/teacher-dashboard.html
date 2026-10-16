@@ -394,7 +394,7 @@ $('#addExamQuestion').addEventListener('click',()=>addExamQuestionRow());
 $('#examQuestionList').addEventListener('click',e=>{const b=e.target.closest('[data-remove-question]');if(!b)return;b.closest('[data-question-row]').remove();renumberExamQuestions()});
 $('#examForm').addEventListener('submit',async e=>{
  e.preventDefault();const err=$('#examFormError'),save=$('#examFormSave');err.classList.add('hidden');err.textContent='';
- const uploadPending=$('#examQuestionList [data-question-row]').some(card=>card.dataset.audioUploading==='true'||card.dataset.audioRecording==='true');
+ const uploadPending=$$('#examQuestionList [data-question-row]').some(card=>card.dataset.audioUploading==='true'||card.dataset.audioRecording==='true');
  if(uploadPending){err.textContent='انتظري حتى ينتهي تسجيل أو رفع ملف الصوت قبل حفظ الامتحان.';err.classList.remove('hidden');return}
  const questions=$('#examQuestionList [data-question-row]').map((card,i)=>{
   const value=k=>card.querySelector('[data-q-field="'+k+'"]').value.trim();
