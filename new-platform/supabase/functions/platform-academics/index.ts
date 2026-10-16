@@ -132,7 +132,7 @@ async function listPricing() {
   return { ok: true, pricing: rows };
 }
 function pricingKey(type: string, name: string, stage: string) {
-  const normalize = (s: string) => s.trim().toLocaleLowerCase("ar").replace(/\\s+/g, " ");
+  const normalize = (s: string) => s.trim().toLocaleLowerCase("ar").replace(/\s+/g, " ");
   return type === "stage" ? "stage:" + stage : "course:" + normalize(name) + "|stage:" + stage;
 }
 async function savePricing(body: any) {
