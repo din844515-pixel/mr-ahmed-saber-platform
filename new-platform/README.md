@@ -237,3 +237,28 @@ No separate database or secure authentication is connected. Login and registrati
 - Fixed the exam form's pre-save pending-media check: it previously called `.some()` on the single-element helper `$` (which returns one Element), causing a JavaScript TypeError before the save request. It now uses `$$` to collect question rows before checking pending uploads/recordings.
 - Latest teacher-dashboard commit: `9ff058edca7d2a404b218abba3ed958e59c80c1f`. Inline dashboard JavaScript syntax check passes; source checks confirm the corrected selector and hidden download controls.
 - Still required before considering complete: verify the preview deployment is READY, confirm exam create/edit/save with a test exam from the phone, and check the native audio menu on Android. No production promotion and no database schema changes were made in this step.
+
+## Current audit — 17 Oct 2026 (note reconciled with latest implementation)
+This section supersedes older status statements above where they conflict with later dated checkpoints. Historical checkpoints are retained as an audit trail.
+
+### Current state
+- The isolated academic Supabase project is `umffvtnujqjmgrrfmsdk`; its `platform-academics` Edge Function and private `platform-academic-media` bucket are already configured. The legacy `Mr. Ahmed Saber` Supabase project remains untouched.
+- Teacher exam/assignment management and student academic flows are implemented against the isolated backend in source. The teacher dashboard also has browser-local student/course/file/comment previews alongside connected academic APIs; do not assume every dashboard section is shared/persistent just because the exam API is connected.
+- Latest known teacher-dashboard source fix: commit `9ff058edca7d2a404b218abba3ed958e59c80c1f` fixes the pre-save pending-audio check and hides native audio download/speed controls. Source syntax passed, but this commit has not yet been confirmed on a READY deployment and has not been tested in the user's mobile browser.
+- Last documented end-to-end-related preview before this fix is older than the current commit. Vercel refused a fresh deployment due to the daily deployment quota; do not treat an older READY URL as containing the latest fix.
+- The approved design, teacher photo source/quality, existing exam/question builder, and frozen PDF manager remain protected. Do not use the incorrect 1,506-byte `new-platform/teacher.png` asset.
+
+### Remaining work — ordered release checklist
+1. **Current blocker: exam save regression test.** Once Preview deployment is available, use a dedicated test exam to create, edit, save, reload, and confirm question count/types/points/audio path persist. On Android, inspect the audio player menu. Do not use real student records.
+2. **Pronunciation end-to-end test.** Teacher uploads MP3/MP4 or records a prompt; waits for upload; saves and publishes a speaking/listening exam; test student signs in, plays the prompt, records or picks a voice file, submits once; teacher plays the answer, grades it, saves feedback, publishes results; student sees results only after publication. Test microphone-denied, empty recording, interrupted upload, and retry paths.
+3. **Assignment end-to-end test.** Teacher creates/publishes an assignment with attachment and due date; student opens it, submits text or a file once; submission locks; teacher opens attachment and marks Not Reviewed / Reviewed / Needs Rework. Confirm the state survives refresh and appears to the correct test accounts.
+4. **Student synchronization and subscription test.** Verify add/edit/delete, duplicate prevention, guardian phone, stage, approval, monthly renewal, expired-access blocking, exemption, and the subscription follow-up queue across a teacher reload and student login. Current student CRUD UI has browser-local fallback; only actions actually confirmed through the shared API count as cross-device functionality.
+5. **Pricing test.** Using the existing authorized teacher session, set/edit/hide/show a test stage/course price; confirm public pricing reflects active values and that blank pricing stays blank. No prices should be invented.
+6. **Files, lessons, and comments.** Verify access by stage/specific student, private signed links, and that lesson comments/replies are visible to all students in the same course only after backend integration. Current comment/course previews may remain browser-local.
+7. **Deferred final fixes.** Reproduce student-code generation on mobile; each new form must show a fresh unused code, including cancel/reopen and save cases. Then visually verify the approved original teacher portrait in homepage hero/About and both dashboards without compressing, replacing, cropping, or changing its quality.
+8. **Release gate.** Run syntax and API checks, deploy Preview only after quota resets, verify the exact current commit/READY deployment, then complete phone interaction tests. Promote to production only after all critical flows above pass; never claim a fix is live based only on source checks or HTTP 200.
+
+### Documentation corrections / caution
+- Earlier opening sections describing the dashboards as UI-only were accurate at the time they were written but are stale for the later exam/assignment/pricing integrations. Read the dated checkpoints and this audit together.
+- A deployed page returning HTTP 200 confirms route availability only; it does not prove that save, recording, storage permissions, student authorization, or cross-device synchronization work.
+- The daily Vercel deployment quota is a deployment/build limit, not a site-visitor limit. Continue source review and safe edits while waiting, but avoid repeated deployment attempts until the quota resets.
