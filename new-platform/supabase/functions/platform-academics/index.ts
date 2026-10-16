@@ -213,7 +213,7 @@ async function reviewSubmission(body: any) {
 
 
 const ACADEMIC_BUCKET = "platform-academic-media";
-const TEACHER_ACTIONS = new Set(["listExams","getExam","saveExam","deleteExam","setExamPublished","setResultsPublished","listAssignments","saveAssignment","deleteAssignment","setAssignmentPublished","listSubmissions","reviewSubmission","listAttempts","getAttemptReview","gradeAttempt"]);
+const TEACHER_ACTIONS = new Set(["listExams","getExam","saveExam","deleteExam","setExamPublished","setResultsPublished","listPricing","savePricing","setPricingActive","listAssignments","saveAssignment","deleteAssignment","setAssignmentPublished","listSubmissions","reviewSubmission","listAttempts","getAttemptReview","gradeAttempt"]);
 const AUDIO_MIME = new Set(["audio/mpeg","audio/mp3","audio/mp4","audio/aac","audio/wav","audio/webm","audio/ogg","video/mp4","video/quicktime","video/webm","video/x-m4v"]);
 const ASSIGNMENT_MIME = new Set([...AUDIO_MIME,"application/pdf","image/jpeg","image/png","image/webp","image/heic","application/msword","application/vnd.openxmlformats-officedocument.wordprocessingml.document","application/vnd.ms-excel","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","text/plain"]);
 function cairoToday(){const a=new Intl.DateTimeFormat("en-GB",{timeZone:"Africa/Cairo",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date()),p:Record<string,string>={};for(const x of a)if(x.type!=="literal")p[x.type]=x.value;return p.year+"-"+p.month+"-"+p.day}
