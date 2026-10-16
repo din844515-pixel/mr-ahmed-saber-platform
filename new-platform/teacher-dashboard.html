@@ -207,7 +207,7 @@ let courses=[];
 function loadCourses(){try{const raw=JSON.parse(localStorage.getItem(COURSE_STORE_KEY)||'[]');courses=Array.isArray(raw)?raw:[]}catch(e){courses=[]}}
 const TEACHER_UPLOAD_KEY_STORE='mas.teacher.uploadKey.v1';
 let courseSyncQueue=Promise.resolve();
-function getTeacherUploadKey(){try{return String(sessionStorage.getItem(TEACHER_UPLOAD_KEY_STORE)||'').trim()}catch(e){return ''}}
+function getTeacherUploadKey(){try{const saved=String(localStorage.getItem(TEACHER_UPLOAD_KEY_STORE)||'').trim();if(saved)return saved;const legacy=String(sessionStorage.getItem(TEACHER_UPLOAD_KEY_STORE)||'').trim();if(legacy){localStorage.setItem(TEACHER_UPLOAD_KEY_STORE,legacy);return legacy}return ''}catch(e){try{return String(sessionStorage.getItem(TEACHER_UPLOAD_KEY_STORE)||'').trim()}catch(_){return ''}}}
 function syncCoursesRemote(showError){
  const key=getTeacherUploadKey();if(!key)return Promise.resolve(false);
  const payload=JSON.stringify({courses:courses,updatedAt:new Date().toISOString()});
@@ -241,11 +241,11 @@ function openLessonForm(courseId,unitId,lessonId){const c=courses.find(x=>x.id==
 function handleCourseAction(e){const b=e.target.closest('[data-course-act]');if(!b)return;const action=b.dataset.courseAct,c=courses.find(x=>x.id===b.dataset.courseId);if(!c)return;const u=(c.units||[]).find(x=>x.id===b.dataset.unitId);if(action==='add-unit'){pendingLessonAfterUnitCourseId='';openUnitForm(c.id,'');return}if(action==='add-course-lesson'){const us=Array.isArray(c.units)?c.units:[];if(!us.length){pendingLessonAfterUnitCourseId=c.id;openUnitForm(c.id,'');$('#unitModalTitle').textContent='الخطوة 1 من 2: إضافة وحدة';$('#unitVideoNextStep').classList.remove('hidden');return}if(us.length===1){openLessonForm(c.id,us[0].id,'');return}$('#courseUnitPickerCourseId').value=c.id;const sel=$('#courseUnitPickerSelect');sel.innerHTML='';us.forEach(u=>{const o=document.createElement('option');o.value=u.id;o.textContent=u.name;sel.appendChild(o)});$('#courseUnitPickerModal').classList.remove('hidden');return}if(action==='edit-course'){openCourseForm(c.id);return}if(action==='add-lesson'){openLessonForm(c.id,b.dataset.unitId,'');return}if(action==='edit-unit'){if(u)openUnitForm(c.id,u.id);return}if(action==='edit-lesson'){if(u)openLessonForm(c.id,u.id,b.dataset.lessonId);return}if(action==='delete-course'){if(!confirm('حذف الكورس وكل وحداته ومحتواه من هذه المعاينة المحلية؟'))return;courses=courses.filter(x=>x.id!==c.id)}else if(action==='delete-unit'){if(!u||!confirm('حذف الوحدة وكل محتواها؟'))return;c.units=c.units.filter(x=>x.id!==u.id)}else if(action==='delete-lesson'){if(!u||!confirm('حذف هذا المحتوى؟'))return;u.lessons=(u.lessons||[]).filter(x=>x.id!==b.dataset.lessonId)}if(saveCourses())renderCourses()}
 $('#courseForm').addEventListener('submit',e=>{e.preventDefault();const err=$('#courseFormError'),id=$('#courseFormId').value,name=$('#courseFormName').value.trim(),stage=$('#courseFormStage').value,description=$('#courseFormDescription').value.trim();err.classList.add('hidden');err.textContent='';if(!name||!stage){err.textContent='اكتبي اسم الكورس واختاري المرحلة.';err.classList.remove('hidden');return}if(courses.some(c=>c.id!==id&&same(c.name,name)&&c.stage===stage)){err.textContent='يوجد كورس بالاسم نفسه في هذه المرحلة.';err.classList.remove('hidden');return}if(id){const c=courses.find(x=>x.id===id);if(!c)return;c.name=name;c.stage=stage;c.description=description}else courses.push({id:newCourseId('course'),name,stage,description,units:[],createdAt:new Date().toISOString()});if(saveCourses()){closeCourseModal('course');renderCourses()}});
 $('#unitForm').addEventListener('submit',e=>{e.preventDefault();const err=$('#unitFormError'),courseId=$('#unitCourseId').value,id=$('#unitFormId').value,name=$('#unitFormName').value.trim(),description=$('#unitFormDescription').value.trim(),c=courses.find(x=>x.id===courseId);err.classList.add('hidden');err.textContent='';if(!c||!name){err.textContent='اكتبي اسم الوحدة.';err.classList.remove('hidden');return}if((c.units||[]).some(u=>u.id!==id&&same(u.name,name))){err.textContent='اسم الوحدة موجود بالفعل داخل هذا الكورس.';err.classList.remove('hidden');return}if(!Array.isArray(c.units))c.units=[];let savedUnitId=id;if(id){const u=c.units.find(x=>x.id===id);if(!u)return;u.name=name;u.description=description}else{savedUnitId=newCourseId('unit');c.units.push({id:savedUnitId,name,description,lessons:[]})}if(saveCourses()){closeCourseModal('unit');renderCourses();if(pendingLessonAfterUnitCourseId===courseId){pendingLessonAfterUnitCourseId='';openLessonForm(courseId,savedUnitId,'')}}});
-$('#lessonUploadKey').addEventListener('input',function(){const v=this.value.trim();try{if(v)sessionStorage.setItem(TEACHER_UPLOAD_KEY_STORE,v);else sessionStorage.removeItem(TEACHER_UPLOAD_KEY_STORE)}catch(e){}});
+$('#lessonUploadKey').addEventListener('input',function(){const v=this.value.trim();try{if(v)localStorage.setItem(TEACHER_UPLOAD_KEY_STORE,v);else localStorage.removeItem(TEACHER_UPLOAD_KEY_STORE)}catch(e){}});
 $('#lessonForm').addEventListener('submit',async e=>{e.preventDefault();const err=$('#lessonFormError'),courseId=$('#lessonCourseId').value,unitId=$('#lessonUnitId').value,id=$('#lessonFormId').value,title=$('#lessonFormTitle').value.trim(),type=$('#lessonFormType').value;let videoUrl=$('#lessonFormVideoUrl').value.trim();const pickedVideo=$('#lessonVideoFile').files&&$('#lessonVideoFile').files[0],detail=$('#lessonFormDetail').value.trim(),c=courses.find(x=>x.id===courseId),u=c&&(c.units||[]).find(x=>x.id===unitId);err.classList.add('hidden');err.textContent='';if(!u||!title){err.textContent='اكتبي عنوان المحتوى.';err.classList.remove('hidden');return}if(!Array.isArray(u.lessons))u.lessons=[];
  if(pickedVideo&&type==='video'){
   const key=String($('#lessonUploadKey').value||getTeacherUploadKey()).trim();if(!key){err.textContent='اكتبي رمز المزامنة في الحقل تحت اختيار الفيديو.';err.classList.remove('hidden');return}
-  try{sessionStorage.setItem(TEACHER_UPLOAD_KEY_STORE,key)}catch(e){}
+  try{localStorage.setItem(TEACHER_UPLOAD_KEY_STORE,key)}catch(e){}
   if(pickedVideo.size>2*1024*1024*1024){err.textContent='حجم الفيديو أكبر من الحد المسموح (2 جيجابايت).';err.classList.remove('hidden');return}
   const status=$('#lessonVideoFileStatus');status.textContent='جاري تجهيز رفع الفيديو...';
   try{
@@ -439,10 +439,52 @@ $('#examQuestionList').addEventListener('change',async e=>{
 });
 $('#examQuestionList').addEventListener('click',async e=>{
  const start=e.target.closest('[data-q-record-start]'),stop=e.target.closest('[data-q-record-stop]');
- if(start){const card=start.closest('[data-question-row]'),status=card.querySelector('[data-q-upload-status]');if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||!window.MediaRecorder){status.textContent='التسجيل غير مدعوم هنا؛ اختاري ملف MP3 أو MP4 من الهاتف.';return}
-  try{const stream=await navigator.mediaDevices.getUserMedia({audio:true}),mime=['audio/webm;codecs=opus','audio/webm','audio/mp4'].find(x=>MediaRecorder.isTypeSupported(x))||'',rec=mime?new MediaRecorder(stream,{mimeType:mime}):new MediaRecorder(stream),chunks=[];rec.ondataavailable=ev=>{if(ev.data&&ev.data.size)chunks.push(ev.data)};rec.onstop=async()=>{stream.getTracks().forEach(t=>t.stop());start.disabled=false;stop.disabled=true;card.dataset.audioRecording='false';card.dataset.audioUploading='true';const blob=new Blob(chunks,{type:rec.mimeType||'audio/webm'}),ext=(blob.type.split('/')[1]||'webm').split(';')[0].replace('x-',''),file=new File([blob],'teacher-pronunciation-'+Date.now()+'.'+(ext==='mpeg'?'mp3':ext),{type:blob.type||'audio/webm'});status.textContent='تم التسجيل. جاري رفع الصوت...';try{const up=await uploadTeacherAcademicFile(file,'exam_audio');card.querySelector('[data-q-field="media_url"]').value=up.path;questionPreview(card,URL.createObjectURL(blob),up.type);status.textContent='تم رفع تسجيل المستر؛ احفظي الامتحان.'}catch(error){status.textContent=error.message||'تعذر رفع التسجيل.'}finally{delete card.dataset.audioUploading}};card._questionRecorder=rec;card.dataset.audioRecording='true';rec.start();start.disabled=true;stop.disabled=false;status.textContent='جاري التسجيل... اضغطي إيقاف التسجيل عند الانتهاء.'}
-  catch(error){status.textContent='تعذر فتح الميكروفون. اسمحي باستخدامه أو اختاري ملفًا من الهاتف.'}}
- if(stop){const card=stop.closest('[data-question-row]');if(card?._questionRecorder&&card._questionRecorder.state!=='inactive')card._questionRecorder.stop()}
+ if(start){
+  e.preventDefault();
+  const card=start.closest('[data-question-row]'),status=card.querySelector('[data-q-upload-status]'),stopButton=card.querySelector('[data-q-record-stop]');
+  if(card.dataset.audioUploading==='true'||card.dataset.audioRecording==='true')return;
+  if(!window.isSecureContext||!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||!window.MediaRecorder){
+   status.textContent='المتصفح لا يتيح التسجيل المباشر هنا. افتحي الصفحة في Chrome واسمحي بالميكروفون، أو اختاري ملف MP3/MP4 من الهاتف.';
+   return;
+  }
+  start.disabled=true;stopButton.disabled=true;status.textContent='جاري طلب إذن الميكروفون…';
+  let stream=null;
+  try{
+   stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
+   const mime=['audio/webm;codecs=opus','audio/webm','audio/mp4'].find(x=>MediaRecorder.isTypeSupported(x))||'';
+   const rec=mime?new MediaRecorder(stream,{mimeType:mime}):new MediaRecorder(stream),chunks=[];
+   rec.ondataavailable=ev=>{if(ev.data&&ev.data.size)chunks.push(ev.data)};
+   rec.onerror=()=>{stream.getTracks().forEach(t=>t.stop());start.disabled=false;stopButton.disabled=true;card.dataset.audioRecording='false';status.textContent='حصل خطأ أثناء التسجيل. حاولي مرة أخرى أو اختاري ملفًا من الهاتف.'};
+   rec.onstop=async()=>{
+    stream.getTracks().forEach(t=>t.stop());start.disabled=false;stopButton.disabled=true;card.dataset.audioRecording='false';
+    if(!chunks.length||chunks.every(x=>!x.size)){status.textContent='لم يُلتقط صوت. تأكدي من إذن الميكروفون وحاولي مرة أخرى.';return}
+    card.dataset.audioUploading='true';
+    const blob=new Blob(chunks,{type:rec.mimeType||'audio/webm'}),subtype=(blob.type.split('/')[1]||'webm').split(';')[0],ext=subtype==='mpeg'?'mp3':subtype==='mp4'?'m4a':subtype;
+    const file=new File([blob],'teacher-pronunciation-'+Date.now()+'.'+ext,{type:blob.type||'audio/webm'});
+    status.textContent='تم التسجيل. جاري رفع الصوت إلى التخزين المشترك…';
+    try{
+     const up=await uploadTeacherAcademicFile(file,'exam_audio');
+     card.querySelector('[data-q-field="media_url"]').value=up.path;
+     questionPreview(card,URL.createObjectURL(blob),up.type);
+     status.textContent='تم رفع تسجيل المستر بنجاح. احفظي الامتحان لتثبيت السؤال.';
+    }catch(error){status.textContent=error.message||'تعذر رفع التسجيل؛ اختاري الملف من الهاتف أو حاولي مرة أخرى.'}
+    finally{delete card.dataset.audioUploading}
+   };
+   card._questionRecorder=rec;card.dataset.audioRecording='true';rec.start();
+   start.disabled=true;stopButton.disabled=false;status.textContent='جاري التسجيل الآن… اضغطي «إيقاف التسجيل» عند الانتهاء.';
+  }catch(error){
+   if(stream)stream.getTracks().forEach(t=>t.stop());
+   card.dataset.audioRecording='false';start.disabled=false;stopButton.disabled=true;
+   const reason=error&&error.name==='NotAllowedError'?'إذن الميكروفون مرفوض. افتحي إعدادات الموقع واسمحي بالميكروفون.':error&&error.name==='NotFoundError'?'لم يتم العثور على ميكروفون متاح.':'تعذر فتح الميكروفون في هذا المتصفح. افتحي الصفحة في Chrome أو اختاري ملف MP3/MP4 من الهاتف.';
+   status.textContent=reason;
+  }
+  return;
+ }
+ if(stop){
+  e.preventDefault();
+  const card=stop.closest('[data-question-row]'),rec=card&&card._questionRecorder;
+  if(rec&&rec.state!=='inactive'){stop.disabled=true;rec.stop()}
+ }
 });
 $('#assignmentResourceFile').addEventListener('change',async function(){const file=this.files&&this.files[0];if(!file)return;$('#assignmentResourceStatus').textContent='جاري رفع الملف...';this.disabled=true;try{const up=await uploadTeacherAcademicFile(file,'assignment_resource');$('#assignmentFormResourcePath').value=up.path;$('#assignmentFormResourceName').value=up.name;$('#assignmentResourceStatus').textContent='تم رفع الملف: '+up.name}catch(error){$('#assignmentResourceStatus').textContent=error.message||'تعذر رفع الملف.';this.value=''}finally{this.disabled=false}});
 function renderExamAttempts(exam,attempts){const panel=$('#attemptReviewPanel');panel.classList.remove('hidden');panel.innerHTML='<h3>محاولات '+esc(exam?exam.title:'الامتحان')+'</h3>'+(attempts.length?attempts.map(a=>'<div class="assessment-review-row"><h4>'+esc(a.student?.full_name||'طالب')+' — '+esc(a.student?.student_code||'')+'</h4><div class="assessment-meta"><span class="assessment-pill">'+esc(a.status)+'</span><span class="assessment-pill">'+(a.result?esc(a.result.score)+' / '+esc(a.result.max_score):'لم تُحسب النتيجة بعد')+'</span></div><button class="btn btn-outline" type="button" data-review-attempt="'+esc(a.id)+'">فتح الإجابات والتصحيح</button></div>').join(''):'<div class="assessment-empty">لا توجد محاولات للطلاب حتى الآن.</div>');panel.scrollIntoView({behavior:'smooth',block:'start'})}
@@ -519,7 +561,7 @@ window.addEventListener('storage',function(e){if(e.key===TEACHER_LESSON_COMMENT_
 
 loadCourses();renderCourses();load();render();refreshFileCourses('');refreshFileStudents('');syncFileAccess();reloadLocalFiles();
 $('#studentRegistryKey').value=getTeacherUploadKey();
-$('#studentRegistryKey').addEventListener('input',function(){const value=this.value.trim();try{if(value)sessionStorage.setItem(TEACHER_UPLOAD_KEY_STORE,value);else sessionStorage.removeItem(TEACHER_UPLOAD_KEY_STORE)}catch(e){}});
-$('#studentRegistryConnect').addEventListener('click',async function(){const value=$('#studentRegistryKey').value.trim();if(!value){setStudentRegistryStatus('أدخلي رمز المزامنة أولًا.','error');return}try{sessionStorage.setItem(TEACHER_UPLOAD_KEY_STORE,value)}catch(e){}this.disabled=true;this.textContent='جاري الاتصال…';await loadSharedStudentRegistry();await loadAcademicData();await loadPricingAdmin();this.disabled=false;this.textContent='اتصال ومزامنة'});
+$('#studentRegistryKey').addEventListener('input',function(){const value=this.value.trim();try{if(value)localStorage.setItem(TEACHER_UPLOAD_KEY_STORE,value);else localStorage.removeItem(TEACHER_UPLOAD_KEY_STORE)}catch(e){}});
+$('#studentRegistryConnect').addEventListener('click',async function(){const value=$('#studentRegistryKey').value.trim();if(!value){setStudentRegistryStatus('أدخلي رمز المزامنة أولًا.','error');return}try{localStorage.setItem(TEACHER_UPLOAD_KEY_STORE,value)}catch(e){}this.disabled=true;this.textContent='جاري الاتصال…';await loadSharedStudentRegistry();await loadAcademicData();await loadPricingAdmin();this.disabled=false;this.textContent='اتصال ومزامنة'});
 if(getTeacherUploadKey()){loadSharedStudentRegistry();loadAcademicData();loadPricingAdmin();}
 </script></body></html>
