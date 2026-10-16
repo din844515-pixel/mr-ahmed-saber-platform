@@ -227,7 +227,8 @@ Deno.serve(async (req: Request) => {
     const action = String(body?.action || "");
     let student:any=null;
     if(action==="studentLogin"){return json(await studentLogin(body))}
-    if(TEACHER_ACTIONS.has(action)){
+    const teacherUpload=action==="createUploadUrl"&&(body.file_kind==="exam_audio"||body.file_kind==="assignment_resource");
+    if(TEACHER_ACTIONS.has(action)||teacherUpload){
       const supplied=String(req.headers.get("x-teacher-key")||"");
       if(!supplied||await sha256(supplied)!==EXPECTED_KEY_HASH)return json({error:"رمز المزامنة غير صحيح."},401);
     } else { student=await currentStudent(req); }
