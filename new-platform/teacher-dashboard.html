@@ -301,7 +301,7 @@ $('#pricingForm').addEventListener('submit',async e=>{
  if(type==='course'&&!name){err.textContent='اكتبي اسم الكورس.';err.classList.remove('hidden');return}
  if(!Number.isFinite(amount)||amount<0){err.textContent='اكتبي سعرًا صحيحًا.';err.classList.remove('hidden');return}
  const button=$('#pricingSave');button.disabled=true;button.textContent='جاري الحفظ…';
- try{await pricingRequest('savePricing',{pricing:{item_type:type,item_name:name,education_stage:stage,price_egp:amount,is_active:true}});resetPricingForm();await loadPricingAdmin();modal('تم حفظ السعر','تم حفظ السعر، وسيظهر للطالب في الصفحة الرئيسية.')}
+ try{await pricingRequest('savePricing',{pricing:{id:$('#pricingId').value||undefined,item_type:type,item_name:name,education_stage:stage,price_egp:amount,is_active:true}});resetPricingForm();await loadPricingAdmin();modal('تم حفظ السعر','تم حفظ السعر، وسيظهر للطالب في الصفحة الرئيسية.')}
  catch(error){err.textContent=error.message||'تعذر حفظ السعر.';err.classList.remove('hidden')}
  finally{button.disabled=false;button.textContent='حفظ السعر'}
 });
