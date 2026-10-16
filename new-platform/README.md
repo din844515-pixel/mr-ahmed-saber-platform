@@ -262,3 +262,9 @@ This section supersedes older status statements above where they conflict with l
 - Earlier opening sections describing the dashboards as UI-only were accurate at the time they were written but are stale for the later exam/assignment/pricing integrations. Read the dated checkpoints and this audit together.
 - A deployed page returning HTTP 200 confirms route availability only; it does not prove that save, recording, storage permissions, student authorization, or cross-device synchronization work.
 - The daily Vercel deployment quota is a deployment/build limit, not a site-visitor limit. Continue source review and safe edits while waiting, but avoid repeated deployment attempts until the quota resets.
+
+## Follow-up checkpoint — 17 Oct 2026 (second exam-save selector defect)
+- A second use of the single-element helper `$` was found immediately after the pending-audio check: the question collection used `$('#examQuestionList [data-question-row]').map(...)`. Since `$` returns only one Element, this would still throw before the exam save request even after fixing the pending-upload check.
+- Changed the question collection to `$$('#examQuestionList [data-question-row]').map(...)` so all question rows are collected before serialization.
+- Latest teacher-dashboard commit: `4b85e760b90a6fedf183d12977f3be1f6c6ff1a9`. Fetched the updated branch source and confirmed the corrected selector; inline JavaScript syntax check passes.
+- Source/syntax verification only. The new commit has not yet been deployed or tested by creating/editing an exam in the phone browser. Keep the production site unchanged until the preview test passes.
