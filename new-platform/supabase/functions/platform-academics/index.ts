@@ -274,7 +274,10 @@ Deno.serve(async (req: Request) => {
       case "deleteExam": result = await deleteExam(body); break;
       case "setExamPublished": result = await setExamFlag(body, "is_published"); break;
       case "setResultsPublished": result = await setExamFlag(body, "results_published"); break;
-      case "listPricing": result = await listPricing(); break;\n      case "savePricing": result = await savePricing(body); break;\n      case "setPricingActive": result = await setPricingActive(body); break;\n      case "listAssignments": result = await listAssignments(); break;
+      case "listPricing": result = await listPricing(); break;
+      case "savePricing": result = await savePricing(body); break;
+      case "setPricingActive": result = await setPricingActive(body); break;
+      case "listAssignments": result = await listAssignments(); break;
       case "saveAssignment": result = await saveAssignment(body); break;
       case "deleteAssignment": result = await deleteAssignment(body); break;
       case "setAssignmentPublished": result = await setAssignmentPublished(body); break;
