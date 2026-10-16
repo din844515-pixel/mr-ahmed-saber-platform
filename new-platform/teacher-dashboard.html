@@ -59,6 +59,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
      <label class="student-field"><span>الكورس</span><select class="control" id="fileCourse"><option value="">ملف عام للمرحلة</option></select></label>
      <label class="student-field"><span>الوحدة</span><select class="control" id="fileUnit"><option value="">بدون وحدة</option></select></label>
      <label class="student-field"><span>صلاحية الملف *</span><select class="control" id="fileAccess" required><option value="stage">كل طلاب المرحلة</option><option value="student">طلاب محددون (اختيار متعدد)</option></select></label>
+     <select id="fileStudent" class="hidden" aria-hidden="true" tabindex="-1"><option value=""></option></select>
      <div class="student-field file-field-wide hidden" id="fileStudentWrap"><span>الطلاب المسموح لهم *</span><input class="control" id="fileStudentSearch" type="search" placeholder="ابحثي باسم الطالب أو الكود"><div id="fileStudentList" class="file-student-list" aria-describedby="fileStudentHelp"></div><small id="fileStudentHelp" class="file-help">علّمي على مربع كل طالب مسموح له بالملف؛ تقدري تختاري أكتر من طالب بسهولة.</small></div>
      <label class="student-field file-field-wide"><span>ملف PDF *</span><input class="control" id="filePicker" type="file" accept="application/pdf,.pdf"><small id="filePickerHelp" class="file-help">اختاري PDF من ملفات الهاتف. الحدث لا يفتح الكاميرا.</small></label>
     </div>
