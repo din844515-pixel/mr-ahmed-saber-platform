@@ -144,3 +144,9 @@ No separate database or secure authentication is connected. Login and registrati
 - PDF bytes and metadata are stored in a dedicated IndexedDB database on the current browser/device. This is a local preview only, NOT shared storage and NOT live access control for students; do not enter sensitive/private documents until an isolated backend, authentication and storage policies are connected.
 - The PDF file module uses a separate store and code path. The exam/question area was not edited, the old Supabase project was not touched, and no PDF-import-to-exam function was added.
 - Before claiming release, run JavaScript syntax checks, deploy the latest branch head, verify the three platform routes return HTTP 200, and request mobile interaction confirmation for file add/edit/replace/download/delete and stage/student access controls.
+
+
+## PDF manager follow-up — 16 Oct 2026
+- Updated the local PDF file manager to list courses across all stages (showing each course's stage in the option) instead of limiting the course dropdown to the currently selected stage. Units populate from the selected course, listing every unit configured under that course.
+- Changed file access from one student to multi-select. A file can be assigned to multiple selected students; selected student IDs/names are stored in the local IndexedDB record and shown in the saved-file summary. Legacy records with one student remain readable.
+- JavaScript syntax was checked successfully after this change. Still local-only; no shared student permissions are enforced until a backend is connected.
