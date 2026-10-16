@@ -61,7 +61,7 @@
 button,a{transition:transform .18s ease,box-shadow .18s ease,background-color .18s ease,border-color .18s ease}
 button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #d6ad5d;outline-offset:3px}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
-</style><meta name="description" content="منصة Mr. Ahmed Saber لتعلم اللغة الإنجليزية، الكورسات والاختبارات ومتابعة المستوى."></head>
+.stage-price{font-weight:800;color:#8b6829;font-size:13px;margin:7px 0 10px!important}.public-course-prices{margin:24px 0 8px;padding:18px;border:1px solid var(--line);border-radius:16px;background:#fffdf8}.public-course-prices h3{margin:0 0 12px;color:var(--navy)}.public-course-price-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}.public-course-price-item{border:1px solid var(--line);border-radius:12px;padding:12px;background:#fff}.public-course-price-item strong{display:block;color:var(--navy)}.public-course-price-item span{font-weight:800;color:#8b6829;font-size:13px}.subscription-price-line{padding:10px 12px;margin-top:8px;background:#f7efd9;border:1px solid #e6d4a8;border-radius:10px;color:#755728;font-size:13px}.subscription-price-line strong{font-size:16px}</style><meta name="description" content="منصة Mr. Ahmed Saber لتعلم اللغة الإنجليزية، الكورسات والاختبارات ومتابعة المستوى."></head>
 <body>
 <header class="topbar">
  <div class="container nav">
@@ -119,6 +119,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
    <article class="course-card"><div class="course-art art-grammar"><span class="art-icon" aria-hidden="true">✎</span><span class="course-type">GRAMMAR · VOCABULARY</span></div><div class="course-content"><h3>القواعد والمفردات</h3><p>راجع القواعد والمفردات وتابع المحاضرات والتدريبات المرتبطة بكورسِك.</p><div class="course-meta"><b>شرح وتدريب</b><button class="text-link" data-modal="studentLogin">استكشف الكورس ←</button></div></div></article>
    <article class="course-card"><div class="course-art art-exam"><span class="art-icon" aria-hidden="true">✧</span><span class="course-type">REVISION · PRACTICE</span></div><div class="course-content"><h3>مراجعات وتدريبات</h3><p>استعد للامتحانات بتدريبات منظمة ومتابعة مستواك من خلال النتائج.</p><div class="course-meta"><b>مراجعة مستمرة</b><button class="text-link" data-modal="studentLogin">استكشف الكورس ←</button></div></div></article>
   </div>
+  <div id="publicCoursePrices" class="public-course-prices hidden" aria-live="polite"></div>
   <div class="student-count"><span aria-hidden="true">✦</span><span>مجتمع تعليمي يضم</span><strong>10,000+ طالب</strong><span>خطوة جديدة كل يوم</span></div>
  </div>
 </section>
@@ -126,14 +127,14 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
  <div class="container">
   <div class="section-heading center"><div class="eyebrow">محتوى مناسب لمرحلتك</div><h2>المراحل الدراسية</h2><p>اختار مرحلتك لتتعرف على محتوى المنصة وخيارات الاشتراك المناسبة.</p><div class="gold-rule"></div></div>
   <div class="stages-grid">
-   <article class="stage-card"><div class="stage-icon" aria-hidden="true">♟</div><h3>التأسيس</h3><p>ابدأ من الأساسيات</p><button class="btn btn-light btn-sm" data-stage="تأسيس">اختار المرحلة</button></article>
-   <article class="stage-card"><div class="stage-icon" aria-hidden="true">🎓</div><h3>أولى إعدادي</h3><p>شرح ومتابعة دراسية</p><button class="btn btn-light btn-sm" data-stage="أولى إعدادي">اختار المرحلة</button></article>
-   <article class="stage-card"><div class="stage-icon" aria-hidden="true">🎓</div><h3>ثانية إعدادي</h3><p>شرح ومتابعة دراسية</p><button class="btn btn-light btn-sm" data-stage="ثانية إعدادي">اختار المرحلة</button></article>
-   <article class="stage-card"><div class="stage-icon" aria-hidden="true">🎓</div><h3>ثالثة إعدادي</h3><p>شرح ومراجعة</p><button class="btn btn-light btn-sm" data-stage="ثالثة إعدادي">اختار المرحلة</button></article>
-   <article class="stage-card"><div class="stage-icon" aria-hidden="true">📘</div><h3>أولى ثانوي</h3><p>شرح وتدريبات</p><button class="btn btn-light btn-sm" data-stage="أولى ثانوي">اختار المرحلة</button></article>
-   <article class="stage-card"><div class="stage-icon" aria-hidden="true">📘</div><h3>ثانية ثانوي</h3><p>شرح وتدريبات</p><button class="btn btn-light btn-sm" data-stage="ثانية ثانوي">اختار المرحلة</button></article>
-   <article class="stage-card"><div class="stage-icon" aria-hidden="true">📘</div><h3>ثالثة ثانوي</h3><p>مراجعة واستعداد للامتحان</p><button class="btn btn-light btn-sm" data-stage="ثالثة ثانوي">اختار المرحلة</button></article>
-   <article class="stage-card"><div class="stage-icon" aria-hidden="true">✦</div><h3>كورسات شاملة</h3><p>مسارات تعليمية متنوعة</p><button class="btn btn-light btn-sm" data-stage="كورسات شاملة">اختار المرحلة</button></article>
+   <article class="stage-card"><div class="stage-icon" aria-hidden="true">♟</div><h3>التأسيس</h3><p>ابدأ من الأساسيات</p><p class="stage-price" data-stage-price="تأسيس">السعر يحدده المستر</p><button class="btn btn-light btn-sm" data-stage="تأسيس">اختار المرحلة</button></article>
+   <article class="stage-card"><div class="stage-icon" aria-hidden="true">🎓</div><h3>أولى إعدادي</h3><p>شرح ومتابعة دراسية</p><p class="stage-price" data-stage-price="أولى إعدادي">السعر يحدده المستر</p><button class="btn btn-light btn-sm" data-stage="أولى إعدادي">اختار المرحلة</button></article>
+   <article class="stage-card"><div class="stage-icon" aria-hidden="true">🎓</div><h3>ثانية إعدادي</h3><p>شرح ومتابعة دراسية</p><p class="stage-price" data-stage-price="ثانية إعدادي">السعر يحدده المستر</p><button class="btn btn-light btn-sm" data-stage="ثانية إعدادي">اختار المرحلة</button></article>
+   <article class="stage-card"><div class="stage-icon" aria-hidden="true">🎓</div><h3>ثالثة إعدادي</h3><p>شرح ومراجعة</p><p class="stage-price" data-stage-price="ثالثة إعدادي">السعر يحدده المستر</p><button class="btn btn-light btn-sm" data-stage="ثالثة إعدادي">اختار المرحلة</button></article>
+   <article class="stage-card"><div class="stage-icon" aria-hidden="true">📘</div><h3>أولى ثانوي</h3><p>شرح وتدريبات</p><p class="stage-price" data-stage-price="أولى ثانوي">السعر يحدده المستر</p><button class="btn btn-light btn-sm" data-stage="أولى ثانوي">اختار المرحلة</button></article>
+   <article class="stage-card"><div class="stage-icon" aria-hidden="true">📘</div><h3>ثانية ثانوي</h3><p>شرح وتدريبات</p><p class="stage-price" data-stage-price="ثانية ثانوي">السعر يحدده المستر</p><button class="btn btn-light btn-sm" data-stage="ثانية ثانوي">اختار المرحلة</button></article>
+   <article class="stage-card"><div class="stage-icon" aria-hidden="true">📘</div><h3>ثالثة ثانوي</h3><p>مراجعة واستعداد للامتحان</p><p class="stage-price" data-stage-price="ثالثة ثانوي">السعر يحدده المستر</p><button class="btn btn-light btn-sm" data-stage="ثالثة ثانوي">اختار المرحلة</button></article>
+   <article class="stage-card"><div class="stage-icon" aria-hidden="true">✦</div><h3>كورسات شاملة</h3><p>مسارات تعليمية متنوعة</p><p class="stage-price" data-stage-price="كورسات شاملة">السعر يحدده المستر</p><button class="btn btn-light btn-sm" data-stage="كورسات شاملة">اختار المرحلة</button></article>
   </div>
  </div>
 </section>
@@ -168,6 +169,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
     <p class="panel-lead">الاشتراك يبدأ بعد مراجعة التحويل وموافقة المستر. اختيار المرحلة وحده لا يفعّل الحساب.</p>
     <form id="subscriptionForm">
      <div class="field"><label for="subscribeStage">المرحلة / نوع الاشتراك</label><select id="subscribeStage" required><option value="">اختار المرحلة</option><option>تأسيس</option><option>أولى إعدادي</option><option>ثانية إعدادي</option><option>ثالثة إعدادي</option><option>أولى ثانوي</option><option>ثانية ثانوي</option><option>ثالثة ثانوي</option><option>كورسات شاملة</option></select></div>
+     <div class="subscription-price-line" id="subscriptionPrice" aria-live="polite">السعر: السعر يحدده المستر</div>
      <div class="field"><label for="payMethod">طريقة الدفع</label><select id="payMethod" required><option value="">اختار طريقة الدفع</option><option value="vodafone">فودافون كاش</option><option value="other">طرق أخرى</option></select></div>
      <div id="vodafoneBox" class="payment-box hidden" aria-live="polite"><div class="pay-label">بيانات التحويل عبر فودافون كاش</div><div class="pay-number">01064443212</div><p>باسم: <b>أحمد صابر غريب</b></p><p class="pay-warning">الرجاء أخذ اسكرين بعد التحويل</p><p>بعد التحويل، احتفظ بصورة الإيصال لإرسالها للمستر للمراجعة وتفعيل الاشتراك.</p></div>
      <div id="otherPay" class="not-available hidden">طرق الدفع الأخرى غير متاحة الآن.</div>
@@ -223,6 +225,22 @@ $$('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)closeModa
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModals()});
 $('#searchOpen').addEventListener('click',()=>openModal('searchModal'));
 $('#searchForm').addEventListener('submit',e=>{e.preventDefault();const q=$('#searchInput').value.trim().toLocaleLowerCase('ar');const notice=$('#searchNotice');if(!q){notice.textContent='اكتب كلمة للبحث أولًا.';notice.classList.remove('hidden');return}const matches=[...document.querySelectorAll('main section[id]')].filter(s=>(s.innerText||'').toLocaleLowerCase('ar').includes(q));if(matches.length){notice.textContent='تم العثور على القسم: '+(matches[0].querySelector('h2')?.textContent||matches[0].id);notice.classList.remove('hidden');matches[0].scrollIntoView({behavior:'smooth'});setTimeout(closeModals,550)}else{notice.textContent='لم يتم العثور على قسم مطابق. جرّب اسم مرحلة أو قسم آخر.';notice.classList.remove('hidden')}});
+let publicPricingCache=[];
+function formatEGP(value){return Number(value).toLocaleString('ar-EG',{maximumFractionDigits:2})+' جنيه مصري'}
+function findStagePrice(stage){return publicPricingCache.find(p=>p.item_type==='stage'&&p.education_stage===stage&&p.is_active)}
+function updateSubscriptionPrice(){const stage=$('#subscribeStage').value,box=$('#subscriptionPrice');if(!box)return;const row=findStagePrice(stage);box.innerHTML=row?'سعر الاشتراك لهذه المرحلة: <strong>'+formatEGP(row.price_egp)+'</strong>':'السعر: السعر يحدده المستر'}
+function escapeHTML(value){return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))}
+async function loadPublicPricing(){
+ try{const response=await fetch('/api/pricing',{cache:'no-store',headers:{accept:'application/json'}});const data=await response.json();if(!response.ok||!data.ok)throw new Error('pricing unavailable');publicPricingCache=Array.isArray(data.pricing)?data.pricing:[];
+ document.querySelectorAll('[data-stage-price]').forEach(el=>{const row=findStagePrice(el.dataset.stagePrice);el.textContent=row?formatEGP(row.price_egp):'السعر يحدده المستر'});
+ const courses=publicPricingCache.filter(p=>p.item_type==='course'&&p.is_active),wrap=$('#publicCoursePrices');
+ if(wrap){if(courses.length){wrap.classList.remove('hidden');wrap.innerHTML='<h3>أسعار الكورسات</h3><div class="public-course-price-grid">'+courses.map(p=>'<article class="public-course-price-item"><strong>'+escapeHTML(p.item_name)+'</strong><small>'+escapeHTML(p.education_stage)+'</small><div><span>'+formatEGP(p.price_egp)+'</span></div><button class="btn btn-light btn-sm" type="button" data-priced-course="'+escapeHTML(p.item_name)+'" data-priced-stage="'+escapeHTML(p.education_stage)+'">اشترك في الكورس</button></article>').join('')+'</div>'}else wrap.classList.add('hidden')}
+ updateSubscriptionPrice()
+ }catch(e){updateSubscriptionPrice()}
+}
+$('#subscribeStage').addEventListener('change',updateSubscriptionPrice);
+$('#publicCoursePrices').addEventListener('click',e=>{const b=e.target.closest('[data-priced-course]');if(!b)return;$('#subscribeStage').value=b.dataset.pricedStage;$('#subscribe').scrollIntoView({behavior:'smooth',block:'center'});updateSubscriptionPrice();$('#infoMessage').textContent='الكورس المحدد: '+b.dataset.pricedCourse+' — السعر ظاهر في قسم الاشتراك حسب المرحلة. اختاري طريقة الدفع للمتابعة.';openModal('infoModal')});
+loadPublicPricing();
 $('#payMethod').addEventListener('change',e=>{$('#vodafoneBox').classList.toggle('hidden',e.target.value!=='vodafone');$('#otherPay').classList.toggle('hidden',e.target.value!=='other')});
 $$('[data-stage]').forEach(btn=>btn.addEventListener('click',()=>{$('#subscribeStage').value=btn.dataset.stage;$('#subscribe').scrollIntoView({behavior:'smooth',block:'center'});$('#subscribeStage').focus({preventScroll:true})}));
 $('#subscriptionNext').addEventListener('click',()=>{if(!$('#subscribeStage').value||!$('#payMethod').value){$('#infoMessage').textContent='من فضلك اختار المرحلة وطريقة الدفع أولًا.';openModal('infoModal');return}if($('#payMethod').value==='other'){$('#infoMessage').textContent='طرق الدفع الأخرى غير متاحة الآن. اختار فودافون كاش لعرض بيانات التحويل.';openModal('infoModal');return}$('#infoMessage').textContent='حوّل المبلغ المتفق عليه إلى بيانات فودافون كاش المعروضة، واحتفظ بصورة التحويل لإرسالها للمستر. اختيار المرحلة لا يفعّل الاشتراك؛ التفعيل بعد مراجعة المستر. سيتم ربط طلب الاشتراك آليًا بعد تجهيز النظام الخلفي.';openModal('infoModal')});
