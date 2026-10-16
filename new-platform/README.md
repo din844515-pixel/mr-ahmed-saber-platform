@@ -268,3 +268,9 @@ This section supersedes older status statements above where they conflict with l
 - Changed the question collection to `$$('#examQuestionList [data-question-row]').map(...)` so all question rows are collected before serialization.
 - Latest teacher-dashboard commit: `4b85e760b90a6fedf183d12977f3be1f6c6ff1a9`. Fetched the updated branch source and confirmed the corrected selector; inline JavaScript syntax check passes.
 - Source/syntax verification only. The new commit has not yet been deployed or tested by creating/editing an exam in the phone browser. Keep the production site unchanged until the preview test passes.
+
+## User-confirmed checkpoint — 17 Oct 2026 (student code generation)
+- User confirmed that the student-code generator is now working.
+- Mark the deferred student-code-generator issue as resolved by user confirmation. Do not continue patching or refactoring code generation while it is working; preserve the current behavior and avoid unrelated edits to the student form.
+- This confirmation covers the user's observed behavior, not a global uniqueness guarantee across devices. Cross-device uniqueness still ultimately requires a database constraint/sequence in the approved isolated backend.
+- Continue with the remaining deferred item: visually verify the approved original teacher portrait in the homepage hero/About and both dashboards, preserving its original bytes and quality. Do not claim the image is fixed until visually checked.
