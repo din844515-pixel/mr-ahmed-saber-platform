@@ -1,0 +1,12 @@
+{
+  "name": "mr-ahmed-saber-platform",
+  "private": true,
+  "version": "1.0.0",
+  "type": "commonjs",
+  "engines": {
+    "node": "22.x"
+  },
+  "dependencies": {
+    "@vercel/blob": "^2.8.2"
+  }
+}
