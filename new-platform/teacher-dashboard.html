@@ -62,13 +62,13 @@ $$('[data-view]').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.v
 function modal(title,msg){$('#modalTitle').textContent=title;$('#modalMessage').textContent=msg;$('#actionModal').classList.remove('hidden')}
 // Local-only management preview until a separate backend is approved and connected.
 const STORE_KEY='mas.teacher.students.v1',STAGES=['تأسيس','أولى إعدادي','ثانية إعدادي','ثالثة إعدادي','أولى ثانوي','ثانية ثانوي','ثالثة ثانوي','كورسات شاملة'];
-let students=[],selectedStage='',editingId='';
+let students=[],selectedStage='',editingId='',codeSequence=0;
 function today(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
 function addMonth(iso){const p=iso.split('-').map(Number),dt=new Date(p[0],p[1],1);dt.setDate(Math.min(p[2],new Date(p[0],p[1]+1,0).getDate()));return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0')}
 function phone(v){return String(v||'').replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/\D/g,'')}
 function esc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
 function status(s){if(s.archived)return 'مؤرشف';if(s.payment==='exempt')return 'معفى';if(s.payment!=='paid'||!s.start||!s.end)return 'لم يتم السداد';return today()>=s.end?'منتهي':'تم السداد'}
-function makeCode(){const y=String(new Date().getFullYear()),key='mas.teacher.studentCodeSequence.v1';let maxSaved=0;students.forEach(s=>{const p=String(s.code||'').split('-');if(p[0]==='MAS'&&p[1]===y)maxSaved=Math.max(maxSaved,Number(p[2])||0)});let reserved=0;try{const v=JSON.parse(localStorage.getItem(key)||'{}');if(v&&v.year===y)reserved=Number(v.last)||0}catch(e){}const next=Math.max(maxSaved,reserved)+1;try{localStorage.setItem(key,JSON.stringify({year:y,last:next}))}catch(e){}return 'MAS-'+y+'-'+String(next).padStart(5,'0')}
+function makeCode(){const y=String(new Date().getFullYear()),key='mas.teacher.studentCodeSequence.v1';let maxSaved=0;students.forEach(s=>{const p=String(s.code||'').split('-');if(p[0]==='MAS'&&p[1]===y)maxSaved=Math.max(maxSaved,Number(p[2])||0)});let reserved=0;try{const v=JSON.parse(localStorage.getItem(key)||'{}');if(v&&v.year===y)reserved=Number(v.last)||0}catch(e){}const next=Math.max(maxSaved,reserved,codeSequence)+1;codeSequence=next;try{localStorage.setItem(key,JSON.stringify({year:y,last:next}))}catch(e){}return 'MAS-'+y+'-'+String(next).padStart(5,'0')}
 function load(){try{const v=JSON.parse(localStorage.getItem(STORE_KEY)||'[]');students=Array.isArray(v)?v:[]}catch(e){students=[]}}
 function persist(){try{localStorage.setItem(STORE_KEY,JSON.stringify(students));return true}catch(e){modal('تعذر الحفظ','التخزين المحلي غير متاح في هذا المتصفح.');return false}}
 function same(a,b){return String(a||'').trim().replace(/\s+/g,' ').toLocaleLowerCase('ar')===String(b||'').trim().replace(/\s+/g,' ').toLocaleLowerCase('ar')}
