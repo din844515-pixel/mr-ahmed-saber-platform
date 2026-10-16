@@ -129,3 +129,10 @@ No separate database or secure authentication is connected. Login and registrati
 - Latest code/deployment to reproduce later: commit `198a15b44a11126265057615a1b214a77a2da722`, deployment `dpl_9PgQmkE5jMDUXYuyMCfv8oY9gpb2`, URL https://mr-ahmed-saber-bopucuive-mr-ahmed-saber.vercel.app/new-platform/teacher-dashboard.html.
 - At the end, reproduce the behavior on mobile, inspect whether the Add Student click invokes `openStudent(null)` and whether `makeCode()` runs each time. Verify visible code changes on each new form open, cancel, and save; ensure no duplicates with existing saved students. Do not alter the verified student CRUD, stage lists/search, visual design, or exam builder while investigating.
 - Important: browser localStorage-only codes are not globally unique across devices. For a real multi-device platform, unique code generation should eventually be enforced by a database sequence/constraint in an isolated, approved backend; do not modify the legacy Supabase project.
+
+
+## Deferred issue — teacher portrait images (resolve at end)
+- User explicitly requested on 16 Oct 2026 to defer the teacher-photo issue together with student-code generation until the end. Do not change image URLs, teacher portrait files, image quality, crops, page layout, or approved design while implementing other features.
+- Reported symptom: the approved teacher photo is still not appearing correctly/consistently in the intended locations. A previous source URL returned HTTP 200, but that alone did not prove that the image renders visibly in the app.
+- At the end, visually inspect the approved original portrait on the homepage hero and About section, student dashboard, and teacher dashboard on mobile and desktop. Confirm the exact approved image, keep its original quality, and do not substitute the tiny `new-platform/teacher.png` file.
+- Treat the portrait issue as unresolved until it is visually verified; HTTP 200 or a matching URL is not enough. Keep this issue paired with the deferred student-code-generator issue below.
