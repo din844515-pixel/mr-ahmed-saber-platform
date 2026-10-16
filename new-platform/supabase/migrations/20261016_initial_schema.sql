@@ -241,7 +241,7 @@ create table if not exists public.teacher_audit_log (
 create or replace function public.is_platform_teacher()
 returns boolean
 language sql stable security definer
-set search_path = public
+set search_path = ''
 as $$
   select exists(select 1 from public.profiles p where p.id = auth.uid() and p.role = 'teacher');
 $$;
@@ -249,7 +249,7 @@ $$;
 create or replace function public.current_student_id()
 returns uuid
 language sql stable security definer
-set search_path = public
+set search_path = ''
 as $$
   select s.id from public.students s where s.auth_user_id = auth.uid() limit 1;
 $$;
@@ -257,7 +257,7 @@ $$;
 create or replace function public.can_access_course(target_course uuid)
 returns boolean
 language sql stable security definer
-set search_path = public
+set search_path = ''
 as $$
   select exists(
     select 1
@@ -274,7 +274,7 @@ $$;
 create or replace function public.can_access_lesson(target_lesson uuid)
 returns boolean
 language sql stable security definer
-set search_path = public
+set search_path = ''
 as $$
   select exists(
     select 1 from public.lessons l
@@ -286,7 +286,7 @@ $$;
 create or replace function public.can_access_study_file(target_file uuid)
 returns boolean
 language sql stable security definer
-set search_path = public
+set search_path = ''
 as $$
   select exists(
     select 1 from public.study_files f
@@ -407,6 +407,15 @@ using (exists(select 1 from public.exam_attempts a where a.id = attempt_id and a
 
 drop policy if exists student_write_active_attempt_answers on public.exam_attempt_answers;
 create policy student_write_active_attempt_answers on public.exam_attempt_answers for insert to authenticated
+with check (
+  exists(select 1 from public.exam_attempts a where a.id = attempt_id and a.student_id = public.current_student_id() and a.submitted_at is null and now() < a.expires_at)
+);
+
+drop policy if exists student_update_active_attempt_answers on public.exam_attempt_answers;
+create policy student_update_active_attempt_answers on public.exam_attempt_answers for update to authenticated
+using (
+  exists(select 1 from public.exam_attempts a where a.id = attempt_id and a.student_id = public.current_student_id() and a.submitted_at is null and now() < a.expires_at)
+)
 with check (
   exists(select 1 from public.exam_attempts a where a.id = attempt_id and a.student_id = public.current_student_id() and a.submitted_at is null and now() < a.expires_at)
 );
