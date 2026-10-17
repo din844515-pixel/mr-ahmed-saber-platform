@@ -92,8 +92,13 @@ Deno.serve(async (req: Request) => {
   }
   let body: any;
   try { body = await req.json(); } catch { return json({ error: "بيانات الطلب غير صالحة." }, 400); }
-  if (!Array.isArray(body?.students) || body.students.length > 2000) return json({ error: "قائمة الطلاب غير صالحة." }, 400);
+  if (body?.action !== "next-code" && (!Array.isArray(body?.students) || body.students.length > 2000)) return json({ error: "قائمة الطلاب غير صالحة." }, 400);
   try {
+    if (body?.action === "next-code") {
+      const { data: code, error } = await db.rpc("platform_next_student_code");
+      if (error) throw error;
+      return json({ ok: true, code });
+    }
     const { data: current, error: readError } = await db.from(TABLE).select("*").limit(50000);
     if (readError) throw readError;
     const existing = current || [];
