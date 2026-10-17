@@ -52,7 +52,7 @@ module.exports = async function handler(req, res) {
   }
   try {
     const body = req.body && typeof req.body === 'object' ? req.body : {};
-    const teacher = req.method === 'PATCH' && await isTeacherRequest(req);
+    const teacher = (req.method === 'PATCH' || req.method === 'GET') && await isTeacherRequest(req);
     let profile = null;
     if (!teacher) {
       const verified = await studentProfile(req);
@@ -62,6 +62,11 @@ module.exports = async function handler(req, res) {
     const courseId = clean(req.method === 'GET' ? req.query.courseId : body.courseId, 180);
     const unitId = clean(req.method === 'GET' ? req.query.unitId : body.unitId, 180);
     const lessonId = clean(req.method === 'GET' ? req.query.lessonId : body.lessonId, 180);
+    if (req.method === 'GET' && teacher && !courseId && !unitId && !lessonId) {
+      const data = await readJson(COMMENTS_PATH, { comments: [] });
+      const comments = Array.isArray(data.comments) ? data.comments : [];
+      return res.status(200).json({ ok: true, comments: comments.slice().sort((a,b) => String(b.createdAt || '').localeCompare(String(a.createdAt || ''))) });
+    }
     if (!courseId || !unitId || !lessonId) return res.status(400).json({ error: 'بيانات المحاضرة غير مكتملة.' });
     const found = await getLesson(courseId, unitId, lessonId);
     if (!found) return res.status(404).json({ error: 'المحاضرة غير موجودة ضمن الكورسات المنشورة.' });
