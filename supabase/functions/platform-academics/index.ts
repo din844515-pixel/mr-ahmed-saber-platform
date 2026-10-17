@@ -280,10 +280,20 @@ async function getSharedLessonContext(s:any, body:any) {
   if(!unit||!lesson)throw new ApiError("المحاضرة غير موجودة ضمن الكورس المنشور.",404);
   return {course,unit,lesson,courseId,unitId,lessonId};
 }
+function lessonCommentDto(row:any) {
+  const replies=Array.isArray(row?.replies)?row.replies:[];
+  return {
+    id:row.id,courseId:row.course_id,unitId:row.unit_id,lessonId:row.lesson_id,
+    courseName:row.course_name||"",unitName:row.unit_name||"",lessonTitle:row.lesson_title||"",
+    studentName:row.student_name||"طالب",studentStage:row.student_stage||"",body:row.body||"",
+    createdAt:row.created_at||null,
+    replies:replies.map((r:any)=>({id:r.id,author:r.author||"Mr. Ahmed Saber",body:r.body||"",createdAt:r.created_at||r.createdAt||null}))
+  };
+}
 async function studentListLessonComments(body:any,s:any) {
   const ctx=await getSharedLessonContext(s,body);
   const rows=await db("platform_lesson_comments?select=*&course_id=eq."+encodeURIComponent(ctx.courseId)+"&unit_id=eq."+encodeURIComponent(ctx.unitId)+"&lesson_id=eq."+encodeURIComponent(ctx.lessonId)+"&order=created_at.asc") as any[];
-  return {ok:true,comments:rows};
+  return {ok:true,comments:rows.map(lessonCommentDto)};
 }
 async function studentCreateLessonComment(body:any,s:any) {
   const ctx=await getSharedLessonContext(s,body),text=needString(body.body,"نص التعليق",2000);
@@ -295,7 +305,7 @@ async function studentCreateLessonComment(body:any,s:any) {
     student_registry_id:s.id,student_name:String(s.full_name||"طالب").slice(0,100),
     student_stage:String(s.education_stage||"").slice(0,80),body:text,replies:[]
   },prefer:"return=representation"}) as any[];
-  return {ok:true,comment:rows[0]||null};
+  return {ok:true,comment:rows[0]?lessonCommentDto(rows[0]):null};
 }
 async function studentListLessonProgress(body:any,s:any) {
   const courseId=String(body.course_id||"").trim();
@@ -315,17 +325,17 @@ async function studentMarkLessonComplete(body:any,s:any) {
 }
 async function teacherListLessonComments() {
   const rows=await db("platform_lesson_comments?select=*&order=created_at.desc&limit=500") as any[];
-  return {ok:true,comments:rows};
+  return {ok:true,comments:rows.map(lessonCommentDto)};
 }
 async function teacherReplyLessonComment(body:any) {
   const id=String(body.comment_id||"").trim(),reply=needString(body.body,"نص الرد",2000);
   if(!/^[0-9a-f-]{36}$/i.test(id))throw new ApiError("معرّف التعليق غير صحيح.");
-  const found=await db("platform_lesson_comments?select=id,replies& id=eq."+escFilter(id)+"&limit=1") as any[];
+  const found=await db("platform_lesson_comments?select=id,replies&id=eq."+escFilter(id)+"&limit=1") as any[];
   if(!found.length)throw new ApiError("التعليق غير موجود.",404);
   const replies=Array.isArray(found[0].replies)?found[0].replies:[];
   replies.push({id:crypto.randomUUID(),author:"Mr. Ahmed Saber",body:reply,created_at:new Date().toISOString()});
   const saved=await db("platform_lesson_comments?id=eq."+escFilter(id),{method:"PATCH",body:{replies,updated_at:new Date().toISOString()},prefer:"return=representation"}) as any[];
-  return {ok:true,comment:saved[0]||null};
+  return {ok:true,comment:saved[0]?lessonCommentDto(saved[0]):null};
 }
 
 async function studentListExams(s:any){const all=await db("platform_exams?select=id,title,instructions,stage,course_title,duration_minutes,is_published,created_at&is_published=eq.true&order=created_at.desc") as any[];const exams=all.filter(e=>studentStageOk(s,String(e.stage)));const attempts=await db("platform_exam_attempts?select=id,exam_id,started_at,expires_at,submitted_at,status&student_registry_id=eq."+escFilter(String(s.id))) as any[];const byId:Record<string,any>={};for(const a of attempts)byId[a.exam_id]=a;const mapped=[];for(const e of exams){const qs=await db("platform_exam_questions?select=id,points&exam_id=eq."+escFilter(String(e.id))) as any[];mapped.push({...e,question_count:qs.length,total_points:qs.reduce((n,q)=>n+(Number(q.points)||0),0),attempt:byId[e.id]||null})}return {ok:true,student:{name:s.full_name,stage:s.education_stage},exams:mapped}}
