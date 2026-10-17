@@ -325,3 +325,11 @@ This section supersedes older status statements above where they conflict with l
 - The teacher's existing `/api/courses` publish flow remains unchanged. This feature depends on the teacher publishing course records successfully to the shared Vercel Blob course index.
 - Lesson comments/replies and actual completion tracking are still local preview behavior and are not represented as cross-device persistent features yet. Do not claim shared comments or accurate course progress until their authenticated storage and write paths are implemented and tested.
 - Student dashboard design, student login, and exam/question-builder files outside the course-loading integration were not redesigned or rewritten in this step.
+
+
+## Execution checkpoint — 17 Oct 2026 (shared lesson comments)
+
+- Added `api/lesson-comments.js` with signed student-session validation through the isolated `platform-academics` function. Comment reads and writes require a valid student session and are restricted to a course/lesson in the shared course index and the student's stage.
+- Student lesson comments now use the shared Vercel Blob comment index instead of localStorage, so comments can be read across devices. The API includes a teacher-authenticated PATCH path for replies; the teacher dashboard reply UI remains a follow-up and must be added before claiming teacher replies are ready to use.
+- Comment storage currently uses a read/modify/write JSON document. This is suitable for an initial preview but may lose simultaneous writes under concurrent submissions; move to a transactional database table before high-volume/production use.
+- Student dashboard visual structure, login form, exam tabs and exam builder were not redesigned in this step. Deployment is preview-only; validate comments on two separate student sessions and verify stage restrictions before production.
