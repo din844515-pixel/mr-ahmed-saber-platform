@@ -307,3 +307,7 @@ This section supersedes older status statements above where they conflict with l
 - Auth migration and API proxy JavaScript syntax checks passed before this route-only homepage change. The next Preview build must include this homepage commit plus the JWT proxy changes.
 - Confirmed blocker remains: `din844515@gmail.com` has no user row in the isolated Supabase Auth project yet, so password login cannot succeed until an authorized admin creates/confirms the account and assigns server-managed `app_metadata.role = teacher` (or `admin`). Do not place the password in source code, commit history, or README. The password supplied in chat has not been tested against an Auth account.
 - Keep the existing sync-key fallback only as a temporary compatibility bridge; this means the migration should not yet be described as fully email/password-only for every API. No production alias/promotion was changed.
+
+## Follow-up — 17 Oct 2026 (auth initialization guard)
+- Added an idempotency guard to `showDashboard()` so Supabase's initial-session event and the login form response cannot trigger duplicate student/exam/pricing loads on the same transition into the authenticated dashboard. This is a small auth-lifecycle fix; no exam/question markup or design was changed.
+- Source commit: `8a92936fa3fd1892a943741225cc7a164fdfaee6`. JavaScript syntax is to be rechecked before the next Preview deployment.
