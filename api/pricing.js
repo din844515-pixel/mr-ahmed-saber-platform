@@ -1,4 +1,5 @@
 const FUNCTION_URL = 'https://umffvtnujqjmgrrfmsdk.supabase.co/functions/v1/platform-academics';
+const isTeacherRequest = require('../lib/teacher-auth');
 const SUPABASE_URL = 'https://umffvtnujqjmgrrfmsdk.supabase.co';
 const PUBLISHABLE_KEY = 'sb_publishable_bbmAuU_9UGd1IrJXBS8Bkg_BI5lpSXV';
 module.exports = async function handler(req, res) {
@@ -23,11 +24,12 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
   const key = String(req.headers['x-teacher-key'] || '');
-  if (!key) return res.status(401).json({ error: 'اتصلي أولًا برمز المستر.' });
+  const tokenAuthorized = await isTeacherRequest(req);
+  if (!tokenAuthorized && !key) return res.status(401).json({ error: 'سجّلي الدخول بحساب المستر لإدارة الأسعار.' });
   try {
     const upstream = await fetch(FUNCTION_URL, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', apikey: PUBLISHABLE_KEY, 'x-teacher-key': key, accept: 'application/json' },
+      headers: { 'content-type': 'application/json', apikey: PUBLISHABLE_KEY, ...(tokenAuthorized ? { authorization: String(req.headers.authorization || '') } : { 'x-teacher-key': key }), accept: 'application/json' },
       body: JSON.stringify(req.body && typeof req.body === 'object' ? req.body : {}),
       cache: 'no-store'
     });
