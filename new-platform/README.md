@@ -311,3 +311,8 @@ This section supersedes older status statements above where they conflict with l
 ## Follow-up — 17 Oct 2026 (auth initialization guard)
 - Added an idempotency guard to `showDashboard()` so Supabase's initial-session event and the login form response cannot trigger duplicate student/exam/pricing loads on the same transition into the authenticated dashboard. This is a small auth-lifecycle fix; no exam/question markup or design was changed.
 - Source commit: `8a92936fa3fd1892a943741225cc7a164fdfaee6`. JavaScript syntax is to be rechecked before the next Preview deployment.
+
+## Permanent content-language rule — 17 Oct 2026
+- **All Arabic wording across the entire platform must use masculine grammatical forms only.** This applies to student and teacher dashboards, login/registration, buttons, labels, validation, success/error messages, exam and assignment instructions, subscription/payment flows, notifications, and any dynamically generated text.
+- Examples: use “اختر المرحلة”، “أجب عن السؤال”، and “أنت مسجل دخولك”; do not use feminine-address forms such as “اختاري”، “أجيبي”، or “أنتِ مسجلة دخولك”.
+- Preserve this rule in every future content/UI edit and check newly added or changed Arabic strings for feminine forms. Do not change the approved visual design or unrelated functionality while applying the rule.
