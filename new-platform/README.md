@@ -356,3 +356,14 @@ This section supersedes older status statements above where they conflict with l
 - Restored a separate “كورسات متاحة للاشتراك” section on the student dashboard with promotional cards for foundation, grammar/vocabulary, and revision/exams. These cards are intentionally visible even when the student has no active enrollment, so they can discover and consider subscribing.
 - Each promotion card links to the public site's existing subscription section (`index.html#subscribe`). These are promotional cards, not falsely represented as already enrolled/active courses. Actual enrolled/published courses remain in the separate “كورساتي الحالية” section and continue to load from the shared course API.
 - Preserve these promotional cards in future course-data fixes; do not remove them when no published/enrolled courses are returned.
+
+
+## Execution checkpoint — 17 Oct 2026 (database-backed lesson comments and progress)
+
+- Added and applied `20261017_student_comments_progress.sql` to the isolated Supabase project `umffvtnujqjmgrrfmsdk`. It creates `platform_lesson_comments` and `platform_student_lesson_progress`, enables RLS, and restricts direct table privileges to the service role; do not apply this schema to the legacy project.
+- Extended the existing `platform-academics` Edge Function with student comment list/create actions, teacher comment list/reply actions, student progress read/mark-complete actions, and lookup of the matching course/unit/lesson from the shared published course index. Supabase function deployment version 11 is active.
+- Replaced `api/lesson-comments.js` JSON-Blob storage with the authenticated Edge Function and database flow. This keeps student comments and teacher replies in a database table rather than a public JSON object. Replies currently update a JSON array on the comment record; very high concurrency should eventually move replies into their own table/transaction.
+- Added a student “mark lesson complete” action and progress percentages calculated from stored per-student completion records. A completion is explicitly student-marked (not inferred from video playback), and no progress is fabricated if the course/lesson list is empty.
+- Updated teacher sign-in handling to load the shared comments panel automatically after authentication.
+- Source commits: function actions `e33939ec084c49da1ceae4fdd291e93a44ad32a8`; comments API `bad0b9f9c9765b3df5e4ba3b44def3f76601b809`; student API allowlist `d63b5d994b19a85ce6a8d1eb361b1c29ad040ffd`; student progress UI `3e733e9f480f18b9016d09aba9d3f4d828f1d81b`; teacher comments auto-load `7741983cf76110f5ffbcd736fbaec3d4218e83ef`.
+- Remaining acceptance tests: use a student with an actually published course, mark one lesson complete, verify the percentage persists after re-login, add a comment, see it from the teacher account, reply, and verify the response at the student end. Keep preview-only until these tests pass.
