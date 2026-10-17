@@ -316,3 +316,12 @@ This section supersedes older status statements above where they conflict with l
 - **All Arabic wording across the entire platform must use masculine grammatical forms only.** This applies to student and teacher dashboards, login/registration, buttons, labels, validation, success/error messages, exam and assignment instructions, subscription/payment flows, notifications, and any dynamically generated text.
 - Examples: use “اختر المرحلة”، “أجب عن السؤال”، and “أنت مسجل دخولك”; do not use feminine-address forms such as “اختاري”، “أجيبي”، or “أنتِ مسجلة دخولك”.
 - Preserve this rule in every future content/UI edit and check newly added or changed Arabic strings for feminine forms. Do not change the approved visual design or unrelated functionality while applying the rule.
+
+
+## Execution checkpoint — 17 Oct 2026 (authenticated student course loading)
+
+- Added `api/student-courses.js`, which requires the signed-in student bearer session, validates it through the existing student academics function, and only returns shared courses matching the student's education stage (or the agreed comprehensive-course stage).
+- Updated the student dashboard course list to load from this authenticated endpoint instead of reading cached course records from the browser's localStorage. Course cards, units, and lessons still use the approved existing visual layout.
+- The teacher's existing `/api/courses` publish flow remains unchanged. This feature depends on the teacher publishing course records successfully to the shared Vercel Blob course index.
+- Lesson comments/replies and actual completion tracking are still local preview behavior and are not represented as cross-device persistent features yet. Do not claim shared comments or accurate course progress until their authenticated storage and write paths are implemented and tested.
+- Student dashboard design, student login, and exam/question-builder files outside the course-loading integration were not redesigned or rewritten in this step.
