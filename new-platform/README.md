@@ -349,3 +349,10 @@ This section supersedes older status statements above where they conflict with l
 - Teacher replies now use `PATCH /api/lesson-comments` with the comment's course/unit/lesson IDs and are persisted in the same shared comments index students read. Student and teacher UI notices were updated to stop claiming comments are only local.
 - The API allows an authenticated teacher to list all comments without a lesson filter. Student requests still require a valid student session and stage authorization; teacher-only replies require the teacher auth gate.
 - Remaining validation: test with a real student account and teacher account in separate sessions, confirm comment/reply round trip, verify the comment appears for a second student in the same lesson, and verify another stage cannot read it. Shared comments still use a JSON read/modify/write store; concurrent writes may race, so migrate to transactional database storage before high-volume production.
+
+
+## UI correction — 17 Oct 2026 (subscription promotion cards restored)
+
+- Restored a separate “كورسات متاحة للاشتراك” section on the student dashboard with promotional cards for foundation, grammar/vocabulary, and revision/exams. These cards are intentionally visible even when the student has no active enrollment, so they can discover and consider subscribing.
+- Each promotion card links to the public site's existing subscription section (`index.html#subscribe`). These are promotional cards, not falsely represented as already enrolled/active courses. Actual enrolled/published courses remain in the separate “كورساتي الحالية” section and continue to load from the shared course API.
+- Preserve these promotional cards in future course-data fixes; do not remove them when no published/enrolled courses are returned.
