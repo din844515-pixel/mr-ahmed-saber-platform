@@ -31,7 +31,41 @@
 button,a{transition:transform .18s ease,box-shadow .18s ease,background-color .18s ease,border-color .18s ease}
 button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #d6ad5d;outline-offset:3px}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
-</style></head><body><div class="app">
+</style>
+<style id="teacher-auth-guard-style">
+html.teacher-auth-pending body > *:not(#teacherAuthGate){visibility:hidden!important}
+#teacherAuthGate{position:fixed;inset:0;z-index:999999;background:linear-gradient(135deg,#07172f,#102b4d);display:grid;place-items:center;padding:18px;font-family:Tahoma,Arial,sans-serif}
+#teacherAuthGate[hidden]{display:none!important}
+.teacher-auth-card{width:min(440px,100%);background:#fffdf8;border:1px solid #d6ad5d;border-radius:22px;padding:28px;box-shadow:0 25px 80px #0007;color:#1e2938}
+.teacher-auth-brand{width:62px;height:62px;margin:0 auto 12px;border:1px solid #d6ad5d;border-radius:50%;display:grid;place-items:center;background:#07172f;color:#f0d79d;font:700 24px Georgia,serif}
+.teacher-auth-card h1{font-size:23px;text-align:center;color:#07172f;margin:5px 0}
+.teacher-auth-card p{font-size:13px;text-align:center;color:#727d8b;margin:5px 0 22px}
+.teacher-auth-field{display:block;margin:13px 0}
+.teacher-auth-field span{display:block;font-size:13px;font-weight:700;margin-bottom:6px}
+.teacher-auth-field input{width:100%;padding:13px;border:1px solid #d9d1c4;border-radius:11px;background:#fff;font:inherit;box-sizing:border-box}
+.teacher-auth-submit,.teacher-auth-logout{width:100%;padding:13px;border:0;border-radius:11px;background:linear-gradient(135deg,#f0d79d,#d6ad5d);font-weight:900;color:#07172f;cursor:pointer}
+#teacherAuthMessage{min-height:22px;font-size:12px;color:#9b2c2c;margin-top:10px;text-align:center}
+#teacherAuthLogout{position:fixed;z-index:99999;top:12px;left:12px;border:1px solid #d6ad5d;border-radius:10px;background:#07172f;color:#f0d79d;padding:8px 12px;font-weight:800;cursor:pointer}
+#teacherAuthLogout[hidden]{display:none!important}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>document.documentElement.classList.add("teacher-auth-pending");</script>
+</head><body>
+<div id="teacherAuthGate" role="dialog" aria-modal="true" aria-labelledby="teacherAuthTitle">
+ <form class="teacher-auth-card" id="teacherAuthForm">
+  <div class="teacher-auth-brand">AS</div>
+  <h1 id="teacherAuthTitle">دخول لوحة المستر</h1>
+  <p>سجّلي الدخول بالبريد الإلكتروني وكلمة المرور المصرّح بهما للمستر.</p>
+  <label class="teacher-auth-field"><span>البريد الإلكتروني</span><input id="teacherAuthEmail" type="email" autocomplete="username" required placeholder="name@example.com" dir="ltr"></label>
+  <label class="teacher-auth-field"><span>كلمة المرور</span><input id="teacherAuthPassword" type="password" autocomplete="current-password" required placeholder="كلمة المرور" dir="ltr"></label>
+  <button class="teacher-auth-submit" id="teacherAuthSubmit" type="submit">تسجيل الدخول</button>
+  <div id="teacherAuthMessage" role="status" aria-live="polite"></div>
+  <button type="button" class="teacher-auth-logout" id="teacherAuthBack" style="margin-top:6px;background:#f1e8d8">العودة للموقع</button>
+ </form>
+</div>
+<button id="teacherAuthLogout" type="button" hidden>تسجيل الخروج</button>
+<div class="app">
 <aside class="sidebar"><a class="brand" href="index.html"><span class="mark">AS</span><span><strong>MR. Ahmed Saber</strong><small>TEACHER CONTROL PANEL</small></span></a><div class="profile"><div class="portrait teacher-avatar-photo"><img src="https://saber.vercel.app/teacher.png" alt="الأستاذ أحمد صابر" style="display:block!important;visibility:visible!important;opacity:1!important"></div><small>أهلًا بيك</small><h2>Mr. Ahmed Saber</h2><p>لوحة التحكم الرئيسية</p></div><div class="side-label">إدارة المنصة</div><nav class="side-nav" id="sideNav">
 <button class="active" data-view="home"><span class="ico">⌂</span> الرئيسية</button>
 <button data-view="students"><span class="ico">♙</span> الطلاب والأكواد</button>
@@ -564,4 +598,58 @@ $('#studentRegistryKey').value=getTeacherUploadKey();
 $('#studentRegistryKey').addEventListener('input',function(){const value=this.value.trim();try{if(value)localStorage.setItem(TEACHER_UPLOAD_KEY_STORE,value);else localStorage.removeItem(TEACHER_UPLOAD_KEY_STORE)}catch(e){}});
 $('#studentRegistryConnect').addEventListener('click',async function(){const value=$('#studentRegistryKey').value.trim();if(!value){setStudentRegistryStatus('أدخلي رمز المزامنة أولًا.','error');return}try{localStorage.setItem(TEACHER_UPLOAD_KEY_STORE,value)}catch(e){}this.disabled=true;this.textContent='جاري الاتصال…';await loadSharedStudentRegistry();await loadAcademicData();await loadPricingAdmin();this.disabled=false;this.textContent='اتصال ومزامنة'});
 if(getTeacherUploadKey()){loadSharedStudentRegistry();loadAcademicData();loadPricingAdmin();}
-</script></body></html>
+</script>
+<script>
+(function(){
+ const SUPABASE_URL='https://umffvtnujqjmgrrfmsdk.supabase.co';
+ const SUPABASE_ANON_KEY='sb_publishable_bbmAuU_9UGd1IrJXBS8Bkg_BI5lpSXV';
+ const gate=document.getElementById('teacherAuthGate');
+ const form=document.getElementById('teacherAuthForm');
+ const email=document.getElementById('teacherAuthEmail');
+ const password=document.getElementById('teacherAuthPassword');
+ const message=document.getElementById('teacherAuthMessage');
+ const submit=document.getElementById('teacherAuthSubmit');
+ const logout=document.getElementById('teacherAuthLogout');
+ const back=document.getElementById('teacherAuthBack');
+ let client=null,allow=false,checking=false;
+ function showGate(text){allow=false;document.documentElement.classList.add('teacher-auth-pending');gate.hidden=false;logout.hidden=true;if(text)message.textContent=text;}
+ function showDashboard(){allow=true;document.documentElement.classList.remove('teacher-auth-pending');gate.hidden=true;logout.hidden=false;}
+ function isTeacher(user){const meta=(user&&user.app_metadata)||{};return meta.role==='teacher'||meta.role==='admin'||(Array.isArray(meta.roles)&&(meta.roles.includes('teacher')||meta.roles.includes('admin')));}
+ function deny(){if(client)client.auth.signOut({scope:'local'});showGate('هذا الحساب غير مصرح له بدخول لوحة المستر.');}
+ async function checkSession(){
+  if(checking)return;checking=true;
+  try{
+   const {data,error}=await client.auth.getSession();if(error)throw error;
+   const user=data.session&&data.session.user;
+   if(user&&isTeacher(user)){showDashboard();}
+   else if(user){deny();}
+   else{showGate('أدخلي بيانات حساب المستر للمتابعة.');}
+  }catch(e){showGate('تعذر التحقق من تسجيل الدخول. تأكدي من الاتصال وحاولي مرة أخرى.');}
+  finally{checking=false;}
+ }
+ if(!window.supabase||!window.supabase.createClient){showGate('تعذر تحميل خدمة تسجيل الدخول. حدّثي الصفحة وحاولي مرة أخرى.');return;}
+ client=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storage:window.localStorage}});
+ form.addEventListener('submit',async function(e){
+  e.preventDefault();message.textContent='جاري التحقق من البيانات…';submit.disabled=true;
+  try{
+   const {data,error}=await client.auth.signInWithPassword({email:email.value.trim(),password:password.value});
+   if(error)throw error;
+   if(!data.user||!isTeacher(data.user)){await client.auth.signOut({scope:'local'});message.textContent='بيانات الدخول صحيحة لكن الحساب غير مفعّل كحساب مستر. يلزم اعتماد دور المدرّس للحساب.';return;}
+   password.value='';showDashboard();
+  }catch(e){message.textContent='تعذر تسجيل الدخول. راجعي البريد الإلكتروني وكلمة المرور وحاولي مرة أخرى.';}
+  finally{submit.disabled=false;}
+ });
+ logout.addEventListener('click',async function(){
+  logout.disabled=true;try{await client.auth.signOut();}finally{logout.disabled=false;showGate('تم تسجيل الخروج.');password.value='';email.value='';}
+ });
+ back.addEventListener('click',function(){location.href='index.html';});
+ client.auth.onAuthStateChange(function(event,session){
+  if(event==='SIGNED_OUT'||!session){showGate('سجّلي الدخول للمتابعة.');return;}
+  if(session.user&&isTeacher(session.user))showDashboard();
+  else if(session.user)deny();
+ });
+ checkSession();
+})();
+</script>
+
+</body></html>
