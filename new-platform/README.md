@@ -389,3 +389,12 @@ This section supersedes older status statements above where they conflict with l
 - Fixed an escaping error in `api/lesson-comments.js` where the Bearer-token regex had literal doubled backslashes and would reject valid authorization headers. The route now parses standard `Authorization: Bearer <token>` headers correctly.
 - This fixes the API gateway source for both student comment requests and teacher comment listing/replies. It still requires a new Preview deployment and end-to-end checks; the currently deployed preview does not contain this fix yet.
 - Source commit: `a8525903ded6e36137b3bca6f2599a50cabecb5f`.
+
+
+## Deferred final fixes — 17 Oct 2026 (teacher photo + student-code generation review)
+
+- Restored the approved original teacher portrait URL in all 5 current references across the homepage hero/About section, student dashboard, and teacher dashboard: `https://mr-ahmed-saber-f2j274lv3-mr-ahmed-saber.vercel.app/teacher.png`. The URL was previously verified in this project history as HTTP 200, `image/png`, 1,037,820 bytes. Do not use `https://saber.vercel.app/teacher.png` or the tiny local `new-platform/teacher.png` (1,506 bytes).
+- No image bytes were changed, compressed, replaced, or re-encoded. Only the HTML image source URL was corrected; the exact layout, image sizing, cropping rules, and mobile breakpoints remain unchanged.
+- The source fix is committed in the current branch across homepage `8318943f60d37e1b188a5d05cb5e05476d53a1e7`, student dashboard `b140f1f099ca6a53b3e0ea158e5344abfb92129f`, and teacher dashboard `2be61447e66ea47f07ed90b6c891753e8df8f30c`.
+- Deferred student-code generator was reviewed but not changed in this pass: the teacher dashboard's `makeCode()` currently derives sequence state from the browser's `localStorage` plus the locally loaded student array, so it is not yet a database-authoritative, race-safe generator across multiple devices. Fix this through a server-side atomic sequence / unique constraint before claiming it is fully fixed.
+- Visual acceptance still pending: because Vercel's daily deployment quota blocked new previews, the corrected photo URL has not yet been visually checked on the live preview across desktop/mobile. Do not claim this image issue fully closed until the new preview is deployed and inspected.
