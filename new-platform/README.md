@@ -367,3 +367,11 @@ This section supersedes older status statements above where they conflict with l
 - Updated teacher sign-in handling to load the shared comments panel automatically after authentication.
 - Source commits: function actions `e33939ec084c49da1ceae4fdd291e93a44ad32a8`; comments API `bad0b9f9c9765b3df5e4ba3b44def3f76601b809`; student API allowlist `d63b5d994b19a85ce6a8d1eb361b1c29ad040ffd`; student progress UI `3e733e9f480f18b9016d09aba9d3f4d828f1d81b`; teacher comments auto-load `7741983cf76110f5ffbcd736fbaec3d4218e83ef`.
 - Remaining acceptance tests: use a student with an actually published course, mark one lesson complete, verify the percentage persists after re-login, add a comment, see it from the teacher account, reply, and verify the response at the student end. Keep preview-only until these tests pass.
+
+
+## Deployment blocker — 17 Oct 2026 (Vercel preview quota)
+
+- Latest source checkpoint is commit `1a66f3f835cb4ece59ffa55eb589a62929e335d9`; the newest READY Vercel preview is still commit `9c92de3318e675de0554bdb3ebf46a5f61039b9b` at `https://mr-ahmed-saber-5so9hagta-mr-ahmed-saber.vercel.app`.
+- A new preview deployment request was rejected by Vercel with HTTP 402, resource `api-deployments-free-per-day`, over 100 deployments in the daily quota, with retry-after 86400 seconds. Do not keep retrying the deployment API. The new comment/progress UI source has not been served by the current preview yet.
+- Supabase `platform-academics` Edge Function version 11 is ACTIVE and the two new tables exist with RLS enabled. The new comments/progress round-trip still needs end-to-end tests with valid student and teacher sessions after the frontend preview can be redeployed.
+- Resume by deploying the current branch head after the Vercel quota resets or after the account owner resolves the stated deployment quota; continue to keep the target as Preview, not Production.
