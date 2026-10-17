@@ -1,4 +1,5 @@
 const crypto = require('node:crypto');
+const isTeacherRequest = require('../lib/teacher-auth');
 
 const SUPABASE_FUNCTION_URL = 'https://umffvtnujqjmgrrfmsdk.supabase.co/functions/v1/platform-students';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_bbmAuU_9UGd1IrJXBS8Bkg_BI5lpSXV';
@@ -26,8 +27,10 @@ module.exports = async function handler(req, res) {
   const supplied = String(req.headers['x-teacher-key'] || '');
   const expectedHash = '5c23b5f970c3d551469c8c917e1a53b0d2a2e19d86353117089896f60d6e5763';
   const actualHash = crypto.createHash('sha256').update(supplied).digest('hex');
-  if (!supplied || !safeEqual(expectedHash, actualHash)) {
-    return res.status(401).json({ error: 'رمز المزامنة غير صحيح.' });
+  const tokenAuthorized = await isTeacherRequest(req);
+  const legacyAuthorized = !!supplied && safeEqual(expectedHash, actualHash);
+  if (!tokenAuthorized && !legacyAuthorized) {
+    return res.status(401).json({ error: 'سجّلي الدخول بحساب المستر لإكمال العملية.' });
   }
 
   try {
@@ -35,7 +38,7 @@ module.exports = async function handler(req, res) {
       method: req.method,
       headers: {
         'apikey': SUPABASE_PUBLISHABLE_KEY,
-        'x-teacher-key': supplied,
+        ...(tokenAuthorized ? { 'authorization': String(req.headers.authorization || '') } : { 'x-teacher-key': supplied }),
         'accept': 'application/json'
       }
     };
