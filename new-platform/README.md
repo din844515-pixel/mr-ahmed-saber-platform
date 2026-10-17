@@ -375,3 +375,10 @@ This section supersedes older status statements above where they conflict with l
 - A new preview deployment request was rejected by Vercel with HTTP 402, resource `api-deployments-free-per-day`, over 100 deployments in the daily quota, with retry-after 86400 seconds. Do not keep retrying the deployment API. The new comment/progress UI source has not been served by the current preview yet.
 - Supabase `platform-academics` Edge Function version 11 is ACTIVE and the two new tables exist with RLS enabled. The new comments/progress round-trip still needs end-to-end tests with valid student and teacher sessions after the frontend preview can be redeployed.
 - Resume by deploying the current branch head after the Vercel quota resets or after the account owner resolves the stated deployment quota; continue to keep the target as Preview, not Production.
+
+
+## Follow-up — 17 Oct 2026 (course authorization endpoint hardening)
+
+- Updated the shared lesson context lookup in `platform-academics` to use the stable project domain `https://mr-ahmed-saber-new.vercel.app/api/courses` rather than a one-off preview deployment URL. This is necessary so lesson-comment and progress actions do not depend on an expiring deployment hostname.
+- Redeployed `platform-academics` successfully; active version is now 12. Source commit: `d8057a4645ef232002e0590468b367d085082fbb`.
+- Current source branch head is `d8057a4645ef232002e0590468b367d085082fbb`; Vercel preview quota is still the only confirmed blocker to packaging the frontend changes into a new Preview deployment. No production promotion was made.
