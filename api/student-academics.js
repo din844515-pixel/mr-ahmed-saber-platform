@@ -9,7 +9,9 @@ const STUDENT_ACTIONS = new Set([
   'studentSubmitExam',
   'studentListAssignments',
   'studentSubmitAssignment',
-  'studentListResults'
+  'studentListResults',
+  'studentListLessonProgress',
+  'studentMarkLessonComplete'
 ]);
 
 module.exports = async function handler(req, res) {
