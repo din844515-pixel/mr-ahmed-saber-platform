@@ -178,13 +178,16 @@ function saveStudentsCache(){try{localStorage.setItem(STORE_KEY,JSON.stringify(s
 function setStudentRegistryStatus(message,state){const node=$('#studentRegistryStatus');if(!node)return;node.textContent=message;node.dataset.state=state||''}
 async function syncStudentRegistryRemote(){
  const key=typeof getTeacherUploadKey==='function'?getTeacherUploadKey():'';
- if(!key){setStudentRegistryStatus('أدخلي رمز المزامنة للاتصال بقاعدة الطلاب.','');return false}
  const version=studentsVersion;
  studentSyncQueue=studentSyncQueue.catch(()=>false).then(async()=>{
+  const token=typeof window.getTeacherAccessToken==='function'?await window.getTeacherAccessToken():'';
+  if(!token&&!key)throw new Error('سجّلي الدخول بحساب المستر لمزامنة قائمة الطلاب.');
   const snapshot=students.map(s=>({...s}));
   const deleteIds=pendingStudentDeletes.slice();
   setStudentRegistryStatus('جاري حفظ تغييرات الطلاب في قاعدة البيانات المشتركة…','');
-  const response=await fetch('/api/students',{method:'POST',headers:{'Content-Type':'application/json','x-teacher-key':key},body:JSON.stringify({students:snapshot,deletedIds:deleteIds}),cache:'no-store'});
+  const headers={'Content-Type':'application/json'};
+  if(token)headers.authorization='Bearer '+token;else headers['x-teacher-key']=key;
+  const response=await fetch('/api/students',{method:'POST',headers,body:JSON.stringify({students:snapshot,deletedIds:deleteIds}),cache:'no-store'});
   let data={};try{data=await response.json()}catch(e){}
   if(!response.ok||!data.ok||!Array.isArray(data.students))throw new Error(data.error||'تعذرت مزامنة الطلاب.');
   pendingStudentDeletes=pendingStudentDeletes.filter(id=>!deleteIds.includes(id));
@@ -197,11 +200,13 @@ async function syncStudentRegistryRemote(){
 }
 async function loadSharedStudentRegistry(){
  const key=typeof getTeacherUploadKey==='function'?getTeacherUploadKey():'';
- if(!key){setStudentRegistryStatus('أدخلي رمز المزامنة للاتصال بقاعدة الطلاب.','');return false}
+ const token=typeof window.getTeacherAccessToken==='function'?await window.getTeacherAccessToken():'';
+ if(!token&&!key){setStudentRegistryStatus('سجّلي الدخول بحساب المستر للاتصال بقاعدة الطلاب.','');return false}
  const local=students.map(s=>({...s}));
  setStudentRegistryStatus('جاري تحميل قائمة الطلاب المشتركة…','');
  try{
-  const response=await fetch('/api/students',{headers:{'x-teacher-key':key},cache:'no-store'});
+  const headers=token?{authorization:'Bearer '+token}:{'x-teacher-key':key};
+  const response=await fetch('/api/students',{headers,cache:'no-store'});
   let data={};try{data=await response.json()}catch(e){}
   if(!response.ok||!data.ok||!Array.isArray(data.students))throw new Error(data.error||'تعذر تحميل قائمة الطلاب.');
   const remote=data.students;
@@ -214,7 +219,7 @@ async function loadSharedStudentRegistry(){
   return true;
  }catch(error){setStudentRegistryStatus(error.message||'تعذر الاتصال بقاعدة الطلاب.','error');return false}
 }
-function persist(){try{localStorage.setItem(STORE_KEY,JSON.stringify(students));studentsVersion++;if(typeof getTeacherUploadKey==='function'&&getTeacherUploadKey())syncStudentRegistryRemote();else setStudentRegistryStatus('تم الحفظ على هذا الجهاز فقط. أدخلي رمز المزامنة لحفظه في قاعدة الطلاب المشتركة.','');return true}catch(e){modal('تعذر الحفظ','التخزين المحلي غير متاح في هذا المتصفح.');return false}}
+function persist(){try{localStorage.setItem(STORE_KEY,JSON.stringify(students));studentsVersion++;if(typeof window.getTeacherAccessToken==='function'||(typeof getTeacherUploadKey==='function'&&getTeacherUploadKey()))syncStudentRegistryRemote();else setStudentRegistryStatus('تم الحفظ على هذا الجهاز فقط. سجّلي الدخول بحساب المستر للمزامنة المشتركة.','');return true}catch(e){modal('تعذر الحفظ','التخزين المحلي غير متاح في هذا المتصفح.');return false}}
 function same(a,b){return String(a||'').trim().replace(/\s+/g,' ').toLocaleLowerCase('ar')===String(b||'').trim().replace(/\s+/g,' ').toLocaleLowerCase('ar')}
 function render(){const q=($('#studentSearch').value||'').trim().toLocaleLowerCase('ar'),f=$('#studentStatus').value,arch=$('#showArchived').checked;const list=students.filter(s=>(arch||!s.archived)&&(!selectedStage||s.stage===selectedStage)).filter(s=>(!q||[s.name,s.code,s.phone,s.guardian,s.stage].join(' ').toLocaleLowerCase('ar').includes(q))&&(!f||status(s)===f));$('#studentListTitle').textContent='قائمة الطلاب'+(selectedStage?' — '+selectedStage:'');$('#studentCount').textContent=list.length+' طالب';$('#studentTableWrap').classList.toggle('hidden',!list.length);$('#studentEmpty').classList.toggle('hidden',!!list.length);if(!list.length)$('#studentEmpty').textContent=q||f?'لا توجد نتائج مطابقة للبحث أو التصفية.':'لا توجد سجلات هنا بعد. اضغطي «إضافة طالب» لتجربة وظائف الإدارة المحلية.';$('#studentRows').innerHTML=list.map((s,i)=>{let a='';if(s.archived){a='<button data-student-act="restore" data-id="'+esc(s.id)+'">استعادة</button><button class="danger" data-student-act="delete" data-id="'+esc(s.id)+'">حذف نهائي</button>'}else{a='<button data-student-act="edit" data-id="'+esc(s.id)+'">تعديل</button><button class="primary" data-student-act="renew" data-id="'+esc(s.id)+'">'+(status(s)==='لم يتم السداد'?'اعتماد الدفع':'تجديد يدوي')+'</button><button data-student-act="exempt" data-id="'+esc(s.id)+'">'+(status(s)==='معفى'?'إلغاء الإعفاء':'إعفاء')+'</button><button data-student-act="whatsapp" data-id="'+esc(s.id)+'">واتساب ولي الأمر</button><button class="danger" data-student-act="archive" data-id="'+esc(s.id)+'">أرشفة</button>'}return '<tr><td>'+(i+1)+'</td><td class="student-name">'+esc(s.name)+'</td><td dir="ltr">'+esc(s.code)+'</td><td dir="ltr">'+esc(s.phone)+'</td><td dir="ltr">'+esc(s.guardian)+'</td><td>'+esc(s.stage)+'</td><td>'+esc(status(s))+'</td><td>'+esc(s.start||'—')+'</td><td>'+esc(s.end||'—')+'</td><td><div class="student-actions">'+a+'</div></td></tr>'}).join('');STAGES.forEach(stage=>{const c=$$('[data-stage]').find(b=>b.dataset.stage===stage);if(c&&c.querySelector('p'))c.querySelector('p').textContent='عدد الطلاب: '+students.filter(s=>!s.archived&&s.stage===stage).length});renderSubscriptionQueue()}
 function daysUntil(iso){if(!iso)return 9999;return Math.round((new Date(iso+'T00:00:00')-new Date(today()+'T00:00:00'))/86400000)}
@@ -226,7 +231,7 @@ $$('[data-action]').forEach(b=>b.addEventListener('click',()=>{if(b.dataset.acti
 $$('[data-stage]').forEach(b=>b.addEventListener('click',()=>{selectedStage=b.dataset.stage;showView('students');$$('[data-stage]').forEach(x=>x.style.borderColor=x===b?'#d6ad5d':'');render();$('#studentListTitle').scrollIntoView({behavior:'smooth',block:'center'})}));
 $('#resetStage').addEventListener('click',()=>{selectedStage='';$$('[data-stage]').forEach(x=>x.style.borderColor='');render()});$('#studentSearch').addEventListener('input',render);$('#studentStatus').addEventListener('change',render);$('#showArchived').addEventListener('change',render);
 $('#studentFormPayment').addEventListener('change',()=>{$('#studentFormHint').textContent=$('#studentFormPayment').value==='paid'?'سيبدأ الاشتراك من اليوم وينتهي في نفس اليوم من الشهر التالي عند الحفظ.':$('#studentFormPayment').value==='exempt'?'سيُسجَّل الطالب معفى من الدفع.':'سيُسجَّل الطالب دون اشتراك نشط.'});
-$('#studentForm').addEventListener('submit',e=>{e.preventDefault();const name=$('#studentFormName').value.trim().replace(/\s+/g,' '),stage=$('#studentFormStage').value,stPhone=phone($('#studentFormPhone').value),guardian=phone($('#studentFormGuardian').value),email=$('#studentFormEmail').value.trim(),payment=$('#studentFormPayment').value,err=$('#studentFormError');err.classList.add('hidden');err.textContent='';if(!name||!stage||!stPhone||!guardian){err.textContent='أكملي الاسم والمرحلة ورقم الطالب ورقم ولي الأمر.';err.classList.remove('hidden');return}if(stPhone.length<8||guardian.length<8){err.textContent='راجعي أرقام الموبايل.';err.classList.remove('hidden');return}if(!STAGES.includes(stage)){err.textContent='اختاري مرحلة من المراحل الثماني.';err.classList.remove('hidden');return}const dup=students.find(s=>!s.archived&&s.id!==editingId&&((phone(s.phone)===stPhone&&same(s.name,name))||(same(s.name,name)&&s.stage===stage&&phone(s.guardian)===guardian)));if(dup){err.textContent='الطالب مسجل بالفعل ببيانات متشابهة. راجعي القائمة لتجنب التكرار.';err.classList.remove('hidden');return}const old=students.find(s=>s.id===editingId);const o=old?{...old,name,stage,phone:stPhone,guardian,email}:{id:'stu-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),code:$('#studentFormCode').value.trim()||makeCode(),name,stage,phone:stPhone,guardian,email,payment:'unpaid',start:'',end:'',archived:false,createdAt:new Date().toISOString()};if(payment==='exempt'){o.payment='exempt';o.start='';o.end=''}else if(payment==='unpaid'){o.payment='unpaid';o.start='';o.end=''}else if(!old||old.payment!=='paid'){o.payment='paid';o.start=today();o.end=addMonth(o.start)}else{o.payment='paid'}if(old)students=students.map(s=>s.id===old.id?o:s);else students.push(o);if(!persist())return;closeStudent();render();modal(old?'تم حفظ التعديلات':'تمت إضافة الطالب',getTeacherUploadKey()?'جارٍ مزامنة بيانات الطالب مع قاعدة البيانات المشتركة. راجعي حالة المزامنة في أعلى القائمة.':'تم الحفظ على هذا الجهاز فقط؛ أدخلي رمز المزامنة أعلى القائمة لحفظ البيانات على بقية الأجهزة.')});
+$('#studentForm').addEventListener('submit',e=>{e.preventDefault();const name=$('#studentFormName').value.trim().replace(/\s+/g,' '),stage=$('#studentFormStage').value,stPhone=phone($('#studentFormPhone').value),guardian=phone($('#studentFormGuardian').value),email=$('#studentFormEmail').value.trim(),payment=$('#studentFormPayment').value,err=$('#studentFormError');err.classList.add('hidden');err.textContent='';if(!name||!stage||!stPhone||!guardian){err.textContent='أكملي الاسم والمرحلة ورقم الطالب ورقم ولي الأمر.';err.classList.remove('hidden');return}if(stPhone.length<8||guardian.length<8){err.textContent='راجعي أرقام الموبايل.';err.classList.remove('hidden');return}if(!STAGES.includes(stage)){err.textContent='اختاري مرحلة من المراحل الثماني.';err.classList.remove('hidden');return}const dup=students.find(s=>!s.archived&&s.id!==editingId&&((phone(s.phone)===stPhone&&same(s.name,name))||(same(s.name,name)&&s.stage===stage&&phone(s.guardian)===guardian)));if(dup){err.textContent='الطالب مسجل بالفعل ببيانات متشابهة. راجعي القائمة لتجنب التكرار.';err.classList.remove('hidden');return}const old=students.find(s=>s.id===editingId);const o=old?{...old,name,stage,phone:stPhone,guardian,email}:{id:'stu-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),code:$('#studentFormCode').value.trim()||makeCode(),name,stage,phone:stPhone,guardian,email,payment:'unpaid',start:'',end:'',archived:false,createdAt:new Date().toISOString()};if(payment==='exempt'){o.payment='exempt';o.start='';o.end=''}else if(payment==='unpaid'){o.payment='unpaid';o.start='';o.end=''}else if(!old||old.payment!=='paid'){o.payment='paid';o.start=today();o.end=addMonth(o.start)}else{o.payment='paid'}if(old)students=students.map(s=>s.id===old.id?o:s);else students.push(o);if(!persist())return;closeStudent();render();modal(old?'تم حفظ التعديلات':'تمت إضافة الطالب',typeof window.getTeacherAccessToken==='function'?'جارٍ مزامنة بيانات الطالب مع قاعدة البيانات المشتركة. راجعي حالة المزامنة في أعلى القائمة.':'تم الحفظ على هذا الجهاز فقط؛ سجّلي الدخول بحساب المستر للمزامنة المشتركة.')});
 $('#studentRows').addEventListener('click',handleStudentAction);$('#subscriptionQueue').addEventListener('click',handleStudentAction);$('#studentModalClose').addEventListener('click',closeStudent);$('#studentFormCancel').addEventListener('click',closeStudent);$('#studentModal').addEventListener('click',e=>{if(e.target.id==='studentModal')closeStudent()});document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeStudent();$('#actionModal').classList.add('hidden')}});
 $$('[data-close]').forEach(b=>b.addEventListener('click',()=>$('#actionModal').classList.add('hidden')));
 $('#actionModal').addEventListener('click',e=>{if(e.target.id==='actionModal')$('#actionModal').classList.add('hidden')});
@@ -243,14 +248,22 @@ const TEACHER_UPLOAD_KEY_STORE='mas.teacher.uploadKey.v1';
 let courseSyncQueue=Promise.resolve();
 function getTeacherUploadKey(){try{const saved=String(localStorage.getItem(TEACHER_UPLOAD_KEY_STORE)||'').trim();if(saved)return saved;const legacy=String(sessionStorage.getItem(TEACHER_UPLOAD_KEY_STORE)||'').trim();if(legacy){localStorage.setItem(TEACHER_UPLOAD_KEY_STORE,legacy);return legacy}return ''}catch(e){try{return String(sessionStorage.getItem(TEACHER_UPLOAD_KEY_STORE)||'').trim()}catch(_){return ''}}}
 function syncCoursesRemote(showError){
- const key=getTeacherUploadKey();if(!key)return Promise.resolve(false);
+ const key=getTeacherUploadKey();
  const payload=JSON.stringify({courses:courses,updatedAt:new Date().toISOString()});
- const task=async()=>{const response=await fetch('/api/courses',{method:'PUT',headers:{'Content-Type':'application/json','x-teacher-key':key},body:payload,cache:'no-store'});if(!response.ok){let message='تعذرت مزامنة الكورسات';try{const info=await response.json();message=info.error||message}catch(e){}throw new Error(message)}return true};
- courseSyncQueue=courseSyncQueue.catch(()=>false).then(task).catch(error=>{if(showError)modal('تعذر النشر للطلاب',error.message||'راجعي رمز المزامنة واتصال الإنترنت.');return false});
+ const task=async()=>{
+  let token='';try{if(typeof window.getTeacherAccessToken==='function')token=await window.getTeacherAccessToken()}catch(_){}
+  if(!token&&!key)return false;
+  const headers={'Content-Type':'application/json'};
+  if(token)headers.authorization='Bearer '+token;else headers['x-teacher-key']=key;
+  const response=await fetch('/api/courses',{method:'PUT',headers,body:payload,cache:'no-store'});
+  if(!response.ok){let message='تعذرت مزامنة الكورسات';try{const info=await response.json();message=info.error||message}catch(e){}throw new Error(message)}
+  return true;
+ };
+ courseSyncQueue=courseSyncQueue.catch(()=>false).then(task).catch(error=>{if(showError)modal('تعذر النشر للطلاب',error.message||'راجعي تسجيل الدخول واتصال الإنترنت.');return false});
  return courseSyncQueue;
 }
 async function loadSharedCoursesForTeacher(){try{const response=await fetch('/api/courses',{cache:'no-store'});if(!response.ok)return;const data=await response.json();if(data.exists&&Array.isArray(data.courses)){courses=data.courses;try{localStorage.setItem(COURSE_STORE_KEY,JSON.stringify(courses))}catch(e){}renderCourses()}}catch(e){}}
-function saveCourses(){try{localStorage.setItem(COURSE_STORE_KEY,JSON.stringify(courses));if(getTeacherUploadKey())syncCoursesRemote(false);return true}catch(e){modal('تعذر الحفظ','التخزين المحلي للكورسات غير متاح في هذا المتصفح.');return false}}
+function saveCourses(){try{localStorage.setItem(COURSE_STORE_KEY,JSON.stringify(courses));if(typeof window.getTeacherAccessToken==='function'||getTeacherUploadKey())syncCoursesRemote(false);return true}catch(e){modal('تعذر الحفظ','التخزين المحلي للكورسات غير متاح في هذا المتصفح.');return false}}
 function newCourseId(prefix){return prefix+'-'+Date.now()+'-'+Math.random().toString(36).slice(2,7)}
 function renderCourses(){
  const host=$('#courseList');
@@ -278,15 +291,16 @@ $('#unitForm').addEventListener('submit',e=>{e.preventDefault();const err=$('#un
 $('#lessonUploadKey').addEventListener('input',function(){const v=this.value.trim();try{if(v)localStorage.setItem(TEACHER_UPLOAD_KEY_STORE,v);else localStorage.removeItem(TEACHER_UPLOAD_KEY_STORE)}catch(e){}});
 $('#lessonForm').addEventListener('submit',async e=>{e.preventDefault();const err=$('#lessonFormError'),courseId=$('#lessonCourseId').value,unitId=$('#lessonUnitId').value,id=$('#lessonFormId').value,title=$('#lessonFormTitle').value.trim(),type=$('#lessonFormType').value;let videoUrl=$('#lessonFormVideoUrl').value.trim();const pickedVideo=$('#lessonVideoFile').files&&$('#lessonVideoFile').files[0],detail=$('#lessonFormDetail').value.trim(),c=courses.find(x=>x.id===courseId),u=c&&(c.units||[]).find(x=>x.id===unitId);err.classList.add('hidden');err.textContent='';if(!u||!title){err.textContent='اكتبي عنوان المحتوى.';err.classList.remove('hidden');return}if(!Array.isArray(u.lessons))u.lessons=[];
  if(pickedVideo&&type==='video'){
-  const key=String($('#lessonUploadKey').value||getTeacherUploadKey()).trim();if(!key){err.textContent='اكتبي رمز المزامنة في الحقل تحت اختيار الفيديو.';err.classList.remove('hidden');return}
-  try{localStorage.setItem(TEACHER_UPLOAD_KEY_STORE,key)}catch(e){}
+  const key=String($('#lessonUploadKey').value||getTeacherUploadKey()).trim();let authToken='';try{if(typeof window.getTeacherAccessToken==='function')authToken=await window.getTeacherAccessToken()}catch(_){}
+  if(!authToken&&!key){err.textContent='سجّلي الدخول بحساب المستر قبل رفع الفيديو.';err.classList.remove('hidden');return}
+  if(!authToken&&key){try{localStorage.setItem(TEACHER_UPLOAD_KEY_STORE,key)}catch(e){}}
   if(pickedVideo.size>2*1024*1024*1024){err.textContent='حجم الفيديو أكبر من الحد المسموح (2 جيجابايت).';err.classList.remove('hidden');return}
   const status=$('#lessonVideoFileStatus');status.textContent='جاري تجهيز رفع الفيديو...';
   try{
    const blobSdk=await import('https://esm.sh/@vercel/blob@2.8.2/client?bundle');
    const safeName=String(pickedVideo.name||'lesson-video').replace(/[^a-zA-Z0-9._-]+/g,'_').slice(-120)||'lesson-video.mp4';
    const ext=safeName.toLowerCase().match(/\.(mp4|webm|mov|m4v|3gp|mpeg|mpg|ogg|mkv)$/);const guessed=ext?({'.mp4':'video/mp4','.webm':'video/webm','.mov':'video/quicktime','.m4v':'video/x-m4v','.3gp':'video/3gpp','.mpeg':'video/mpeg','.mpg':'video/mpeg','.ogg':'video/ogg','.mkv':'video/x-matroska'})[ext[0]]:'video/mp4';
-   const uploaded=await blobSdk.upload('course-videos/'+Date.now()+'-'+safeName,pickedVideo,{access:'public',handleUploadUrl:'/api/videos',clientPayload:JSON.stringify({teacherKey:key}),contentType:pickedVideo.type||guessed,multipart:pickedVideo.size>4_500_000,onUploadProgress:function(progress){status.textContent='جاري رفع الفيديو '+Math.round(progress.percentage)+'%'}});
+   const uploaded=await blobSdk.upload('course-videos/'+Date.now()+'-'+safeName,pickedVideo,{access:'public',handleUploadUrl:'/api/videos',clientPayload:JSON.stringify(authToken?{accessToken:authToken}:{teacherKey:key}),contentType:pickedVideo.type||guessed,multipart:pickedVideo.size>4_500_000,onUploadProgress:function(progress){status.textContent='جاري رفع الفيديو '+Math.round(progress.percentage)+'%'}});
    videoUrl=uploaded.url;status.textContent='تم رفع الفيديو. جاري نشر بيانات الكورس للطلاب...';
   }catch(uploadError){status.textContent='';err.textContent='فشل رفع الفيديو: '+(uploadError&&uploadError.message?uploadError.message:'تحققي من الاتصال ورمز الرفع.');err.classList.remove('hidden');return}
  }
@@ -294,7 +308,7 @@ $('#lessonForm').addEventListener('submit',async e=>{e.preventDefault();const er
  if(id){const l=u.lessons.find(x=>x.id===id);if(!l)return;l.title=title;l.type=type;l.detail=detail;l.videoUrl=videoUrl;if(pickedVideo)l.videoFileName=pickedVideo.name}
  else u.lessons.push({id:newCourseId('lesson'),title,type,detail,videoUrl,videoFileName:pickedVideo&&type==='video'?pickedVideo.name:'',createdAt:new Date().toISOString()});
  if(saveCourses()){
-  if(getTeacherUploadKey()){const synced=await syncCoursesRemote(true);if(!synced){err.textContent='تم حفظ المحتوى على الجهاز، لكن لم يصل للكورسات المشتركة. لا تغلقي الصفحة؛ راجعي الرمز وحاولي الحفظ مرة أخرى.';err.classList.remove('hidden');return}}
+  if(typeof window.getTeacherAccessToken==='function'||getTeacherUploadKey()){const synced=await syncCoursesRemote(true);if(!synced){err.textContent='تم حفظ المحتوى على الجهاز، لكن لم يصل للكورسات المشتركة. راجعي تسجيل الدخول واتصال الإنترنت ثم حاولي الحفظ مرة أخرى.';err.classList.remove('hidden');return}}
   closeCourseModal('lesson');renderCourses()
  }
 });
@@ -308,8 +322,11 @@ $$('[data-course-close]').forEach(b=>b.addEventListener('click',e=>{e.preventDef
 let platformPricing=[];
 async function pricingRequest(action,payload){
  const key=typeof getTeacherUploadKey==='function'?getTeacherUploadKey():'';
- if(!key)throw new Error('اتصلي أولًا من قسم مزامنة قاعدة الطلاب برمز المستر.');
- const response=await fetch('/api/pricing',{method:'POST',headers:{'content-type':'application/json','x-teacher-key':key},body:JSON.stringify(Object.assign({action},payload||{})),cache:'no-store'});
+ const token=typeof window.getTeacherAccessToken==='function'?await window.getTeacherAccessToken():'';
+ if(!token&&!key)throw new Error('سجّلي الدخول بحساب المستر لإدارة الأسعار.');
+ const headers={'content-type':'application/json'};
+ if(token)headers.authorization='Bearer '+token;else headers['x-teacher-key']=key;
+ const response=await fetch('/api/pricing',{method:'POST',headers,body:JSON.stringify(Object.assign({action},payload||{})),cache:'no-store'});
  let data={};try{data=await response.json()}catch(e){}
  if(!response.ok||!data.ok)throw new Error(data.error||'تعذر حفظ السعر.');
  return data;
@@ -321,7 +338,6 @@ function renderPricingAdmin(){
 }
 async function loadPricingAdmin(){
  const wrap=$('#pricingList');if(!wrap)return;
- if(!(typeof getTeacherUploadKey==='function'&&getTeacherUploadKey())){wrap.innerHTML='<div class="assessment-empty">اتصلي برمز المستر أولًا لعرض الأسعار وإدارتها.</div>';return}
  wrap.innerHTML='<div class="assessment-empty">جاري تحميل الأسعار…</div>';
  try{const data=await pricingRequest('listPricing');platformPricing=data.pricing||[];renderPricingAdmin()}
  catch(error){wrap.innerHTML='<div class="assessment-empty">'+esc(error.message||'تعذر تحميل الأسعار.')+'</div>'}
@@ -352,8 +368,11 @@ const QUESTION_TYPES={single_choice:'اختيار من متعدد (إجابة و
 let academicExams=[],academicAssignments=[];
 async function academicRequest(action,payload){
  const key=typeof getTeacherUploadKey==='function'?getTeacherUploadKey():'';
- if(!key)throw new Error('اتصلي أولًا من قسم «مزامنة قاعدة الطلاب» باستخدام رمز المستر.');
- const response=await fetch('/api/exams',{method:'POST',headers:{'content-type':'application/json','x-teacher-key':key},body:JSON.stringify(Object.assign({action},payload||{})),cache:'no-store'});
+ const token=typeof window.getTeacherAccessToken==='function'?await window.getTeacherAccessToken():'';
+ if(!token&&!key)throw new Error('سجّلي الدخول بحساب المستر لمتابعة الامتحانات والواجبات.');
+ const headers={'content-type':'application/json'};
+ if(token)headers.authorization='Bearer '+token;else headers['x-teacher-key']=key;
+ const response=await fetch('/api/exams',{method:'POST',headers,body:JSON.stringify(Object.assign({action},payload||{})),cache:'no-store'});
  let data={};try{data=await response.json()}catch(e){}
  if(!response.ok||!data.ok)throw new Error(data.error||'تعذر تنفيذ العملية. راجعي الاتصال وحاولي مرة أخرى.');
  return data;
@@ -371,7 +390,8 @@ function renderAssignmentList(items){
 }
 async function loadAcademicData(){
  const key=typeof getTeacherUploadKey==='function'?getTeacherUploadKey():'';
- if(!key){renderAcademicError('examList','أدخلي رمز المستر في قسم مزامنة قاعدة الطلاب لعرض الامتحانات المشتركة.');renderAcademicError('assignmentList','أدخلي رمز المستر في قسم مزامنة قاعدة الطلاب لعرض الواجبات المشتركة.');$('#examCount').textContent='—';return false}
+ const token=typeof window.getTeacherAccessToken==='function'?await window.getTeacherAccessToken():'';
+ if(!token&&!key){renderAcademicError('examList','سجّلي الدخول بحساب المستر لعرض الامتحانات المشتركة.');renderAcademicError('assignmentList','سجّلي الدخول بحساب المستر لعرض الواجبات المشتركة.');$('#examCount').textContent='—';return false}
  $('#examList').innerHTML='<div class="assessment-empty">جاري تحميل الامتحانات…</div>';$('#assignmentList').innerHTML='<div class="assessment-empty">جاري تحميل الواجبات…</div>';
  const results=await Promise.allSettled([academicRequest('listExams'),academicRequest('listAssignments')]);
  if(results[0].status==='fulfilled'){academicExams=results[0].value.exams||[];renderExamList(academicExams)}else renderAcademicError('examList',results[0].reason.message||'تعذر تحميل الامتحانات.');
@@ -613,7 +633,7 @@ $('#studentRegistryConnect').addEventListener('click',async function(){const val
  const back=document.getElementById('teacherAuthBack');
  let client=null,allow=false,checking=false;
  function showGate(text){allow=false;document.documentElement.classList.add('teacher-auth-pending');gate.hidden=false;logout.hidden=true;if(text)message.textContent=text;}
- function showDashboard(){allow=true;document.documentElement.classList.remove('teacher-auth-pending');gate.hidden=true;logout.hidden=false;try{if(typeof getTeacherUploadKey==='function'&&getTeacherUploadKey()){loadSharedStudentRegistry();loadAcademicData();loadPricingAdmin();}}catch(e){console.error('Teacher data refresh failed',e);}}
+ function showDashboard(){allow=true;document.documentElement.classList.remove('teacher-auth-pending');gate.hidden=true;logout.hidden=false;try{loadSharedStudentRegistry();loadAcademicData();loadPricingAdmin();}catch(e){console.error('Teacher data refresh failed',e);}}
  function isTeacher(user){const meta=(user&&user.app_metadata)||{};return meta.role==='teacher'||meta.role==='admin'||(Array.isArray(meta.roles)&&(meta.roles.includes('teacher')||meta.roles.includes('admin')));}
  function deny(){if(client)client.auth.signOut({scope:'local'});showGate('هذا الحساب غير مصرح له بدخول لوحة المستر.');}
  async function checkSession(){
@@ -629,6 +649,7 @@ $('#studentRegistryConnect').addEventListener('click',async function(){const val
  }
  if(!window.supabase||!window.supabase.createClient){showGate('تعذر تحميل خدمة تسجيل الدخول. حدّثي الصفحة وحاولي مرة أخرى.');return;}
  client=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storage:window.localStorage}});
+ window.getTeacherAccessToken=async function(){if(!client)return '';const {data,error}=await client.auth.getSession();if(error)throw error;return data.session&&data.session.access_token?data.session.access_token:'';};
  form.addEventListener('submit',async function(e){
   e.preventDefault();message.textContent='جاري التحقق من البيانات…';submit.disabled=true;
   try{
