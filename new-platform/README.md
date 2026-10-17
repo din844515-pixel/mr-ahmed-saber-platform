@@ -333,3 +333,11 @@ This section supersedes older status statements above where they conflict with l
 - Student lesson comments now use the shared Vercel Blob comment index instead of localStorage, so comments can be read across devices. The API includes a teacher-authenticated PATCH path for replies; the teacher dashboard reply UI remains a follow-up and must be added before claiming teacher replies are ready to use.
 - Comment storage currently uses a read/modify/write JSON document. This is suitable for an initial preview but may lose simultaneous writes under concurrent submissions; move to a transactional database table before high-volume/production use.
 - Student dashboard visual structure, login form, exam tabs and exam builder were not redesigned in this step. Deployment is preview-only; validate comments on two separate student sessions and verify stage restrictions before production.
+
+
+## Execution checkpoint — 17 Oct 2026 (submitted exam lock + home course cards)
+
+- Updated student exam cards so any attempt with a submission timestamp or a non-`in_progress` status is treated as closed. Closed exams no longer render a start/resume button; the card explicitly says the exam was submitted and cannot be retaken. The existing server-side `studentStartExam` guard still rejects attempts to restart a submitted exam.
+- Replaced the three hardcoded home-page course placeholders (“كورس التأسيس”, “القواعد والمفردات”, and “المراجعات والامتحانات”) with cards rendered from the authenticated student's actual published courses. Each card shows its real course name, stage, unit count and lesson count; “متابعة الكورس” opens that course's content view.
+- This does not fabricate course enrollment or lesson-completion percentages. Only courses in the shared published course index and matching the student's stage will appear; if none are published/assigned in that shared index, the dashboard shows an explicit empty state instead of “بانتظار الربط”.
+- Preserved the existing visual theme and exam/question-builder implementation. Preview-only deployment; must test submitted attempts and stage-filtered course display with real accounts before production.
