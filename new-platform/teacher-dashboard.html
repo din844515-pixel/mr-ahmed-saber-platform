@@ -597,7 +597,7 @@ loadCourses();renderCourses();load();render();refreshFileCourses('');refreshFile
 $('#studentRegistryKey').value=getTeacherUploadKey();
 $('#studentRegistryKey').addEventListener('input',function(){const value=this.value.trim();try{if(value)localStorage.setItem(TEACHER_UPLOAD_KEY_STORE,value);else localStorage.removeItem(TEACHER_UPLOAD_KEY_STORE)}catch(e){}});
 $('#studentRegistryConnect').addEventListener('click',async function(){const value=$('#studentRegistryKey').value.trim();if(!value){setStudentRegistryStatus('أدخلي رمز المزامنة أولًا.','error');return}try{localStorage.setItem(TEACHER_UPLOAD_KEY_STORE,value)}catch(e){}this.disabled=true;this.textContent='جاري الاتصال…';await loadSharedStudentRegistry();await loadAcademicData();await loadPricingAdmin();this.disabled=false;this.textContent='اتصال ومزامنة'});
-if(getTeacherUploadKey()){loadSharedStudentRegistry();loadAcademicData();loadPricingAdmin();}
+// Remote teacher data is loaded only after the authenticated teacher gate succeeds.
 </script>
 <script>
 (function(){
@@ -613,7 +613,7 @@ if(getTeacherUploadKey()){loadSharedStudentRegistry();loadAcademicData();loadPri
  const back=document.getElementById('teacherAuthBack');
  let client=null,allow=false,checking=false;
  function showGate(text){allow=false;document.documentElement.classList.add('teacher-auth-pending');gate.hidden=false;logout.hidden=true;if(text)message.textContent=text;}
- function showDashboard(){allow=true;document.documentElement.classList.remove('teacher-auth-pending');gate.hidden=true;logout.hidden=false;}
+ function showDashboard(){allow=true;document.documentElement.classList.remove('teacher-auth-pending');gate.hidden=true;logout.hidden=false;try{if(typeof getTeacherUploadKey==='function'&&getTeacherUploadKey()){loadSharedStudentRegistry();loadAcademicData();loadPricingAdmin();}}catch(e){console.error('Teacher data refresh failed',e);}}
  function isTeacher(user){const meta=(user&&user.app_metadata)||{};return meta.role==='teacher'||meta.role==='admin'||(Array.isArray(meta.roles)&&(meta.roles.includes('teacher')||meta.roles.includes('admin')));}
  function deny(){if(client)client.auth.signOut({scope:'local'});showGate('هذا الحساب غير مصرح له بدخول لوحة المستر.');}
  async function checkSession(){
