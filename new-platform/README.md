@@ -274,3 +274,12 @@ This section supersedes older status statements above where they conflict with l
 - Mark the deferred student-code-generator issue as resolved by user confirmation. Do not continue patching or refactoring code generation while it is working; preserve the current behavior and avoid unrelated edits to the student form.
 - This confirmation covers the user's observed behavior, not a global uniqueness guarantee across devices. Cross-device uniqueness still ultimately requires a database constraint/sequence in the approved isolated backend.
 - Continue with the remaining deferred item: visually verify the approved original teacher portrait in the homepage hero/About and both dashboards, preserving its original bytes and quality. Do not claim the image is fixed until visually checked.
+
+
+## Follow-up checkpoint — 17 Oct 2026 (Preview deployment retry)
+- Retried a Preview deployment after the earlier daily-deployment-quota rejection. Vercel accepted it and the build completed successfully.
+- Preview deployment ID: `dpl_6wY2iJWZ5xVxLqyquSjC56cSBCRy`; state verified as `READY`.
+- Deployed branch: `rebuild/new-platform-from-note-2026-10-13`; deployed commit: `4d5ad469e40134ac46098bc32c099342cd36df09` (includes the teacher exam-save selector fixes and the user-confirmed student-code checkpoint).
+- Preview URL: `https://mr-ahmed-saber-2zew42i5c-mr-ahmed-saber.vercel.app/new-platform/teacher-dashboard.html`; student dashboard: `https://mr-ahmed-saber-2zew42i5c-mr-ahmed-saber.vercel.app/new-platform/student-dashboard.html`.
+- Build logs report `Build Completed in /vercel/output [4s]`; Vercel state is READY. A web retrieval attempt could not access the dashboard URLs, so this is not proof that page interactions work.
+- Required next step: open this exact Preview on Android and test teacher exam create/edit/save/reload and student recording/assignment flows. Do not promote to production until real phone interaction tests pass. No production deployment was triggered.
