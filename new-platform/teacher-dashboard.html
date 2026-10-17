@@ -632,7 +632,7 @@ $('#studentRegistryConnect').addEventListener('click',async function(){const val
  const back=document.getElementById('teacherAuthBack');
  let client=null,allow=false,checking=false;
  function showGate(text){allow=false;document.documentElement.classList.add('teacher-auth-pending');gate.hidden=false;logout.hidden=true;if(text)message.textContent=text;}
- function showDashboard(){const entering=!allow;allow=true;document.documentElement.classList.remove('teacher-auth-pending');gate.hidden=true;logout.hidden=false;if(!entering)return;try{loadSharedStudentRegistry();loadAcademicData();loadPricingAdmin();}catch(e){console.error('Teacher data refresh failed',e);}}
+ function showDashboard(){const entering=!allow;allow=true;document.documentElement.classList.remove('teacher-auth-pending');gate.hidden=true;logout.hidden=false;if(!entering)return;try{loadSharedStudentRegistry();loadAcademicData();loadPricingAdmin();renderTeacherLessonComments();}catch(e){console.error('Teacher data refresh failed',e);}}
  function isTeacher(user){const meta=(user&&user.app_metadata)||{};return meta.role==='teacher'||meta.role==='admin'||(Array.isArray(meta.roles)&&(meta.roles.includes('teacher')||meta.roles.includes('admin')));}
  function deny(){if(client)client.auth.signOut({scope:'local'});showGate('هذا الحساب غير مصرح له بدخول لوحة المستر.');}
  async function checkSession(){
