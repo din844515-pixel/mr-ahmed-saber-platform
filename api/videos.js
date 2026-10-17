@@ -1,17 +1,15 @@
 const { handleUpload } = require('@vercel/blob/client');
 const crypto = require('node:crypto');
+const isTeacherRequest = require('../lib/teacher-auth');
 
-function authorizedClientPayload(clientPayload) {
+async function authorizedClientPayload(clientPayload) {
+  if (!clientPayload) return false;
+  let data = {};
+  try { data = JSON.parse(clientPayload); } catch (_) { return false; }
+  if (data.accessToken && await isTeacherRequest({ headers: { authorization: 'Bearer ' + String(data.accessToken) } })) return true;
   const expected = process.env.TEACHER_UPLOAD_KEY || '';
-  if (!expected || !clientPayload) return false;
-  let supplied = '';
-  try {
-    const data = JSON.parse(clientPayload);
-    supplied = String(data.teacherKey || '');
-  } catch (error) {
-    return false;
-  }
-  if (!supplied) return false;
+  const supplied = String(data.teacherKey || '');
+  if (!expected || !supplied) return false;
   const a = Buffer.from(expected);
   const b = Buffer.from(supplied);
   return a.length === b.length && crypto.timingSafeEqual(a, b);
@@ -30,7 +28,7 @@ module.exports = async function handler(req, res) {
       body,
       request: req,
       onBeforeGenerateToken: async (pathname, clientPayload) => {
-        if (!authorizedClientPayload(clientPayload)) {
+        if (!(await authorizedClientPayload(clientPayload))) {
           throw new Error('رمز الرفع غير صحيح. اكتبيه من جديد.');
         }
         if (!String(pathname || '').startsWith('course-videos/')) {
