@@ -341,3 +341,11 @@ This section supersedes older status statements above where they conflict with l
 - Replaced the three hardcoded home-page course placeholders (“كورس التأسيس”, “القواعد والمفردات”, and “المراجعات والامتحانات”) with cards rendered from the authenticated student's actual published courses. Each card shows its real course name, stage, unit count and lesson count; “متابعة الكورس” opens that course's content view.
 - This does not fabricate course enrollment or lesson-completion percentages. Only courses in the shared published course index and matching the student's stage will appear; if none are published/assigned in that shared index, the dashboard shows an explicit empty state instead of “بانتظار الربط”.
 - Preserved the existing visual theme and exam/question-builder implementation. Preview-only deployment; must test submitted attempts and stage-filtered course display with real accounts before production.
+
+
+## Execution checkpoint — 17 Oct 2026 (teacher shared lesson comments)
+
+- Teacher dashboard lesson comments now load from `GET /api/lesson-comments` using the signed-in teacher's Supabase Auth token; teacher can see comments across published lessons, including student name/stage, course/unit/lesson context and existing replies.
+- Teacher replies now use `PATCH /api/lesson-comments` with the comment's course/unit/lesson IDs and are persisted in the same shared comments index students read. Student and teacher UI notices were updated to stop claiming comments are only local.
+- The API allows an authenticated teacher to list all comments without a lesson filter. Student requests still require a valid student session and stage authorization; teacher-only replies require the teacher auth gate.
+- Remaining validation: test with a real student account and teacher account in separate sessions, confirm comment/reply round trip, verify the comment appears for a second student in the same lesson, and verify another stage cannot read it. Shared comments still use a JSON read/modify/write store; concurrent writes may race, so migrate to transactional database storage before high-volume production.
