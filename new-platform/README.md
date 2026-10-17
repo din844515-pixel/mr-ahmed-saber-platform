@@ -382,3 +382,10 @@ This section supersedes older status statements above where they conflict with l
 - Updated the shared lesson context lookup in `platform-academics` to use the stable project domain `https://mr-ahmed-saber-new.vercel.app/api/courses` rather than a one-off preview deployment URL. This is necessary so lesson-comment and progress actions do not depend on an expiring deployment hostname.
 - Redeployed `platform-academics` successfully; active version is now 12. Source commit: `d8057a4645ef232002e0590468b367d085082fbb`.
 - Current source branch head is `d8057a4645ef232002e0590468b367d085082fbb`; Vercel preview quota is still the only confirmed blocker to packaging the frontend changes into a new Preview deployment. No production promotion was made.
+
+
+## Follow-up fix — 17 Oct 2026 (lesson-comments authorization header)
+
+- Fixed an escaping error in `api/lesson-comments.js` where the Bearer-token regex had literal doubled backslashes and would reject valid authorization headers. The route now parses standard `Authorization: Bearer <token>` headers correctly.
+- This fixes the API gateway source for both student comment requests and teacher comment listing/replies. It still requires a new Preview deployment and end-to-end checks; the currently deployed preview does not contain this fix yet.
+- Source commit: `a8525903ded6e36137b3bca6f2599a50cabecb5f`.
