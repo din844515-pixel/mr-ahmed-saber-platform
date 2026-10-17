@@ -1,5 +1,6 @@
 const { list, put } = require('@vercel/blob');
 const crypto = require('node:crypto');
+const isTeacherRequest = require('../lib/teacher-auth');
 
 const COURSE_PATH = 'platform/course-index-v1.json';
 
@@ -37,7 +38,8 @@ module.exports = async function handler(req, res) {
     res.setHeader('Allow', 'GET, PUT');
     return res.status(405).json({ error: 'Method not allowed' });
   }
-  if (!authorized(req)) return res.status(401).json({ error: 'رمز الرفع غير صحيح. اكتبيه من جديد.' });
+  const tokenAuthorized = await isTeacherRequest(req);
+  if (!tokenAuthorized && !authorized(req)) return res.status(401).json({ error: 'سجّلي الدخول بحساب المستر لنشر الكورسات.' });
 
   try {
     const body = req.body && typeof req.body === 'object' ? req.body : {};
