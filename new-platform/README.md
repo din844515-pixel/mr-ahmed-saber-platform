@@ -10,7 +10,7 @@ This is the isolated rebuild based on the approved reference note. The legacy si
 - Responsive student dashboard preview: sidebar/navigation, student welcome, course cards/progress placeholders, lessons, exams, assignments, files, results, and contact.
 - Responsive teacher dashboard preview: right-hand navigation, overview, stage lists, student management UI, courses, exams/assignments, files, results, subscriptions, and settings.
 - Dashboard previews explicitly indicate that there are no live student records or connected management functions yet. No fictitious student data is presented as real data.
-- The approved teacher photo supplied in this conversation is included as `teacher.webp` and used on the public homepage and teacher dashboard.
+- The approved teacher photo is the exact user-supplied original PNG (736×1307; 1,037,820 bytes; SHA-1 `83e0b28fdcd33fdf352124788433eccfe45ef0fc`). Do not re-encode, compress, crop, or substitute it. It is used in the homepage hero, About section, student dashboard, and teacher dashboard.
 
 ## Preview URLs
 - Landing page: /
@@ -45,18 +45,18 @@ No separate database or secure authentication is connected. Login and registrati
 ## Approved homepage media — 15 Oct 2026
 - A dedicated introductory/promotional video section is placed immediately after the hero and before courses, linked from a `شاهد فيديو تعريفي` hero button.
 - Do not use the existing media-library clip as a default or hardcoded advertisement. The teacher-selected video must only appear after a real successful save.
-- The approved original teacher portrait is referenced through an immutable deployment containing `new-platform/teacher.png`; preserve its exact bytes and do not re-encode or substitute it.
+- The approved original teacher portrait is referenced through the verified original PNG deployment; the current repository's `new-platform/teacher.png` is only a 1,506-byte placeholder, not the approved photo. Do not use that placeholder as a substitute or change the original image bytes.
 - Acceptance requires checking the portrait in the homepage hero, homepage About, student dashboard, teacher dashboard, plus video playback on mobile and desktop.
 
 
 ## Homepage intro video and teacher photo — 15 Oct 2026
 - The homepage contains an introductory-video section immediately after the hero and before courses, but it must not play any fixed/default clip. Until the teacher has saved a real promo video through secure storage, the section displays an explicit empty state.
-- The original teacher portrait is referenced through the same immutable static deployment that contains `new-platform/teacher.png`; preserve exact bytes and do not re-encode.
+- The original teacher portrait is referenced through the verified original PNG deployment using a shareable access URL; preserve exact bytes and do not re-encode. The repository's 1,506-byte `new-platform/teacher.png` placeholder is not the approved photo.
 - Acceptance checklist: homepage hero photo, About photo, teacher dashboard portrait, student dashboard portrait, promo video playback.
 
 ## Execution checkpoint — 15 Oct 2026
-- Fixed all five teacher portrait references in the new platform pages to use the approved image at `/new-platform/teacher.png` on the new deployment origin. This keeps the original deployed PNG asset and does not re-encode, compress, crop, or replace the source file.
-- Acceptance check from the Vercel deployment file manifest confirms `new-platform/teacher.png` is present in the deployed asset tree. The new HTML source changes must still be deployed and visually checked at the preview URL before calling the image fix complete.
+- On 18 Oct 2026, updated the homepage hero/About and both student-dashboard portraits plus the teacher-dashboard portrait to reference the verified original PNG (SHA-1 `83e0b28fdcd33fdf352124788433eccfe45ef0fc`; 1,037,820 bytes). The source is served from the original immutable image deployment via a shareable access URL; no image bytes or display settings were changed. The 1,506-byte `new-platform/teacher.png` in this branch is a placeholder and must not be treated as the approved photo.
+- The homepage reference, About reference, student sidebar/header portraits, and teacher sidebar portrait must all use the same approved original image URL. Confirm each in the preview on mobile and desktop before considering the image task complete. complete.
 - The teacher promo video picker currently supports selecting a local `video/*` file, previewing it, and cancelling the selection only. It does not upload, persist, hide, or publish a saved video yet; local preview is not a save.
 - No isolated Supabase project is available in the connected project list; the one visible project is named `Mr. Ahmed Saber`, so it is not assumed safe to modify. Do not attach the new platform to it or change its schema, buckets, RLS, student data, or secrets. Secure persistent video upload remains blocked until an isolated backend/storage and teacher authentication are available. Never expose a storage token in browser code or enable an unauthenticated upload endpoint.
 - Keep the old site/database untouched, keep the exam/question system unchanged, and continue using small edits with deployment and browser checks. Student management actions remain UI previews, not live database operations.
@@ -415,3 +415,10 @@ This section supersedes older status statements above where they conflict with l
 - Replaced the stale warning that implied assignments were not connected with brief teacher instructions for creating, publishing, and reviewing assignments. Renamed the action to «عرض تسليمات الطلاب» so the teacher can identify where to review student responses. The existing create/upload/publish/submit/review backend actions were left intact.
 - Pronunciation/listening question source already uses browser `MediaRecorder`, a separate stop-recording control, microphone permission handling, upload to the student's answer path, and saved-answer persistence. The previous Preview was created before these source fixes; do not mark the mobile recording issue closed until a new Preview is available and the record → stop → upload → submit flow is physically tested on an Android phone. If the browser denies microphone support, the UI should show the fallback message rather than imply recording succeeded.
 - Last completed source checkpoint: see the latest branch head after this README update. JavaScript inline-script syntax checks and approved teacher-photo source checks are being repeated before the single Preview deployment. No Vercel deployment was triggered because the daily quota was the explicit blocker.
+
+
+## Approved WhatsApp contact — 18 Oct 2026
+- Support/contact number: `01553438138`.
+- WhatsApp direct link (international form): `https://wa.me/201553438138`.
+- Official channel subscribe link: `https://whatsapp.com/channel/0029VbEB6wYIHphCcWMBTi26`.
+- Show both actions in the homepage contact strip and the student dashboard contact section. Keep their visual style consistent with the approved design.
