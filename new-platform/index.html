@@ -61,7 +61,25 @@
 button,a{transition:transform .18s ease,box-shadow .18s ease,background-color .18s ease,border-color .18s ease}
 button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #d6ad5d;outline-offset:3px}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
-.stage-price{font-weight:800;color:#8b6829;font-size:13px;margin:7px 0 10px!important}.public-course-prices{margin:24px 0 8px;padding:18px;border:1px solid var(--line);border-radius:16px;background:#fffdf8}.public-course-prices h3{margin:0 0 12px;color:var(--navy)}.public-course-price-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}.public-course-price-item{border:1px solid var(--line);border-radius:12px;padding:12px;background:#fff}.public-course-price-item strong{display:block;color:var(--navy)}.public-course-price-item span{font-weight:800;color:#8b6829;font-size:13px}.subscription-price-line{padding:10px 12px;margin-top:8px;background:#f7efd9;border:1px solid #e6d4a8;border-radius:10px;color:#755728;font-size:13px}.subscription-price-line strong{font-size:16px}</style><meta name="description" content="منصة Mr. Ahmed Saber لتعلم اللغة الإنجليزية، الكورسات والاختبارات ومتابعة المستوى."></head>
+.stage-price{font-weight:800;color:#8b6829;font-size:13px;margin:7px 0 10px!important}.public-course-prices{margin:24px 0 8px;padding:18px;border:1px solid var(--line);border-radius:16px;background:#fffdf8}.public-course-prices h3{margin:0 0 12px;color:var(--navy)}.public-course-price-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}.public-course-price-item{border:1px solid var(--line);border-radius:12px;padding:12px;background:#fff}.public-course-price-item strong{display:block;color:var(--navy)}.public-course-price-item span{font-weight:800;color:#8b6829;font-size:13px}.subscription-price-line{padding:10px 12px;margin-top:8px;background:#f7efd9;border:1px solid #e6d4a8;border-radius:10px;color:#755728;font-size:13px}.subscription-price-line strong{font-size:16px}/* Student reviews form and live public reviews */
+.student-review-area{margin:28px auto 0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:20px;align-items:start}
+.student-review-form{background:#fffdf8;border:1px solid #e5dac1;border-radius:18px;padding:22px;box-shadow:0 10px 30px #07172f08}
+.student-review-form h3,.student-review-list h3{margin:0 0 8px;color:#07172f;font-size:20px}
+.student-review-form p,.student-review-list>p{color:#737b86;line-height:1.8;margin:0 0 16px;font-size:14px}
+.student-review-form .field{margin:12px 0}
+.student-review-form input,.student-review-form select,.student-review-form textarea{width:100%;border:1px solid #d9d4c8;border-radius:10px;padding:12px;background:#fff;color:#172033;font:inherit;box-sizing:border-box}
+.student-review-form textarea{min-height:110px;resize:vertical}
+.student-review-form input:focus,.student-review-form select:focus,.student-review-form textarea:focus{outline:3px solid #d8b76d66;border-color:#cba95d}
+.student-review-status{margin-top:12px;border-radius:10px;padding:10px 12px;background:#f6efdf;color:#5f4a20;font-size:14px;line-height:1.7}
+.student-review-status:empty{display:none}
+.student-review-list{min-width:0}
+.live-review-cards{display:grid;gap:12px}
+.live-review-card{border:1px solid #e5dac1;background:#fffdf8;border-radius:14px;padding:16px}
+.live-review-card p{margin:10px 0 12px;color:#626b77;line-height:1.9;overflow-wrap:anywhere}
+.live-review-meta{display:flex;align-items:center;justify-content:space-between;gap:8px;color:#07172f;font-weight:700;font-size:13px;flex-wrap:wrap}
+.live-review-stage{color:#8a7445;font-weight:600}
+@media(max-width:760px){.student-review-area{grid-template-columns:1fr}.student-review-form{padding:17px}}
+</style><meta name="description" content="منصة Mr. Ahmed Saber لتعلم اللغة الإنجليزية، الكورسات والاختبارات ومتابعة المستوى."></head>
 <body>
 <header class="topbar">
  <div class="container nav">
@@ -188,6 +206,18 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
    <article class="quote-card"><div class="quote-mark">“</div><p>الواجبات والامتحانات بتوضح لي الأخطاء اللي محتاج أركز عليها قبل الامتحان.</p><div class="quote-person"><span class="avatar">ع</span><span>عمر أحمد — نموذج توضيحي</span></div></article>
    <article class="quote-card"><div class="quote-mark">“</div><p>تقسيم المحاضرات إلى وحدات خلاني أتابع المذاكرة بشكل مرتب وأسهل أرجع للدرس.</p><div class="quote-person"><span class="avatar">م</span><span>مريم علي — نموذج توضيحي</span></div></article>
   </div>
+  <div class="student-review-area">
+   <form class="student-review-form" id="studentReviewForm">
+    <h3>شاركنا رأيك في المنصة</h3>
+    <p>اكتب تجربتك باحترام ووضوح. رأيك هيظهر على المنصة بعد إرساله.</p>
+    <div class="field"><label for="reviewStudentName">اسم الطالب</label><input id="reviewStudentName" name="student_name" maxlength="80" required minlength="2" autocomplete="name" placeholder="اكتب اسمك"></div>
+    <div class="field"><label for="reviewStudentStage">المرحلة الدراسية</label><select id="reviewStudentStage" name="education_stage" required><option value="">اختار المرحلة</option><option>تأسيس</option><option>أولى إعدادي</option><option>ثانية إعدادي</option><option>ثالثة إعدادي</option><option>أولى ثانوي</option><option>ثانية ثانوي</option><option>ثالثة ثانوي</option><option>كورسات شاملة</option></select></div>
+    <div class="field"><label for="reviewStudentText">رأيك في الشرح والمنصة</label><textarea id="reviewStudentText" name="review_text" maxlength="700" minlength="10" required placeholder="احكيلنا إيه اللي عجبك في تجربتك..."></textarea></div>
+    <button class="btn btn-dark" id="submitStudentReview" type="submit" style="width:100%">نشر رأيي</button>
+    <div class="student-review-status" id="studentReviewStatus" role="status" aria-live="polite"></div>
+   </form>
+   <div class="student-review-list"><h3>آراء الطلاب المنشورة</h3><p>آراء الطلاب اللي اتبعتت من النموذج هتظهر هنا.</p><div class="live-review-cards" id="liveStudentReviews"><div class="student-review-status">جاري تحميل الآراء المنشورة…</div></div></div>
+  </div>
  </div>
 </section>
 <section class="section section-white" id="about">
@@ -287,5 +317,15 @@ function updateTestProgress(){const answered=testAnswers.filter(a=>a!==null).len
 $('#testStartForm').addEventListener('submit',e=>{e.preventDefault();testAnswers=Array(questions.length).fill(null);paintQuestions();$('#testIntro').classList.add('hidden');$('#testArea').classList.remove('hidden');$('#testArea').scrollIntoView({behavior:'smooth',block:'start'})});
 $('#questionList').addEventListener('change',e=>{if(e.target.matches('input[type=radio]')){const index=Number(e.target.name.slice(1));testAnswers[index]=Number(e.target.value);updateTestProgress()}});
 $('#placementForm').addEventListener('submit',e=>{e.preventDefault();const unanswered=testAnswers.filter(a=>a===null).length;if(unanswered){$('#infoMessage').textContent='باقي '+unanswered+' سؤال/أسئلة من غير إجابة. راجع كل الأسئلة قبل إنهاء الاختبار.';openModal('infoModal');return}const score=testAnswers.reduce((sum,a,i)=>sum+(a===questions[i].c?1:0),0);let band=score>=12?'مستوى متقدم نسبيًا':score>=8?'مستوى متوسط':'تحتاج إلى تقوية الأساسيات';$('#testArea').classList.add('hidden');$('#testResult').innerHTML='<span class="pill">نتيجة إرشادية</span><h3>'+$('#testName').value.trim()+'</h3><p>درجتك في الاختبار</p><strong>'+score+' / '+questions.length+'</strong><p>'+band+'</p><p>هذه نتيجة أولية من النموذج الحالي وليست تقييمًا معتمدًا. لن تُحفظ في سجل الطالب قبل ربط النظام الخلفي.</p><button class="btn btn-dark" id="resetTest" type="button">البدء من جديد</button>';$('#testResult').classList.remove('hidden');$('#resetTest').addEventListener('click',()=>{$('#testResult').classList.add('hidden');$('#testIntro').classList.remove('hidden');$('#testStartForm').reset();testAnswers=Array(questions.length).fill(null);$('#testIntro').scrollIntoView({behavior:'smooth',block:'center'})});$('#testResult').scrollIntoView({behavior:'smooth',block:'center'})});
+</script>
+<script>
+(function(){
+ const form=document.getElementById('studentReviewForm');if(!form)return;
+ const list=document.getElementById('liveStudentReviews'),status=document.getElementById('studentReviewStatus'),submit=document.getElementById('submitStudentReview');
+ function addReview(review,prepend){const card=document.createElement('article');card.className='live-review-card';const meta=document.createElement('div');meta.className='live-review-meta';const name=document.createElement('span');name.textContent=review.student_name||'طالب';const stage=document.createElement('span');stage.className='live-review-stage';stage.textContent=review.education_stage||'';meta.append(name,stage);const quote=document.createElement('p');quote.textContent=review.review_text||'';card.append(meta,quote);if(prepend)list.prepend(card);else list.append(card);}
+ async function loadReviews(){try{const response=await fetch('/api/testimonials',{cache:'no-store'});const data=await response.json();if(!response.ok||!data.ok)throw new Error('load failed');list.replaceChildren();(data.reviews||[]).forEach(review=>addReview(review,false));if(!(data.reviews||[]).length){const empty=document.createElement('div');empty.className='student-review-status';empty.textContent='لسه مفيش آراء منشورة من الطلاب. كوني أول واحد يشارك رأيه.';list.append(empty);}}catch(error){list.replaceChildren();const msg=document.createElement('div');msg.className='student-review-status';msg.textContent='تعذر تحميل الآراء الجديدة حاليًا.';list.append(msg);}}
+ form.addEventListener('submit',async function(event){event.preventDefault();status.textContent='جاري نشر رأيك…';submit.disabled=true;submit.textContent='جاري النشر…';const payload={student_name:form.elements.student_name.value,education_stage:form.elements.education_stage.value,review_text:form.elements.review_text.value};try{const response=await fetch('/api/testimonials',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});const data=await response.json();if(!response.ok||!data.ok||!data.review)throw new Error(data.error||'تعذر نشر رأيك. حاول مرة أخرى.');list.querySelector('.student-review-status')?.remove();addReview(data.review,true);form.reset();status.textContent='تم نشر رأيك بنجاح، شكرًا لمشاركتك!';}catch(error){status.textContent=error.message||'تعذر نشر رأيك الآن. حاول مرة أخرى.';}finally{submit.disabled=false;submit.textContent='نشر رأيي';}});
+ loadReviews();
+})();
 </script>
 </body></html>
