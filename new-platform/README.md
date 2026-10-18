@@ -430,7 +430,7 @@ This section supersedes older status statements above where they conflict with l
 - WhatsApp contact button explicitly displays `01553438138` and links to `https://wa.me/201553438138`; the channel button links to `https://whatsapp.com/channel/0029VbEB6wYIHphCcWMBTi26`.
 - Replaced empty testimonial placeholders with clearly-labelled illustrative examples. They must not be represented as real student testimonials; replace them only with approved genuine feedback.
 - Confirmed the stage/course price editor and public pricing reader already exist. The database `public.platform_pricing` is currently empty, so no actual price should be invented; the teacher must save real prices before students can see them.
-- Access audit found no rows in `auth.users` in the isolated Supabase project at review time. The teacher portal relies on Supabase Auth and a teacher/admin app-metadata role, so teacher access is not ready until the authorized account is provisioned. Do not weaken the gate or allow arbitrary signup as a workaround. Student sign-in still requires a valid active code and registered phone number.
+- Access audit found the existing teacher account in the original `Mr. Ahmed Saber` identity project (`gfzzuxzrvysuodehjkyq`), while the isolated backend project (`umffvtnujqjmgrrfmsdk`) intentionally has no teacher Auth users. The teacher dashboard now signs in through the existing identity project. Server routes and the two isolated backend functions validate teacher bearer tokens against the same identity project and still store new platform student/academic data only in the isolated backend. Do not move legacy academic tables or student records, weaken the teacher gate, or allow arbitrary signup. Student sign-in still requires a valid active code and registered phone number.
 - Source commit: `b49eee544d493457679c8c31845dca4f20fa14eb`. A Preview deployment was initiated for this commit and reached READY at `mr-ahmed-saber-9xf52tim3-mr-ahmed-saber.vercel.app`; this is a preview, not a production release. Manual browser testing of authentication, price saving, and account flows remains pending.
 
 
@@ -444,3 +444,11 @@ The following decisions are also locked unless the user explicitly requests a ch
 - Keep the existing exam/question creation and grading workflow intact; do not refactor it while fixing unrelated homepage, image, login, pricing, or reviews issues.
 - Preserve all previously approved stage/subscription requirements and the eight student categories.
 - Make small, isolated changes only; test before claiming completion or publishing.
+
+
+## Teacher login repair — 18 Oct 2026
+- Root cause: the dashboard's Auth client was pointed at the isolated backend project, but the teacher's existing, verified `teacher` account is in the original identity project.
+- Updated the dashboard Auth client, the shared Vercel teacher-token verifier, and the `platform-students` / `platform-academics` Edge Functions to validate against the original identity project.
+- The isolated project's service-role DB access and tables are unchanged. The original project's student/exam tables are not queried or modified by this fix.
+- The teacher form displays the Auth error text if sign-in still fails, without exposing access tokens or secrets.
+- Manual sign-in from the published Preview still needs user verification using the existing email/password.
