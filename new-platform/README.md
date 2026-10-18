@@ -422,3 +422,13 @@ This section supersedes older status statements above where they conflict with l
 - WhatsApp direct link (international form): `https://wa.me/201553438138`.
 - Official channel subscribe link: `https://whatsapp.com/channel/0029VbEB6wYIHphCcWMBTi26`.
 - Show both actions in the homepage contact strip and the student dashboard contact section. Keep their visual style consistent with the approved design.
+
+
+## Follow-up checkpoint — 18 Oct 2026 (homepage polish and access audit)
+- Kept the approved teacher photo, page layout, pricing backend, and exam/question builder unchanged.
+- Homepage student-entry links now navigate to `student-dashboard.html` instead of leaving the visitor in the login modal on the homepage.
+- WhatsApp contact button explicitly displays `01553438138` and links to `https://wa.me/201553438138`; the channel button links to `https://whatsapp.com/channel/0029VbEB6wYIHphCcWMBTi26`.
+- Replaced empty testimonial placeholders with clearly-labelled illustrative examples. They must not be represented as real student testimonials; replace them only with approved genuine feedback.
+- Confirmed the stage/course price editor and public pricing reader already exist. The database `public.platform_pricing` is currently empty, so no actual price should be invented; the teacher must save real prices before students can see them.
+- Access audit found no rows in `auth.users` in the isolated Supabase project at review time. The teacher portal relies on Supabase Auth and a teacher/admin app-metadata role, so teacher access is not ready until the authorized account is provisioned. Do not weaken the gate or allow arbitrary signup as a workaround. Student sign-in still requires a valid active code and registered phone number.
+- Source commit: `b49eee544d493457679c8c31845dca4f20fa14eb`. A Preview deployment was initiated for this commit and reached READY at `mr-ahmed-saber-9xf52tim3-mr-ahmed-saber.vercel.app`; this is a preview, not a production release. Manual browser testing of authentication, price saving, and account flows remains pending.
