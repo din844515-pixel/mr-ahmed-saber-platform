@@ -473,3 +473,14 @@ The following decisions are also locked unless the user explicitly requests a ch
 - The database RPC `public.platform_save_exam(jsonb,jsonb)` was updated on isolated project `umffvtnujqjmgrrfmsdk`: editing an exam with past student attempts creates a new version, unpublishes and labels the previous version, and preserves its questions/attempts/results. Editing an exam without attempts continues updating the existing record. Migration source: `20261019_exam_edit_versioning_and_retake.sql`.
 - Supabase Edge Function `platform-academics` deployed active version 14, including teacher-authorized `allowExamRetake` and updated delete operations.
 - Source changes are committed on `rebuild/new-platform-from-note-2026-10-13`. Must create/inspect the next Vercel Preview and test the browser flow on mobile before claiming that all four requested items work end to end. Do not promote Production. Keep the teacher portrait byte-for-byte unchanged, preserve the visual design and question-builder types, and do not reset the teacher's working login.
+
+
+## LOCKED portrait asset — permanent public URL (19 Oct 2026)
+- The exact approved original file **`الصورة المعتمدة للمستر - لندن وبيج بن.png`** was copied into the public Supabase Storage bucket `teacher-assets/teacher.png`.
+- Permanent asset URL: `https://umffvtnujqjmgrrfmsdk.supabase.co/storage/v1/object/public/teacher-assets/teacher.png`
+- Verified after upload: HTTP HEAD succeeded; `image/png`; size **1,037,820 bytes**; SHA-256 `369c4b2fbbab181f5204d4d10f40484b1e69a38c70930e2643ed021844f4f7eb`, exactly matching the approved source-file fingerprint.
+- Homepage (hero and About section), student dashboard and teacher dashboard now reference this public stable URL. No image compression, conversion, crop, or redraw was performed.
+- Do not restore `_vercel_share` URLs, the protected one-off deployment hostname, or the tiny `new-platform/teacher.png` (1,506 bytes). Never edit image URLs in individual pages independently; use the locked public storage URL above.
+- Temporary `api/photo-import-once.js` was removed after the successful transfer, and the one-time `photo-import-once` Edge Function was replaced with a closed 410 response. The old photo-only deployment's temporary protection override was revoked.
+- Search indexing metadata is present in the homepage: `robots=index,follow`, canonical homepage URL `https://mr-ahmed-saber-new.vercel.app/new-platform/index.html`, Open Graph metadata and `og:image` pointing to the stable public photo. The root `robots.txt` and `sitemap.xml` exist; verify them on the final production deployment before marking public SEO complete.
+- This source-asset fix is committed on the active branch. Final gate: deploy the current branch head, verify all three page routes and the public image URL, then confirm visually on mobile before claiming the portrait is visibly correct. Keep the visual design and image sizing/crop CSS unchanged.
