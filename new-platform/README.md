@@ -432,3 +432,15 @@ This section supersedes older status statements above where they conflict with l
 - Confirmed the stage/course price editor and public pricing reader already exist. The database `public.platform_pricing` is currently empty, so no actual price should be invented; the teacher must save real prices before students can see them.
 - Access audit found no rows in `auth.users` in the isolated Supabase project at review time. The teacher portal relies on Supabase Auth and a teacher/admin app-metadata role, so teacher access is not ready until the authorized account is provisioned. Do not weaken the gate or allow arbitrary signup as a workaround. Student sign-in still requires a valid active code and registered phone number.
 - Source commit: `b49eee544d493457679c8c31845dca4f20fa14eb`. A Preview deployment was initiated for this commit and reached READY at `mr-ahmed-saber-9xf52tim3-mr-ahmed-saber.vercel.app`; this is a preview, not a production release. Manual browser testing of authentication, price saving, and account flows remains pending.
+
+
+## IMMUTABLE APPROVED ASSETS & DECISIONS — 18 Oct 2026
+This section is a hard constraint for all future changes. Do not replace, edit, crop, compress, recolor, retouch, regenerate, or change the quality of the approved teacher portrait. The user re-uploaded the exact approved portrait on 18 Oct 2026 (736 × 1307 PNG): teacher in a dark formal suit in front of Big Ben at sunset. Treat that uploaded original as the source of truth. Keep it unchanged and use the same bytes in the homepage hero, About section, teacher dashboard, and student dashboard where the portrait is shown. The current repository's `new-platform/teacher.png` must not be assumed to be the approved original merely because the filename matches; verify file dimensions/content before release. Do not publish until the approved original is actually deployed and visually checked.
+
+The following decisions are also locked unless the user explicitly requests a change:
+- Keep the existing navy/gold/beige/brown academic visual design.
+- Preserve the three existing sample student review texts and names; do not rewrite or remove them. They are illustrative examples, not genuine testimonials.
+- Keep the user-provided WhatsApp contact number 01553438138 and channel URL https://whatsapp.com/channel/0029VbEB6wYIHphCcWMBTi26.
+- Keep the existing exam/question creation and grading workflow intact; do not refactor it while fixing unrelated homepage, image, login, pricing, or reviews issues.
+- Preserve all previously approved stage/subscription requirements and the eight student categories.
+- Make small, isolated changes only; test before claiming completion or publishing.
