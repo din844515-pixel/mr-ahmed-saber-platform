@@ -402,10 +402,10 @@ $('#placementForm').addEventListener('submit',e=>{e.preventDefault();const unans
    if(missing){showError('جاوب على كل الأسئلة قبل إنهاء الاختبار.');return;}
    const score=answers.reduce((sum,a,i)=>sum+(a===questions[i].c?1:0),0);
    const band=score>=12?'مستوى متقدم نسبيًا':score>=8?'مستوى متوسط':'تحتاج إلى تقوية الأساسيات';
-   area.classList.add('hidden');
    const result=document.getElementById('testResult');
+   area.classList.add('hidden');
    result.replaceChildren();
-   const title=document.createElement('h3');title.textContent=name.value.trim();
+   const title=document.createElement('h3');title.textContent=(document.getElementById('testName')?.value||'الطالب').trim();
    const scoreText=document.createElement('strong');scoreText.textContent=score+' / '+questions.length;
    const description=document.createElement('p');description.textContent=band+' — هذه نتيجة إرشادية فقط ولا تُحفظ في سجل الطالب.';
    const reset=document.createElement('button');reset.type='button';reset.className='btn btn-dark';reset.textContent='البدء من جديد';
