@@ -44,6 +44,7 @@ function needStage(v: unknown) {
   if (!STAGES.includes(s)) throw new ApiError("اختاري مرحلة دراسية صحيحة.");
   return s;
 }
+async function listPlacementTests(){return await db("platform_placement_tests?select=id,student_name,education_stage,guardian_phone,email,score,total_questions,level_band,answers,contact_consent,created_at&order=created_at.desc&limit=500")}
 async function listExams() {
   const exams = await db("platform_exams?select=*&order=created_at.desc") as any[];
   if (!exams.length) return { ok: true, exams: [] };
@@ -216,7 +217,7 @@ async function reviewSubmission(body: any) {
 
 
 const ACADEMIC_BUCKET = "platform-academic-media";
-const TEACHER_ACTIONS = new Set(["listExams","getExam","saveExam","deleteExam","setExamPublished","setResultsPublished","listPricing","savePricing","setPricingActive","listAssignments","saveAssignment","deleteAssignment","setAssignmentPublished","listSubmissions","reviewSubmission","listAttempts","getAttemptReview","gradeAttempt","allowExamRetake","teacherListLessonComments","teacherReplyLessonComment"]);
+const TEACHER_ACTIONS = new Set(["listExams","getExam","saveExam","deleteExam","setExamPublished","setResultsPublished","listPricing","savePricing","setPricingActive","listAssignments","saveAssignment","deleteAssignment","setAssignmentPublished","listSubmissions","reviewSubmission","listAttempts","getAttemptReview","gradeAttempt","allowExamRetake","listPlacementTests","teacherListLessonComments","teacherReplyLessonComment"]);
 async function authorizedTeacherSession(req: Request): Promise<boolean> {
   const authorization = String(req.headers.get("authorization") || "");
   const token = authorization.toLowerCase().startsWith("bearer ") ? authorization.slice(7).trim() : "";
@@ -373,6 +374,7 @@ Deno.serve(async (req: Request) => {
     } else { student=await currentStudent(req); }
     let result: unknown;
     switch (action) {
+      case "listPlacementTests": result = await listPlacementTests(); break;
       case "listExams": result = await listExams(); break;
       case "getExam": result = await getExam(body.id); break;
       case "saveExam": result = await saveExam(body); break;
