@@ -1,6 +1,8 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 const EXPECTED_KEY_HASH = "5c23b5f970c3d551469c8c917e1a53b0d2a2e19d86353117089896f60d6e5763";
+const AUTH_SUPABASE_URL = "https://gfzzuxzrvysuodehjkyq.supabase.co";
+const AUTH_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rb8JsRCgD3ry78YabOfDkQ_G4VCKFko";
 const STAGES = ["تأسيس","أولى إعدادي","ثانية إعدادي","ثالثة إعدادي","أولى ثانوي","ثانية ثانوي","ثالثة ثانوي","كورسات شاملة"];
 const TYPES = ["single_choice","multiple_choice","true_false","short_text","fill_blanks","long_answer","listening","speaking"];
 const enc = new TextEncoder();
@@ -213,7 +215,25 @@ async function reviewSubmission(body: any) {
 
 
 const ACADEMIC_BUCKET = "platform-academic-media";
-const TEACHER_ACTIONS = new Set(["listExams","getExam","saveExam","deleteExam","setExamPublished","setResultsPublished","listPricing","savePricing","setPricingActive","listAssignments","saveAssignment","deleteAssignment","setAssignmentPublished","listSubmissions","reviewSubmission","listAttempts","getAttemptReview","gradeAttempt"]);
+const TEACHER_ACTIONS = new Set(["listExams","getExam","saveExam","deleteExam","setExamPublished","setResultsPublished","listPricing","savePricing","setPricingActive","listAssignments","saveAssignment","deleteAssignment","setAssignmentPublished","listSubmissions","reviewSubmission","listAttempts","getAttemptReview","gradeAttempt","teacherListLessonComments","teacherReplyLessonComment"]);
+async function authorizedTeacherSession(req: Request): Promise<boolean> {
+  const authorization = String(req.headers.get("authorization") || "");
+  const token = authorization.toLowerCase().startsWith("bearer ") ? authorization.slice(7).trim() : "";
+  if (!token || token.length > 12000 || !supabaseUrl) return false;
+  try {
+    const response = await fetch(AUTH_SUPABASE_URL + "/auth/v1/user", {
+      method: "GET",
+      headers: { apikey: AUTH_SUPABASE_PUBLISHABLE_KEY, authorization: "Bearer " + token, accept: "application/json" },
+      cache: "no-store",
+      signal: AbortSignal.timeout(6000)
+    });
+    if (!response.ok) return false;
+    const user = await response.json();
+    const metadata = user?.app_metadata || user?.raw_app_meta_data || {};
+    const roles = Array.isArray(metadata.roles) ? metadata.roles : [];
+    return metadata.role === "teacher" || metadata.role === "admin" || roles.includes("teacher") || roles.includes("admin");
+  } catch (_) { return false; }
+}
 const AUDIO_MIME = new Set(["audio/mpeg","audio/mp3","audio/mp4","audio/aac","audio/wav","audio/webm","audio/ogg","video/mp4","video/quicktime","video/webm","video/x-m4v"]);
 const ASSIGNMENT_MIME = new Set([...AUDIO_MIME,"application/pdf","image/jpeg","image/png","image/webp","image/heic","application/msword","application/vnd.openxmlformats-officedocument.wordprocessingml.document","application/vnd.ms-excel","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","text/plain"]);
 function cairoToday(){const a=new Intl.DateTimeFormat("en-GB",{timeZone:"Africa/Cairo",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date()),p:Record<string,string>={};for(const x of a)if(x.type!=="literal")p[x.type]=x.value;return p.year+"-"+p.month+"-"+p.day}
@@ -246,6 +266,79 @@ async function issueToken(s:any){const p=toB64Utf8(JSON.stringify({sid:s.id,exp:
 async function currentStudent(req:Request){const t=String(req.headers.get("authorization")||"").replace(/^Bearer\s+/i,"").trim(),parts=t.split(".");if(parts.length!==2||!parts[0]||!serviceKey)throw new ApiError("سجلي الدخول من جديد لفتح هذه الصفحة.",401);if(await signToken(parts[0])!==parts[1])throw new ApiError("جلسة الطالب غير صالحة. سجلي الدخول مرة أخرى.",401);let claims:any;try{claims=JSON.parse(fromB64Utf8(parts[0]))}catch{throw new ApiError("جلسة الطالب غير صالحة.",401)}if(!claims.sid||Number(claims.exp)<=Math.floor(Date.now()/1000))throw new ApiError("انتهت صلاحية جلسة الطالب. سجلي الدخول مرة أخرى.",401);const rows=await db("platform_student_registry?select=*&id=eq."+escFilter(String(claims.sid))+"&limit=1") as any[];if(!rows.length)throw new ApiError("حساب الطالب غير موجود.",401);assertStudentActive(rows[0]);return rows[0]}
 async function studentLogin(body:any){const code=String(body.student_code||"").trim().toUpperCase(),phone=normPhone(body.student_phone);if(!code||!phone)throw new ApiError("اكتبي كود الطالب ورقم الموبايل المسجل.");const rows=await db("platform_student_registry?select=*&student_code=eq."+encodeURIComponent(code)+"&limit=1") as any[];if(!rows.length||normPhone(rows[0].student_phone)!==phone||rows[0].archived)throw new ApiError("كود الطالب أو رقم الموبايل غير صحيح.",401);assertStudentActive(rows[0]);return {ok:true,token:await issueToken(rows[0]),student:{id:rows[0].id,code:rows[0].student_code,name:rows[0].full_name,stage:rows[0].education_stage,subscription_end:rows[0].subscription_end,payment_status:rows[0].payment_status},expires_in:43200}}
 function studentStageOk(s:any,stage:string){return stage===s.education_stage||stage==="كورسات شاملة"||s.education_stage==="كورسات شاملة"}
+const SHARED_COURSE_INDEX_URL = "https://mr-ahmed-saber-new.vercel.app/api/courses";
+async function getSharedLessonContext(s:any, body:any) {
+  const courseId=needString(body.course_id,"معرّف الكورس",180),unitId=needString(body.unit_id,"معرّف الوحدة",180),lessonId=needString(body.lesson_id,"معرّف المحاضرة",180);
+  const response=await fetch(SHARED_COURSE_INDEX_URL,{cache:"no-store",signal:AbortSignal.timeout(8000)});
+  if(!response.ok)throw new ApiError("تعذر التحقق من الكورس المنشور. حاول مرة أخرى.",503);
+  const data=await response.json();const courses=Array.isArray(data.courses)?data.courses:[];
+  const course=courses.find((x:any)=>String(x.id)===courseId);
+  if(!course)throw new ApiError("الكورس غير موجود ضمن الكورسات المنشورة.",404);
+  const stage=String(course.stage||course.education_stage||"");
+  if(!studentStageOk(s,stage))throw new ApiError("الكورس غير متاح لمرحلتك الدراسية.",403);
+  const unit=(Array.isArray(course.units)?course.units:[]).find((x:any)=>String(x.id)===unitId);
+  const lesson=unit&&(Array.isArray(unit.lessons)?unit.lessons:[]).find((x:any)=>String(x.id)===lessonId);
+  if(!unit||!lesson)throw new ApiError("المحاضرة غير موجودة ضمن الكورس المنشور.",404);
+  return {course,unit,lesson,courseId,unitId,lessonId};
+}
+function lessonCommentDto(row:any) {
+  const replies=Array.isArray(row?.replies)?row.replies:[];
+  return {
+    id:row.id,courseId:row.course_id,unitId:row.unit_id,lessonId:row.lesson_id,
+    courseName:row.course_name||"",unitName:row.unit_name||"",lessonTitle:row.lesson_title||"",
+    studentName:row.student_name||"طالب",studentStage:row.student_stage||"",body:row.body||"",
+    createdAt:row.created_at||null,
+    replies:replies.map((r:any)=>({id:r.id,author:r.author||"Mr. Ahmed Saber",body:r.body||"",createdAt:r.created_at||r.createdAt||null}))
+  };
+}
+async function studentListLessonComments(body:any,s:any) {
+  const ctx=await getSharedLessonContext(s,body);
+  const rows=await db("platform_lesson_comments?select=*&course_id=eq."+encodeURIComponent(ctx.courseId)+"&unit_id=eq."+encodeURIComponent(ctx.unitId)+"&lesson_id=eq."+encodeURIComponent(ctx.lessonId)+"&order=created_at.asc") as any[];
+  return {ok:true,comments:rows.map(lessonCommentDto)};
+}
+async function studentCreateLessonComment(body:any,s:any) {
+  const ctx=await getSharedLessonContext(s,body),text=needString(body.body,"نص التعليق",2000);
+  const rows=await db("platform_lesson_comments",{method:"POST",body:{
+    course_id:ctx.courseId,unit_id:ctx.unitId,lesson_id:ctx.lessonId,
+    course_name:String(ctx.course.name||"كورس").slice(0,180),
+    unit_name:String(ctx.unit.name||"وحدة").slice(0,180),
+    lesson_title:String(ctx.lesson.title||"محاضرة").slice(0,180),
+    student_registry_id:s.id,student_name:String(s.full_name||"طالب").slice(0,100),
+    student_stage:String(s.education_stage||"").slice(0,80),body:text,replies:[]
+  },prefer:"return=representation"}) as any[];
+  return {ok:true,comment:rows[0]?lessonCommentDto(rows[0]):null};
+}
+async function studentListLessonProgress(body:any,s:any) {
+  const courseId=String(body.course_id||"").trim();
+  if(courseId){
+    const all=await db("platform_student_lesson_progress?select=course_id,unit_id,lesson_id,completed_at&student_registry_id=eq."+escFilter(String(s.id))+"&course_id=eq."+encodeURIComponent(courseId)+"&order=completed_at.desc") as any[];
+    return {ok:true,progress:all};
+  }
+  const rows=await db("platform_student_lesson_progress?select=course_id,unit_id,lesson_id,completed_at&student_registry_id=eq."+escFilter(String(s.id))+"&order=completed_at.desc") as any[];
+  return {ok:true,progress:rows};
+}
+async function studentMarkLessonComplete(body:any,s:any) {
+  const ctx=await getSharedLessonContext(s,body);
+  const rows=await db("platform_student_lesson_progress?on_conflict=student_registry_id,course_id,unit_id,lesson_id",{method:"POST",body:{
+    student_registry_id:s.id,course_id:ctx.courseId,unit_id:ctx.unitId,lesson_id:ctx.lessonId,completed_at:new Date().toISOString()
+  },prefer:"resolution=merge-duplicates,return=representation"}) as any[];
+  return {ok:true,progress:rows[0]||{course_id:ctx.courseId,unit_id:ctx.unitId,lesson_id:ctx.lessonId}};
+}
+async function teacherListLessonComments() {
+  const rows=await db("platform_lesson_comments?select=*&order=created_at.desc&limit=500") as any[];
+  return {ok:true,comments:rows.map(lessonCommentDto)};
+}
+async function teacherReplyLessonComment(body:any) {
+  const id=String(body.comment_id||"").trim(),reply=needString(body.body,"نص الرد",2000);
+  if(!/^[0-9a-f-]{36}$/i.test(id))throw new ApiError("معرّف التعليق غير صحيح.");
+  const found=await db("platform_lesson_comments?select=id,replies&id=eq."+escFilter(id)+"&limit=1") as any[];
+  if(!found.length)throw new ApiError("التعليق غير موجود.",404);
+  const replies=Array.isArray(found[0].replies)?found[0].replies:[];
+  replies.push({id:crypto.randomUUID(),author:"Mr. Ahmed Saber",body:reply,created_at:new Date().toISOString()});
+  const saved=await db("platform_lesson_comments?id=eq."+escFilter(id),{method:"PATCH",body:{replies,updated_at:new Date().toISOString()},prefer:"return=representation"}) as any[];
+  return {ok:true,comment:saved[0]?lessonCommentDto(saved[0]):null};
+}
+
 async function studentListExams(s:any){const all=await db("platform_exams?select=id,title,instructions,stage,course_title,duration_minutes,is_published,created_at&is_published=eq.true&order=created_at.desc") as any[];const exams=all.filter(e=>studentStageOk(s,String(e.stage)));const attempts=await db("platform_exam_attempts?select=id,exam_id,started_at,expires_at,submitted_at,status&student_registry_id=eq."+escFilter(String(s.id))) as any[];const byId:Record<string,any>={};for(const a of attempts)byId[a.exam_id]=a;const mapped=[];for(const e of exams){const qs=await db("platform_exam_questions?select=id,points&exam_id=eq."+escFilter(String(e.id))) as any[];mapped.push({...e,question_count:qs.length,total_points:qs.reduce((n,q)=>n+(Number(q.points)||0),0),attempt:byId[e.id]||null})}return {ok:true,student:{name:s.full_name,stage:s.education_stage},exams:mapped}}
 async function studentQuestions(examId:string){const qs=await db("platform_exam_questions?select=id,exam_id,question_type,prompt,options,points,media_url,sort_order&exam_id=eq."+escFilter(examId)+"&order=sort_order.asc") as any[];const out=[];for(const q of qs)out.push({...q,media_url:await signAcademicReadUrl(q.media_url)});return out}
 async function studentStartExam(body:any,s:any){const id=escFilter(String(body.exam_id||""));if(!id)throw new ApiError("الامتحان غير صحيح.");const exams=await db("platform_exams?select=*&id=eq."+id+"&is_published=eq.true&limit=1") as any[];const exam=exams[0];if(!exam||!studentStageOk(s,String(exam.stage)))throw new ApiError("الامتحان غير متاح لمرحلتك.",404);let old=await db("platform_exam_attempts?select=*&exam_id=eq."+id+"&student_registry_id=eq."+escFilter(String(s.id))+"&limit=1") as any[];let attempt=old[0];if(attempt&&attempt.submitted_at)throw new ApiError("تم تسليم هذا الامتحان من قبل، ولا يمكن إعادته.",409);if(attempt&&new Date(attempt.expires_at).getTime()<=Date.now()){await finalizeAttempt(attempt);throw new ApiError("انتهى وقت المحاولة السابقة ولا يمكن إعادة الامتحان.",409)}if(!attempt){const v=await db("platform_exam_attempts",{method:"POST",body:{exam_id:id,student_registry_id:s.id,expires_at:new Date(Date.now()+Number(exam.duration_minutes)*60000).toISOString(),status:"in_progress"},prefer:"return=representation"}) as any[];attempt=v?.[0];if(!attempt){old=await db("platform_exam_attempts?select=*&exam_id=eq."+id+"&student_registry_id=eq."+escFilter(String(s.id))+"&limit=1") as any[];attempt=old[0]}if(!attempt)throw new ApiError("تعذر بدء المحاولة. حدّثي الصفحة وحاولي مرة أخرى.",409)}const answers=await db("platform_exam_answers?select=question_id,answer_value,audio_path,answer_audio_name&attempt_id=eq."+escFilter(String(attempt.id))) as any[];const mappedAnswers=[];for(const a of answers)mappedAnswers.push({...a,audio_url:await signAcademicReadUrl(a.audio_path)});return {ok:true,exam,attempt,questions:await studentQuestions(id),answers:mappedAnswers}}
@@ -262,7 +355,7 @@ async function getAttemptReview(body:any){const id=escFilter(String(body.attempt
 async function gradeAttempt(body:any){const id=escFilter(String(body.attempt_id||"")),ats=await db("platform_exam_attempts?select=*&id=eq."+id+"&limit=1") as any[],attempt=ats[0];if(!attempt||!attempt.submitted_at)throw new ApiError("يجب أن يسلّم الطالب الامتحان أولًا.");const qs=await db("platform_exam_questions?select=id,points&exam_id=eq."+escFilter(String(attempt.exam_id))) as any[],valid:Record<string,number>={};for(const q of qs)valid[q.id]=Number(q.points)||0;for(const a of (Array.isArray(body.answers)?body.answers:[])){const qid=escFilter(String(a.question_id||""));if(!(qid in valid))throw new ApiError("سؤال غير صحيح.");const pts=Number(a.awarded_points);if(!Number.isFinite(pts)||pts<0||pts>valid[qid])throw new ApiError("الدرجة خارج حدود السؤال.");const answerId=escFilter(String(a.id||""));if(!answerId)throw new ApiError("الإجابة غير صحيحة.");await db("platform_exam_answers?id=eq."+answerId+"&attempt_id=eq."+id,{method:"PATCH",body:{awarded_points:pts,teacher_feedback:String(a.teacher_feedback||"").slice(0,5000),reviewed_at:new Date().toISOString()}})}const ans=await db("platform_exam_answers?select=id,awarded_points&attempt_id=eq."+id) as any[],score=ans.reduce((n,a)=>n+(a.awarded_points==null?0:Number(a.awarded_points)||0),0),max=qs.reduce((n,q)=>n+(Number(q.points)||0),0),pending=ans.some(a=>a.awarded_points==null),old=await db("platform_exam_results?select=score,published_at&attempt_id=eq."+id+"&limit=1") as any[];await db("platform_exam_results?on_conflict=attempt_id",{method:"POST",body:{attempt_id:id,score,max_score:max,published_at:old[0]?.published_at||null,updated_at:new Date().toISOString()},prefer:"resolution=merge-duplicates,return=minimal"});if(old.length&&Number(old[0].score)!==score)await db("platform_grade_change_log",{method:"POST",body:{student_registry_id:attempt.student_registry_id,attempt_id:id,old_score:Number(old[0].score)||0,new_score:score,reason:String(body.reason||"تعديل درجة من لوحة المستر").slice(0,1000)},prefer:"return=minimal"});await db("platform_exam_attempts?id=eq."+id,{method:"PATCH",body:{status:pending?"awaiting_review":"graded"}});return {ok:true,score,max_score:max,status:pending?"awaiting_review":"graded"}}
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: { "access-control-allow-origin": "*", "access-control-allow-headers": "content-type,x-teacher-key,apikey", "access-control-allow-methods": "POST,OPTIONS", "cache-control": "no-store" } });
+  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: { "access-control-allow-origin": "*", "access-control-allow-headers": "authorization,content-type,x-teacher-key,apikey", "access-control-allow-methods": "POST,OPTIONS", "cache-control": "no-store" } });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
   try {
     const body = await req.json();
@@ -272,7 +365,9 @@ Deno.serve(async (req: Request) => {
     const teacherUpload=action==="createUploadUrl"&&(body.file_kind==="exam_audio"||body.file_kind==="assignment_resource");
     if(TEACHER_ACTIONS.has(action)||teacherUpload){
       const supplied=String(req.headers.get("x-teacher-key")||"");
-      if(!supplied||await sha256(supplied)!==EXPECTED_KEY_HASH)return json({error:"رمز المزامنة غير صحيح."},401);
+      const tokenAuthorized = await authorizedTeacherSession(req);
+      const legacyAuthorized = !!supplied && await sha256(supplied)===EXPECTED_KEY_HASH;
+      if(!tokenAuthorized&&!legacyAuthorized)return json({error:"سجّلي الدخول بحساب المستر لإكمال العملية."},401);
     } else { student=await currentStudent(req); }
     let result: unknown;
     switch (action) {
@@ -292,6 +387,12 @@ Deno.serve(async (req: Request) => {
       case "listSubmissions": result = await listSubmissions(body); break;
       case "reviewSubmission": result = await reviewSubmission(body); break;
       case "createUploadUrl": result = await createUploadUrl(body,student); break;
+      case "studentListLessonComments": result = await studentListLessonComments(body,student); break;
+      case "studentCreateLessonComment": result = await studentCreateLessonComment(body,student); break;
+      case "studentListLessonProgress": result = await studentListLessonProgress(body,student); break;
+      case "studentMarkLessonComplete": result = await studentMarkLessonComplete(body,student); break;
+      case "teacherListLessonComments": result = await teacherListLessonComments(); break;
+      case "teacherReplyLessonComment": result = await teacherReplyLessonComment(body); break;
       case "studentListExams": result = await studentListExams(student); break;
       case "studentStartExam": result = await studentStartExam(body,student); break;
       case "studentSaveAnswer": result = await studentSaveAnswer(body,student); break;
