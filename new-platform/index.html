@@ -178,7 +178,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
     <div id="testArea" class="test-area hidden">
      <div class="test-head"><span id="testProgressText">0 من 15 سؤالًا</span><span id="testAnswered">تمت الإجابة على 0</span></div>
      <div class="test-progress"><span id="testProgressBar"></span></div>
-     <form id="placementForm"><div id="questionList"></div><button class="btn btn-gold" type="submit" style="width:100%;margin-top:8px">إنهاء الاختبار وعرض النتيجة</button></form>
+     <form id="placementForm"><div id="questionList"></div><label class="option" style="margin:14px 0;align-items:flex-start"><input id="placementContactConsent" type="checkbox" required><span>أوافق على حفظ بياناتي ونتيجة الاختبار، والتواصل معي عبر واتساب بخصوص عروض المنصة.</span></label><div class="notice hidden" id="placementSaveStatus" role="status" aria-live="polite"></div><button class="btn btn-gold" type="submit" style="width:100%;margin-top:8px">إنهاء الاختبار وعرض النتيجة</button></form>
     </div>
     <div id="testResult" class="test-result hidden" aria-live="polite"></div>
    </section>
@@ -396,22 +396,37 @@ $('#placementForm').addEventListener('submit',e=>{e.preventDefault();const unans
   button.addEventListener('click',start,true);
   form.addEventListener('submit',start,true);
   const placementForm=document.getElementById('placementForm');
-  if(placementForm)placementForm.addEventListener('submit',function(e){
+  if(placementForm)placementForm.addEventListener('submit',async function(e){
    e.preventDefault();e.stopImmediatePropagation();
+   const status=document.getElementById('placementSaveStatus');
+   status.classList.add('hidden');status.textContent='';
    const missing=answers.filter(v=>v===null).length;
    if(missing){showError('جاوب على كل الأسئلة قبل إنهاء الاختبار.');return;}
+   const consent=document.getElementById('placementContactConsent');
+   if(!consent||!consent.checked){showError('لازم توافق على حفظ البيانات والتواصل عبر واتساب قبل إرسال النتيجة.');return;}
    const score=answers.reduce((sum,a,i)=>sum+(a===questions[i].c?1:0),0);
    const band=score>=12?'مستوى متقدم نسبيًا':score>=8?'مستوى متوسط':'تحتاج إلى تقوية الأساسيات';
-   const result=document.getElementById('testResult');
-   area.classList.add('hidden');
-   result.replaceChildren();
-   const title=document.createElement('h3');title.textContent=(document.getElementById('testName')?.value||'الطالب').trim();
-   const scoreText=document.createElement('strong');scoreText.textContent=score+' / '+questions.length;
-   const description=document.createElement('p');description.textContent=band+' — هذه نتيجة إرشادية فقط ولا تُحفظ في سجل الطالب.';
-   const reset=document.createElement('button');reset.type='button';reset.className='btn btn-dark';reset.textContent='البدء من جديد';
-   reset.addEventListener('click',()=>{result.classList.add('hidden');intro.classList.remove('hidden');form.reset();answers=Array(questions.length).fill(null);intro.scrollIntoView({behavior:'smooth',block:'center'});});
-   result.append(title,scoreText,description,reset);result.classList.remove('hidden');result.scrollIntoView({behavior:'smooth',block:'center'});
-  },true);
+   const submit=placementForm.querySelector('button[type="submit"]');submit.disabled=true;submit.textContent='جاري حفظ النتيجة…';
+   try{
+    const response=await fetch('/api/placement-tests',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({
+     student_name:(document.getElementById('testName')?.value||'').trim(),
+     education_stage:document.getElementById('testStage')?.value||'',
+     guardian_phone:(document.getElementById('testGuardian')?.value||'').trim(),
+     email:(document.getElementById('testEmail')?.value||'').trim(),
+     score,level_band:band,answers,contact_consent:true
+    }),cache:'no-store'});
+    const data=await response.json();if(!response.ok||!data.ok)throw new Error(data.error||'تعذر حفظ النتيجة.');
+    area.classList.add('hidden');
+    const result=document.getElementById('testResult');result.replaceChildren();
+    const title=document.createElement('h3');title.textContent=(document.getElementById('testName')?.value||'الطالب').trim();
+    const scoreText=document.createElement('strong');scoreText.textContent=score+' / '+questions.length;
+    const description=document.createElement('p');description.textContent=band+' — تم حفظ النتيجة، وسيتمكن فريق المنصة من مراجعتها والتواصل معك وفق موافقتك.';
+    const reset=document.createElement('button');reset.type='button';reset.className='btn btn-dark';reset.textContent='البدء من جديد';
+    reset.addEventListener('click',()=>{result.classList.add('hidden');intro.classList.remove('hidden');form.reset();answers=Array(questions.length).fill(null);intro.scrollIntoView({behavior:'smooth',block:'center'});});
+    result.append(title,scoreText,description,reset);result.classList.remove('hidden');result.scrollIntoView({behavior:'smooth',block:'center'});
+   }catch(err){showError(err.message||'تعذر حفظ النتيجة. حاول مرة أخرى.');}
+   finally{submit.disabled=false;submit.textContent='إنهاء الاختبار وعرض النتيجة';}
+  };
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bootPlacementTest);else bootPlacementTest();
 })();
