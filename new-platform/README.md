@@ -452,3 +452,13 @@ The following decisions are also locked unless the user explicitly requests a ch
 - The isolated project's service-role DB access and tables are unchanged. The original project's student/exam tables are not queried or modified by this fix.
 - The teacher form displays the Auth error text if sign-in still fails, without exposing access tokens or secrets.
 - Manual sign-in from the published Preview still needs user verification using the existing email/password.
+
+
+## User-confirmed checkpoint — 19 Oct 2026
+- User confirmed teacher login is now working. Do not reset the password or change Supabase Auth settings unless the user requests it.
+- The approved teacher portrait source is the original immutable image URL recorded above. A relative `teacher.png` reference caused a 404 on the new deployment; the current deployed homepage, student dashboard, and teacher dashboard have now been verified by fetching their HTML to reference the approved original image URL (two homepage references, two student dashboard references, one teacher dashboard reference). This confirms source paths, not visual rendering; the user must confirm the image appears correctly on their phone.
+- Current READY preview deployment: `dpl_DH8U41Vba6SBXLwKcbogLveASevN`, URL `https://mr-ahmed-saber-fj6iqqnce-mr-ahmed-saber.vercel.app`, commit `630b9f23ad5fdb7d217b4e1617a54250ff6083ce`.
+- The deployed `/api/testimonials` GET endpoint responds HTTP 200 with an empty list. The student review form is present on the homepage; no fake review was inserted to test submission. User should test by submitting a real review and confirming it appears after reload.
+- `/teacher.png` at the new deployment root returns 404, so never use that path. The approved photo is hosted at the original immutable source URL above.
+- The current public pricing table has not been populated with real prices. Do not invent or seed prices; verify the teacher can save prices and the homepage displays them before marking pricing complete.
+- Continue one feature at a time, preserve the approved photo, existing review copy, login behavior, visual design, and exam/question system. No production release has been made.
