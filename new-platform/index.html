@@ -171,7 +171,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
        <div class="field"><label for="testGuardian">رقم ولي الأمر</label><input id="testGuardian" required inputmode="tel" autocomplete="tel" placeholder="01xxxxxxxxx"></div>
        <div class="field"><label for="testEmail">البريد الإلكتروني</label><input id="testEmail" type="email" required autocomplete="email" placeholder="name@example.com"></div>
       </div>
-      <div class="notice hidden" id="testStartError" role="status" aria-live="polite"></div><button class="btn btn-dark" id="startPlacementTest" type="submit" style="width:100%">ابدأ الاختبار <span aria-hidden="true">←</span></button>
+      <div class="notice hidden" id="testStartError" role="status" aria-live="polite"></div><button class="btn btn-dark" id="startPlacementTest" type="button" style="width:100%">ابدأ الاختبار <span aria-hidden="true">←</span></button>
      </form>
      <div class="hint">الاختبار الحالي نموذج تجريبي داخل المتصفح؛ النتيجة لا تُضاف لسجل الطالب قبل ربط قاعدة البيانات.</div>
     </div>
@@ -328,6 +328,92 @@ $('#placementForm').addEventListener('submit',e=>{e.preventDefault();const unans
  async function loadReviews(){try{const response=await fetch('/api/testimonials',{cache:'no-store'});const data=await response.json();if(!response.ok||!data.ok)throw new Error('load failed');list.replaceChildren();(data.reviews||[]).forEach(review=>addReview(review,false));if(!(data.reviews||[]).length){const empty=document.createElement('div');empty.className='student-review-status';empty.textContent='لسه مفيش آراء منشورة من الطلاب. كوني أول واحد يشارك رأيه.';list.append(empty);}}catch(error){list.replaceChildren();const msg=document.createElement('div');msg.className='student-review-status';msg.textContent='تعذر تحميل الآراء الجديدة حاليًا.';list.append(msg);}}
  form.addEventListener('submit',async function(event){event.preventDefault();status.textContent='جاري نشر رأيك…';submit.disabled=true;submit.textContent='جاري النشر…';const payload={student_name:form.elements.student_name.value,education_stage:form.elements.education_stage.value,review_text:form.elements.review_text.value};try{const response=await fetch('/api/testimonials',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});const data=await response.json();if(!response.ok||!data.ok||!data.review)throw new Error(data.error||'تعذر نشر رأيك. حاول مرة أخرى.');list.querySelector('.student-review-status')?.remove();addReview(data.review,true);form.reset();status.textContent='تم نشر رأيك بنجاح، شكرًا لمشاركتك!';}catch(error){status.textContent=error.message||'تعذر نشر رأيك الآن. حاول مرة أخرى.';}finally{submit.disabled=false;submit.textContent='نشر رأيي';}});
  loadReviews();
+})();
+</script>
+<script>
+/* Isolated placement-test boot: works even if an unrelated homepage handler fails. */
+(function(){
+ function bootPlacementTest(){
+  const button=document.getElementById('startPlacementTest');
+  const form=document.getElementById('testStartForm');
+  const intro=document.getElementById('testIntro');
+  const area=document.getElementById('testArea');
+  const list=document.getElementById('questionList');
+  const error=document.getElementById('testStartError');
+  if(!button||!form||!intro||!area||!list||!error)return;
+  const questions=[
+   {q:'Choose the correct verb: She ___ to school every day.',a:['go','goes','going','gone'],c:1},
+   {q:'What is the opposite of “early”?',a:['Fast','Late','Near','Easy'],c:1},
+   {q:'I have lived here ___ 2020.',a:['for','since','at','from'],c:1},
+   {q:'Choose the correct article: He is ___ honest man.',a:['a','an','the','no article'],c:1},
+   {q:'The plural of “child” is ___.',a:['childs','childes','children','childrens'],c:2},
+   {q:'If I ___ more time, I would learn another language.',a:['have','had','will have','has'],c:1},
+   {q:'Choose the correctly spelled word.',a:['Becouse','Because','Beacause','Becaus'],c:1},
+   {q:'“Generous” means ___.',a:['Kind and willing to give','Always late','Very tired','Not careful'],c:0},
+   {q:'They ___ dinner when I arrived.',a:['have','had','were having','are having'],c:2},
+   {q:'Which sentence is correct?',a:['He don’t like tea.','He doesn’t likes tea.','He doesn’t like tea.','He not like tea.'],c:2},
+   {q:'The book ___ by millions of people.',a:['read','is read','reads','reading'],c:1},
+   {q:'She asked me where I ___.',a:['live','did live','lived','am living'],c:2},
+   {q:'Choose the closest meaning to “rapid”.',a:['Slow','Quick','Quiet','Weak'],c:1},
+   {q:'Despite ___ tired, he finished the work.',a:['be','being','was','been'],c:1},
+   {q:'By next year, I ___ my course.',a:['complete','completed','will have completed','am complete'],c:2}
+  ];
+  let answers=Array(questions.length).fill(null);
+  function showError(message){error.textContent=message;error.classList.remove('hidden');}
+  function paint(){
+   list.replaceChildren();
+   questions.forEach((q,qi)=>{
+    const field=document.createElement('fieldset');field.className='question-card';
+    const legend=document.createElement('legend');legend.className='question-title';legend.textContent=(qi+1)+'. '+q.q;field.appendChild(legend);
+    const options=document.createElement('div');options.className='options';
+    q.a.forEach((answer,ai)=>{
+     const label=document.createElement('label');label.className='option';
+     const radio=document.createElement('input');radio.type='radio';radio.name='placement-q-'+qi;radio.value=String(ai);radio.addEventListener('change',()=>{answers[qi]=ai;updateProgress()});
+     const span=document.createElement('span');span.textContent=answer;label.append(radio,span);options.appendChild(label);
+    });
+    field.appendChild(options);list.appendChild(field);
+   });
+   updateProgress();
+  }
+  function updateProgress(){
+   const count=answers.filter(v=>v!==null).length;
+   const text=document.getElementById('testProgressText');if(text)text.textContent=count+' من '+questions.length+' سؤالًا';
+   const answered=document.getElementById('testAnswered');if(answered)answered.textContent='تمت الإجابة على '+count;
+   const bar=document.getElementById('testProgressBar');if(bar)bar.style.width=(count/questions.length*100)+'%';
+  }
+  function start(e){
+   if(e){e.preventDefault();e.stopImmediatePropagation();}
+   error.classList.add('hidden');error.textContent='';
+   const name=document.getElementById('testName'),stage=document.getElementById('testStage'),guardian=document.getElementById('testGuardian'),email=document.getElementById('testEmail');
+   if(!form.reportValidity())return;
+   if(!name.value.trim()||!stage.value||!guardian.value.trim()||!email.value.trim()){showError('من فضلك أكمل البيانات المطلوبة لبدء الاختبار.');return;}
+   answers=Array(questions.length).fill(null);
+   try{
+    paint();intro.classList.add('hidden');area.classList.remove('hidden');
+    area.scrollIntoView({behavior:'smooth',block:'start'});
+   }catch(err){showError('حصلت مشكلة في فتح الأسئلة. حدّث الصفحة وحاول مرة أخرى.');}
+  }
+  button.addEventListener('click',start,true);
+  form.addEventListener('submit',start,true);
+  const placementForm=document.getElementById('placementForm');
+  if(placementForm)placementForm.addEventListener('submit',function(e){
+   e.preventDefault();e.stopImmediatePropagation();
+   const missing=answers.filter(v=>v===null).length;
+   if(missing){showError('جاوب على كل الأسئلة قبل إنهاء الاختبار.');return;}
+   const score=answers.reduce((sum,a,i)=>sum+(a===questions[i].c?1:0),0);
+   const band=score>=12?'مستوى متقدم نسبيًا':score>=8?'مستوى متوسط':'تحتاج إلى تقوية الأساسيات';
+   area.classList.add('hidden');
+   const result=document.getElementById('testResult');
+   result.replaceChildren();
+   const title=document.createElement('h3');title.textContent=name.value.trim();
+   const scoreText=document.createElement('strong');scoreText.textContent=score+' / '+questions.length;
+   const description=document.createElement('p');description.textContent=band+' — هذه نتيجة إرشادية فقط ولا تُحفظ في سجل الطالب.';
+   const reset=document.createElement('button');reset.type='button';reset.className='btn btn-dark';reset.textContent='البدء من جديد';
+   reset.addEventListener('click',()=>{result.classList.add('hidden');intro.classList.remove('hidden');form.reset();answers=Array(questions.length).fill(null);intro.scrollIntoView({behavior:'smooth',block:'center'});});
+   result.append(title,scoreText,description,reset);result.classList.remove('hidden');result.scrollIntoView({behavior:'smooth',block:'center'});
+  },true);
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bootPlacementTest);else bootPlacementTest();
 })();
 </script>
 </body></html>
