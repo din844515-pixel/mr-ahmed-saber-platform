@@ -656,7 +656,7 @@ $('#studentRegistryConnect').addEventListener('click',async function(){const val
    if(error)throw error;
    if(!data.user||!isTeacher(data.user)){await client.auth.signOut({scope:'local'});message.textContent='بيانات الدخول صحيحة لكن الحساب غير مفعّل كحساب مستر. يلزم اعتماد دور المدرّس للحساب.';return;}
    password.value='';showDashboard();
-  }catch(e){message.textContent='تعذر تسجيل الدخول. راجع البريد الإلكتروني وكلمة المرور وحاول مرة أخرى.';}
+  }catch(e){const detail=String(e&&e.message||'').trim();message.textContent=detail?('تعذر تسجيل الدخول: '+detail):'تعذر تسجيل الدخول. راجع البريد الإلكتروني وكلمة المرور وحاول مرة أخرى.';}
   finally{submit.disabled=false;}
  });
  logout.addEventListener('click',async function(){
