@@ -144,7 +144,8 @@ html.teacher-auth-pending body > *:not(#teacherAuthGate){visibility:hidden!impor
   <div class="promo-admin-head"><div><span class="gold" style="font-size:12px;font-weight:800">HOMEPAGE PROMO VIDEO</span><h3>الفيديو الإعلاني</h3><p>اختر الفيديو مباشرةً من معرض الهاتف، وليس عن طريق رابط.</p></div><span class="promo-badge">تحكم المستر</span></div>
   <label class="promo-picker" for="promoVideoFile"><span class="promo-picker-icon">＋</span><strong>إضافة الفيديو الإعلاني</strong><small>اختر ملف فيديو من Gallery / الملفات على الهاتف</small><input id="promoVideoFile" type="file" accept="video/*" /></label>
   <div id="promoPreviewWrap" class="promo-preview-wrap hidden"><video id="promoVideoPreview" controls playsinline preload="metadata"></video><div class="promo-file-info"><b id="promoFileName"></b><span id="promoFileSize"></span></div><button class="btn btn-outline" id="promoRemove" type="button">إلغاء الاختيار</button></div>
-  <div id="promoUploadNotice" class="promo-upload-notice" role="status">اختيار الفيديو ومعاينته متاحان هنا. الحفظ النهائي ونشر الفيديو لجميع الطلاب يحتاجان ربط مساحة تخزين المنصة الجديدة، ولم يتم تفعيل الحفظ المشترك بعد.</div>
+  <div class="row" style="gap:10px;flex-wrap:wrap;margin-top:16px"><button class="btn btn-gold" id="promoPublish" type="button">رفع وحفظ ونشر الفيديو</button><button class="btn btn-outline hidden" id="promoUnpublish" type="button">إلغاء نشر الفيديو</button></div>
+  <div id="promoUploadNotice" class="promo-upload-notice" role="status">اختر الفيديو من الهاتف ثم اضغط «رفع وحفظ ونشر الفيديو». سيظهر على الصفحة الرئيسية بعد نجاح الحفظ.</div>
  </div>
 </section>
 </div><footer class="footer">© Mr. Ahmed Saber · لوحة المستر — نسخة اختبار الربط</footer></div></div>
@@ -265,9 +266,78 @@ $$('[data-close]').forEach(b=>b.addEventListener('click',()=>$('#actionModal').c
 $('#actionModal').addEventListener('click',e=>{if(e.target.id==='actionModal')$('#actionModal').classList.add('hidden')});
 $$('#studentModalClose, #studentFormCancel').forEach(b=>b.addEventListener('click',e=>{e.preventDefault();closeStudent()}));$('#studentModal').addEventListener('click',e=>{if(e.target===$('#studentModal'))closeStudent()});$('#notifications').addEventListener('click',()=>modal('الإشعارات','ستظهر طلبات الدفع والاشتراكات القريبة من الانتهاء بعد توصيل قاعدة البيانات وتنبيهات النظام.'));
 
-const promoInput=$("#promoVideoFile"),promoWrap=$("#promoPreviewWrap"),promoPreview=$("#promoVideoPreview"),promoName=$("#promoFileName"),promoSize=$("#promoFileSize");let promoObjectUrl="";
-promoInput.addEventListener("change",()=>{const file=promoInput.files&&promoInput.files[0];if(!file)return;if(!file.type.startsWith("video/")){modal("ملف غير صالح","اختر ملف فيديو من معرض الهاتف.");promoInput.value="";return;}if(promoObjectUrl)URL.revokeObjectURL(promoObjectUrl);promoObjectUrl=URL.createObjectURL(file);promoPreview.src=promoObjectUrl;promoName.textContent=file.name;promoSize.textContent=(file.size/1048576).toFixed(1)+" MB";promoWrap.classList.remove("hidden");$("#promoUploadNotice").textContent="تم اختيار الفيديو ومعاينته فقط. لم يتم رفعه أو نشره للطلاب بعد؛ يلزم ربط مساحة التخزين المشتركة أولًا."});
-$("#promoRemove").addEventListener("click",()=>{if(promoObjectUrl)URL.revokeObjectURL(promoObjectUrl);promoObjectUrl="";promoPreview.removeAttribute("src");promoPreview.load();promoInput.value="";promoWrap.classList.add("hidden");promoName.textContent="";promoSize.textContent=""});
+const promoInput=$("#promoVideoFile"),promoWrap=$("#promoPreviewWrap"),promoPreview=$("#promoVideoPreview"),promoName=$("#promoFileName"),promoSize=$("#promoFileSize"),promoNotice=$("#promoUploadNotice"),promoPublish=$("#promoPublish"),promoUnpublish=$("#promoUnpublish"),promoRemove=$("#promoRemove");
+let promoObjectUrl="",promoSelectedFile=null,promoPublishedVideo=null;
+function promoNoticeSet(message,isError){promoNotice.textContent=message;promoNotice.style.borderColor=isError?"#d9aaaa":"";promoNotice.style.color=isError?"#9c3838":""}
+function promoSizeText(size){return (Math.max(0,Number(size)||0)/1048576).toFixed(1)+" MB"}
+function applyPublishedPromo(video){
+ promoPublishedVideo=video||null;
+ if(!promoSelectedFile&&promoPublishedVideo){
+  if(promoObjectUrl){URL.revokeObjectURL(promoObjectUrl);promoObjectUrl=""}
+  promoPreview.src=promoPublishedVideo.videoUrl;promoName.textContent=promoPublishedVideo.filename||"الفيديو الإعلاني المنشور";promoSize.textContent=promoSizeText(promoPublishedVideo.size);promoWrap.classList.remove("hidden");
+ }
+ promoUnpublish.classList.toggle("hidden",!promoPublishedVideo);
+}
+async function loadTeacherPromoVideo(){
+ try{
+  const response=await fetch("/api/promo-video",{cache:"no-store"});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok||!data.ok)throw new Error(data.error||"تعذر تحميل حالة الفيديو المنشور.");
+  applyPublishedPromo(data.active?data.video:null);
+  if(!promoSelectedFile)promoNoticeSet(data.active?"يوجد فيديو منشور على الصفحة الرئيسية. عند رفع فيديو جديد ونشره سيحل محل الفيديو الحالي.":"لا يوجد فيديو منشور حاليًا. ارفع الفيديو واحفظه لنشره للطلاب.",false);
+ }catch(error){promoNoticeSet(error.message||"تعذر تحميل حالة الفيديو المنشور.",true)}
+}
+promoInput.addEventListener("change",()=>{
+ const file=promoInput.files&&promoInput.files[0];if(!file)return;
+ if(!String(file.type||"").startsWith("video/")){modal("ملف غير صالح","اختر ملف فيديو من معرض الهاتف.");promoInput.value="";return}
+ if(file.size>2*1024*1024*1024){modal("حجم الفيديو كبير","الحد الأقصى للفيديو 2 جيجابايت.");promoInput.value="";return}
+ if(promoObjectUrl)URL.revokeObjectURL(promoObjectUrl);
+ promoSelectedFile=file;promoObjectUrl=URL.createObjectURL(file);promoPreview.src=promoObjectUrl;
+ promoName.textContent=file.name;promoSize.textContent=promoSizeText(file.size);promoWrap.classList.remove("hidden");
+ promoNoticeSet("تم اختيار الفيديو ومعاينته محليًا فقط. اضغط «رفع وحفظ ونشر الفيديو» ليظهر للطلاب.",false);
+});
+promoRemove.addEventListener("click",()=>{
+ if(promoObjectUrl){URL.revokeObjectURL(promoObjectUrl);promoObjectUrl=""}
+ promoSelectedFile=null;promoInput.value="";
+ if(promoPublishedVideo){promoPreview.src=promoPublishedVideo.videoUrl;promoName.textContent=promoPublishedVideo.filename||"الفيديو الإعلاني المنشور";promoSize.textContent=promoSizeText(promoPublishedVideo.size);promoWrap.classList.remove("hidden");promoNoticeSet("تم إلغاء اختيار الملف الجديد. الفيديو المنشور السابق ما زال ظاهرًا للطلاب.",false)}
+ else{promoPreview.removeAttribute("src");promoPreview.load();promoWrap.classList.add("hidden");promoName.textContent="";promoSize.textContent="";promoNoticeSet("تم إلغاء اختيار الفيديو. لم يتم تغيير الفيديو المنشور.",false)}
+});
+promoPublish.addEventListener("click",async()=>{
+ const file=promoSelectedFile;
+ if(!file){promoNoticeSet(promoPublishedVideo?"الفيديو الحالي منشور بالفعل. اختر ملفًا جديدًا إذا أردت استبداله.":"اختر ملف فيديو أولًا من معرض الهاتف.",true);return}
+ let token="",key="";
+ try{if(typeof window.getTeacherAccessToken==="function")token=await window.getTeacherAccessToken()}catch(_){}
+ try{key=typeof getTeacherUploadKey==="function"?String(getTeacherUploadKey()||"").trim():""}catch(_){}
+ if(!token&&!key){promoNoticeSet("سجّل الدخول بحساب المستر قبل نشر الفيديو.",true);return}
+ const oldLabel=promoPublish.textContent;promoPublish.disabled=true;promoPublish.textContent="جاري الرفع والنشر…";
+ try{
+  const sdk=await import("https://esm.sh/@vercel/blob@2.8.2/client?bundle");
+  const safeName=String(file.name||"homepage-video.mp4").replace(/[^a-zA-Z0-9._-]+/g,"_").slice(-120)||"homepage-video.mp4";
+  const ext=safeName.toLowerCase().match(/\.(mp4|webm|mov|m4v|3gp|mpeg|mpg|ogg|mkv|avi)$/);
+  const guessed=ext?({".mp4":"video/mp4",".webm":"video/webm",".mov":"video/quicktime",".m4v":"video/x-m4v",".3gp":"video/3gpp",".mpeg":"video/mpeg",".mpg":"video/mpeg",".ogg":"video/ogg",".mkv":"video/x-matroska",".avi":"video/avi"})[ext[0]]:"video/mp4";
+  const mimeType=file.type||guessed;
+  promoNoticeSet("جاري رفع الفيديو إلى التخزين الآمن…",false);
+  const uploaded=await sdk.upload("promo-videos/"+Date.now()+"-"+safeName,file,{access:"public",handleUploadUrl:"/api/videos",clientPayload:JSON.stringify(token?{accessToken:token}:{teacherKey:key}),contentType:mimeType,multipart:file.size>4500000,onUploadProgress:function(progress){promoNoticeSet("جاري رفع الفيديو "+Math.round(progress.percentage)+"%…",false)}});
+  promoNoticeSet("تم رفع الملف. جاري حفظه ونشره على الصفحة الرئيسية…",false);
+  const headers={"content-type":"application/json"};if(token)headers.authorization="Bearer "+token;else headers["x-teacher-key"]=key;
+  const response=await fetch("/api/promo-video",{method:"POST",headers,body:JSON.stringify({action:"publish",videoUrl:uploaded.url,filename:file.name,size:file.size,mimeType}),cache:"no-store"});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok||!data.ok)throw new Error(data.error||"تعذر حفظ الفيديو على الصفحة الرئيسية.");
+  if(promoObjectUrl){URL.revokeObjectURL(promoObjectUrl);promoObjectUrl=""}
+  promoSelectedFile=null;promoInput.value="";
+  applyPublishedPromo(data.video);promoNoticeSet("تم رفع الفيديو وحفظه ونشره بنجاح على الصفحة الرئيسية للطلاب.",false);
+ }catch(error){promoNoticeSet(error.message||"تعذر رفع الفيديو أو نشره. حاول مرة أخرى.",true)}
+ finally{promoPublish.disabled=false;promoPublish.textContent=oldLabel}
+});
+promoUnpublish.addEventListener("click",async()=>{
+ if(!promoPublishedVideo)return;
+ if(!confirm("هل تريد إلغاء نشر الفيديو الإعلاني من الصفحة الرئيسية؟"))return;
+ let token="",key="";try{if(typeof window.getTeacherAccessToken==="function")token=await window.getTeacherAccessToken()}catch(_){}try{key=typeof getTeacherUploadKey==="function"?String(getTeacherUploadKey()||"").trim():""}catch(_){}
+ const headers={"content-type":"application/json"};if(token)headers.authorization="Bearer "+token;else headers["x-teacher-key"]=key;
+ promoUnpublish.disabled=true;
+ try{const response=await fetch("/api/promo-video",{method:"POST",headers,body:JSON.stringify({action:"unpublish"}),cache:"no-store"});const data=await response.json().catch(()=>({}));if(!response.ok||!data.ok)throw new Error(data.error||"تعذر إلغاء النشر.");promoPublishedVideo=null;applyPublishedPromo(null);if(promoObjectUrl){URL.revokeObjectURL(promoObjectUrl);promoObjectUrl=""}promoSelectedFile=null;promoInput.value="";promoPreview.removeAttribute("src");promoPreview.load();promoWrap.classList.add("hidden");promoNoticeSet("تم إلغاء نشر الفيديو من الصفحة الرئيسية.",false)}catch(error){promoNoticeSet(error.message||"تعذر إلغاء النشر.",true)}finally{promoUnpublish.disabled=false}
+});
+
 
 const COURSE_STORE_KEY='mas.teacher.courses.v1';
 let courses=[];
@@ -661,7 +731,7 @@ $('#studentRegistryConnect').addEventListener('click',async function(){const val
  const back=document.getElementById('teacherAuthBack');
  let client=null,allow=false,checking=false;
  function showGate(text){allow=false;document.documentElement.classList.add('teacher-auth-pending');gate.hidden=false;logout.hidden=true;if(text)message.textContent=text;}
- function showDashboard(){const entering=!allow;allow=true;document.documentElement.classList.remove('teacher-auth-pending');gate.hidden=true;logout.hidden=false;if(!entering)return;try{loadSharedStudentRegistry();loadAcademicData();loadPricingAdmin();renderTeacherLessonComments();}catch(e){console.error('Teacher data refresh failed',e);}}
+ function showDashboard(){const entering=!allow;allow=true;document.documentElement.classList.remove('teacher-auth-pending');gate.hidden=true;logout.hidden=false;if(!entering)return;try{loadSharedStudentRegistry();loadAcademicData();loadPricingAdmin();renderTeacherLessonComments();loadTeacherPromoVideo();loadRegistrationRequests();}catch(e){console.error('Teacher data refresh failed',e);}}
  function isTeacher(user){const meta=(user&&user.app_metadata)||{};return meta.role==='teacher'||meta.role==='admin'||(Array.isArray(meta.roles)&&(meta.roles.includes('teacher')||meta.roles.includes('admin')));}
  function deny(){if(client)client.auth.signOut({scope:'local'});showGate('هذا الحساب غير مصرح له بدخول لوحة المستر.');}
  async function checkSession(){
