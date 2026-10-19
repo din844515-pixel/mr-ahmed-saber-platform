@@ -137,7 +137,12 @@ html.teacher-auth-pending body > *:not(#teacherAuthGate){visibility:hidden!impor
  </div>
 </section>
 <section class="view" id="view-results"><div class="section-heading"><div><h2>النتائج والتقارير</h2><p>درجات الطلاب، حضور الامتحانات، وسجل تعديلات الدرجات</p></div></div><section class="panel" style="margin-bottom:18px"><div class="panel-title"><div><h3>طلاب اختبار تحديد المستوى</h3><p>الطلاب الذين وافقوا على حفظ بياناتهم والتواصل معهم بخصوص عروض المنصة</p></div><button class="btn btn-gold" id="refreshPlacementLeads" type="button">تحديث القائمة</button></div><div id="placementLeadsStatus" class="student-local-note">سجّل الدخول بحساب المستر لعرض النتائج.</div><div id="placementLeadsList" class="student-table-wrap"><div class="empty">لم يتم تحميل البيانات.</div></div></section><div class="two-col"><section class="panel"><h3>نتائج الامتحانات</h3><div class="empty">ستظهر النتائج هنا بعد الحفظ والمراجعة والنشر من المستر.</div></section><section class="panel"><h3>سجل التعديلات</h3><div class="empty">سيحفظ النظام الدرجة القديمة والجديدة ومن قام بالتعديل وتوقيته.</div></section></div></section>
-<section class="view" id="view-subscriptions"><div class="section-heading"><div><h2>الاشتراكات والمدفوعات</h2><p>مراجعة الدفع وتفعيل الطالب وتجديد الاشتراك وإدارة الإعفاءات</p></div></div><div class="two-col"><section class="panel"><h3>طلبات الدفع</h3><div class="student-local-note">هذه قائمة متابعة من بيانات الاختبار المحلية فقط، وليست طلبات دفع أو إيصالات حقيقية.</div><div id="subscriptionQueue" class="subscription-queue"><div class="empty">لا توجد اشتراكات محلية تحتاج متابعة الآن.</div></div></section><section class="panel"><h3>سياسة الاشتراك</h3><div class="feature-row"><div class="dot">◷</div><div><strong>اشتراك شهري</strong><small>يبدأ من تاريخ تفعيل اشتراك الطالب ويُحسب تاريخ الانتهاء</small></div></div><div class="feature-row"><div class="dot">♧</div><div><strong>معفى من الدفع</strong><small>علامة واضحة مع ضبط الوصول يدويًا</small></div></div><div class="feature-row"><div class="dot">↻</div><div><strong>تجديد يدوي</strong><small>المستر يعتمد التجديد ويرفع الحظر عند استحقاقه</small></div></div></section><section class="panel" style="margin-top:18px"><div class="section-heading"><div><h3>أسعار المراحل والكورسات</h3><p>الأسعار النشطة تظهر للطالب في الصفحة الرئيسية قبل الاشتراك.</p></div></div><form id="pricingForm"><input type="hidden" id="pricingId"><div class="student-form-grid"><label class="student-field"><span>نوع السعر</span><select class="control" id="pricingType"><option value="stage">اشتراك مرحلة دراسية</option><option value="course">كورس منفصل</option></select></label><label class="student-field"><span>المرحلة الدراسية *</span><select class="control" id="pricingStage" required><option>تأسيس</option><option>أولى إعدادي</option><option>ثانية إعدادي</option><option>ثالثة إعدادي</option><option>أولى ثانوي</option><option>ثانية ثانوي</option><option>ثالثة ثانوي</option><option>كورسات شاملة</option></select></label><label class="student-field hidden" id="pricingCourseNameWrap"><span>اسم الكورس *</span><input class="control" id="pricingCourseName" maxlength="180" placeholder="اكتب اسم الكورس"></label><label class="student-field"><span>السعر بالجنيه المصري *</span><input class="control" id="pricingAmount" type="number" min="0" max="1000000" step="0.5" required placeholder="اكتب السعر"></label></div><p class="student-form-error hidden" id="pricingError" role="alert"></p><div class="student-form-actions"><button class="btn btn-gold" type="submit" id="pricingSave">حفظ السعر</button><button class="btn btn-light" type="button" id="pricingCancel">تفريغ الحقول</button></div></form><div id="pricingList" style="margin-top:16px"><div class="empty">اتصل برمز المستر لعرض الأسعار.</div></div></section></div></section>
+<section class="view" id="view-subscriptions"><div class="section-heading"><div><h2>الاشتراكات والمدفوعات</h2><p>مراجعة الدفع وتفعيل الطالب وتجديد الاشتراك وإدارة الإعفاءات</p></div></div><section class="panel" id="registrationRequestsPanel" style="margin-bottom:18px">
+ <div class="section-heading"><div><h3>طلبات التسجيل وإيصالات الدفع</h3><p>راجع بيانات الطالب والإيصال، ثم اعتمد الطلب لتفعيل الاشتراك وإنشاء كود الطالب.</p></div><button class="btn btn-light" id="registrationRequestsRefresh" type="button">تحديث الطلبات</button></div>
+ <div id="registrationRequestsStatus" class="student-local-note" role="status">جاري تجهيز قائمة الطلبات…</div>
+ <div id="registrationRequestsList"><div class="empty">جاري تحميل طلبات التسجيل…</div></div>
+</section>
+<div class="two-col"><section class="panel"><h3>متابعة الاشتراكات المحلية</h3><div class="student-local-note">هذه القائمة للمتابعة المحلية فقط. طلبات التسجيل وإيصالات الدفع الفعلية تظهر في القائمة أعلاه.</div><div id="subscriptionQueue" class="subscription-queue"><div class="empty">لا توجد اشتراكات محلية تحتاج متابعة الآن.</div></div></section><section class="panel"><h3>سياسة الاشتراك</h3><div class="feature-row"><div class="dot">◷</div><div><strong>اشتراك شهري</strong><small>يبدأ من تاريخ تفعيل اشتراك الطالب ويُحسب تاريخ الانتهاء</small></div></div><div class="feature-row"><div class="dot">♧</div><div><strong>معفى من الدفع</strong><small>علامة واضحة مع ضبط الوصول يدويًا</small></div></div><div class="feature-row"><div class="dot">↻</div><div><strong>تجديد يدوي</strong><small>المستر يعتمد التجديد ويرفع الحظر عند استحقاقه</small></div></div></section><section class="panel" style="margin-top:18px"><div class="section-heading"><div><h3>أسعار المراحل والكورسات</h3><p>الأسعار النشطة تظهر للطالب في الصفحة الرئيسية قبل الاشتراك.</p></div></div><form id="pricingForm"><input type="hidden" id="pricingId"><div class="student-form-grid"><label class="student-field"><span>نوع السعر</span><select class="control" id="pricingType"><option value="stage">اشتراك مرحلة دراسية</option><option value="course">كورس منفصل</option></select></label><label class="student-field"><span>المرحلة الدراسية *</span><select class="control" id="pricingStage" required><option>تأسيس</option><option>أولى إعدادي</option><option>ثانية إعدادي</option><option>ثالثة إعدادي</option><option>أولى ثانوي</option><option>ثانية ثانوي</option><option>ثالثة ثانوي</option><option>كورسات شاملة</option></select></label><label class="student-field hidden" id="pricingCourseNameWrap"><span>اسم الكورس *</span><input class="control" id="pricingCourseName" maxlength="180" placeholder="اكتب اسم الكورس"></label><label class="student-field"><span>السعر بالجنيه المصري *</span><input class="control" id="pricingAmount" type="number" min="0" max="1000000" step="0.5" required placeholder="اكتب السعر"></label></div><p class="student-form-error hidden" id="pricingError" role="alert"></p><div class="student-form-actions"><button class="btn btn-gold" type="submit" id="pricingSave">حفظ السعر</button><button class="btn btn-light" type="button" id="pricingCancel">تفريغ الحقول</button></div></form><div id="pricingList" style="margin-top:16px"><div class="empty">اتصل برمز المستر لعرض الأسعار.</div></div></section></div></section>
 <section class="view" id="view-settings">
  <div class="section-heading"><div><h2>إعدادات الصفحة الرئيسية</h2><p>إدارة الفيديو الإعلاني الظاهر للطلاب</p></div></div>
  <div class="panel promo-admin">
@@ -336,6 +341,56 @@ promoUnpublish.addEventListener("click",async()=>{
  const headers={"content-type":"application/json"};if(token)headers.authorization="Bearer "+token;else headers["x-teacher-key"]=key;
  promoUnpublish.disabled=true;
  try{const response=await fetch("/api/promo-video",{method:"POST",headers,body:JSON.stringify({action:"unpublish"}),cache:"no-store"});const data=await response.json().catch(()=>({}));if(!response.ok||!data.ok)throw new Error(data.error||"تعذر إلغاء النشر.");promoPublishedVideo=null;applyPublishedPromo(null);if(promoObjectUrl){URL.revokeObjectURL(promoObjectUrl);promoObjectUrl=""}promoSelectedFile=null;promoInput.value="";promoPreview.removeAttribute("src");promoPreview.load();promoWrap.classList.add("hidden");promoNoticeSet("تم إلغاء نشر الفيديو من الصفحة الرئيسية.",false)}catch(error){promoNoticeSet(error.message||"تعذر إلغاء النشر.",true)}finally{promoUnpublish.disabled=false}
+});
+
+
+
+async function loadRegistrationRequests(){
+ const list=$('#registrationRequestsList'),status=$('#registrationRequestsStatus');
+ if(!list||!status)return;
+ status.textContent='جاري تحميل طلبات التسجيل…';list.innerHTML='<div class="empty">جاري التحميل…</div>';
+ try{
+  const token=typeof window.getTeacherAccessToken==='function'?await window.getTeacherAccessToken():'';
+  if(!token)throw new Error('سجّل الدخول بحساب المستر لعرض الطلبات.');
+  const response=await fetch('/api/registration-requests',{headers:{authorization:'Bearer '+token,accept:'application/json'},cache:'no-store'});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok||!data.ok||!Array.isArray(data.requests))throw new Error(data.error||'تعذر تحميل طلبات التسجيل.');
+  const rows=data.requests;
+  status.textContent='عدد الطلبات: '+rows.length+'. الطلبات الجديدة تنتظر مراجعة الإيصال واعتماد الدفع.';
+  if(!rows.length){list.innerHTML='<div class="empty">لا توجد طلبات تسجيل حتى الآن.</div>';return}
+  const statusName={pending_review:'قيد المراجعة',approved:'تم الاعتماد',rejected:'مرفوض'};
+  list.innerHTML='<div class="registration-request-list">'+rows.map(function(r){
+   const pending=r.status==='pending_review';
+   const receipt=r.receiptUrl?'<a class="btn btn-light" href="'+esc(r.receiptUrl)+'" target="_blank" rel="noopener noreferrer">عرض إيصال الدفع</a>':'<span class="muted">تعذر إنشاء رابط الإيصال. حدّث القائمة.</span>';
+   const code=r.studentCode?'<p><b>كود الطالب:</b> <code>'+esc(r.studentCode)+'</code></p>':'';
+   const note=r.reviewNote?'<p><b>ملاحظة المراجعة:</b> '+esc(r.reviewNote)+'</p>':'';
+   return '<article class="panel registration-request-card" style="margin:12px 0;padding:16px"><div class="section-heading"><div><h4 style="margin:0 0 6px">'+esc(r.studentName||'طالب جديد')+' — '+esc(r.stage||'')+'</h4><p style="margin:0">تاريخ الطلب: '+esc(r.createdAt?new Date(r.createdAt).toLocaleString('ar-EG'):'غير متاح')+'</p></div><span class="pill">'+esc(statusName[r.status]||r.status||'غير معروف')+'</span></div><div class="two-col" style="margin:12px 0"><div><p><b>موبايل الطالب:</b> '+esc(r.studentPhone||'—')+'</p><p><b>رقم ولي الأمر:</b> '+esc(r.guardianPhone||'—')+'</p><p><b>البريد:</b> '+esc(r.email||'—')+'</p>'+code+note+'</div><div>'+receipt+'</div></div>'+(pending?'<div class="student-form-actions"><button class="btn btn-gold" type="button" data-reg-act="approve" data-reg-id="'+esc(r.id)+'">اعتماد الدفع وتفعيل الطالب</button><button class="btn btn-outline" type="button" data-reg-act="reject" data-reg-id="'+esc(r.id)+'">رفض الطلب</button></div>':'')+'</article>';
+  }).join('')+'</div>';
+ }catch(error){
+  status.textContent=error.message||'تعذر تحميل طلبات التسجيل.';
+  list.innerHTML='<div class="empty">تعذر تحميل القائمة. <button type="button" class="btn btn-light" id="retryRegistrationRequests">إعادة المحاولة</button></div>';
+  $('#retryRegistrationRequests')?.addEventListener('click',loadRegistrationRequests);
+ }
+}
+$('#registrationRequestsRefresh')?.addEventListener('click',loadRegistrationRequests);
+$('#registrationRequestsList')?.addEventListener('click',async function(e){
+ const button=e.target.closest('[data-reg-act]');if(!button)return;
+ const decision=button.dataset.regAct,requestId=button.dataset.regId;
+ if(decision==='approve'&&!confirm('هل تريد اعتماد إيصال الدفع وإنشاء حساب الطالب وتفعيل اشتراكه لمدة شهر؟'))return;
+ if(decision==='reject'&&!confirm('هل تريد رفض طلب التسجيل؟'))return;
+ const old=button.textContent;button.disabled=true;button.textContent=decision==='approve'?'جاري الاعتماد…':'جاري الرفض…';
+ try{
+  const token=typeof window.getTeacherAccessToken==='function'?await window.getTeacherAccessToken():'';
+  if(!token)throw new Error('انتهت جلسة الدخول. سجّل الدخول بحساب المستر وحاول مرة أخرى.');
+  const response=await fetch('/api/registration-requests',{method:'PATCH',headers:{'content-type':'application/json',authorization:'Bearer '+token,accept:'application/json'},body:JSON.stringify({requestId,decision,note:''}),cache:'no-store'});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok||!data.ok)throw new Error(data.error||'تعذر تحديث طلب التسجيل.');
+  if(decision==='approve'){
+   modal('تم اعتماد الطلب','تم اعتماد الدفع وتفعيل حساب الطالب لمدة شهر. كود الطالب: '+(data.studentCode||'راجع قائمة الطلاب.'));
+   await loadSharedStudentRegistry();
+  }else modal('تم رفض الطلب','تم تسجيل قرار رفض طلب التسجيل.');
+  await loadRegistrationRequests();
+ }catch(error){modal('تعذر تحديث الطلب',error.message||'حاول مرة أخرى.');button.disabled=false;button.textContent=old}
 });
 
 
