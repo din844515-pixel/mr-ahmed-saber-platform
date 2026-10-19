@@ -170,7 +170,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
    <section class="panel" aria-labelledby="testTitle">
     <div class="panel-title"><div class="panel-icon" aria-hidden="true">✎</div><div><h3 id="testTitle">ابدأ اختبار المستوى</h3><p>الاختبار متاح للزوار دون تسجيل دخول</p></div></div>
     <div id="testIntro">
-     <p class="panel-lead">من فضلك اكتب بياناتك قبل بدء الاختبار. النتيجة الموجودة هنا إرشادية فقط، ولن يتم حفظ بياناتك أو إرسالها للمستر قبل توصيل النظام الخلفي.</p>
+     <p class="panel-lead">اكتب بياناتك قبل بدء الاختبار. النتيجة إرشادية لتحديد المستوى، وعند إنهاء الاختبار والموافقة على التواصل تُحفظ النتيجة ليتمكن المستر من مراجعتها.</p>
      <form id="testStartForm">
       <div class="field-grid">
        <div class="field"><label for="testName">اسم الطالب</label><input id="testName" required autocomplete="name" placeholder="اكتب اسمك"></div>
@@ -464,7 +464,7 @@ $('#placementForm').addEventListener('submit',e=>{e.preventDefault();const unans
     result.append(title,scoreText,description,reset);result.classList.remove('hidden');result.scrollIntoView({behavior:'smooth',block:'center'});
    }catch(err){showError(err.message||'تعذر حفظ النتيجة. حاول مرة أخرى.');}
    finally{submit.disabled=false;submit.textContent='إنهاء الاختبار وعرض النتيجة';}
-  });
+  },true);
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bootPlacementTest);else bootPlacementTest();
 })();
