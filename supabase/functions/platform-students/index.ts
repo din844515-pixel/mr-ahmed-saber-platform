@@ -5,6 +5,8 @@ const EXPECTED_KEY_SHA256 = "5c23b5f970c3d551469c8c917e1a53b0d2a2e19d86353117089
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_bbmAuU_9UGd1IrJXBS8Bkg_BI5lpSXV";
 const STAGES = new Set(["تأسيس","أولى إعدادي","ثانية إعدادي","ثالثة إعدادي","أولى ثانوي","ثانية ثانوي","ثالثة ثانوي","كورسات شاملة"]);
 const TABLE = "platform_student_registry";
+const TEACHER_AUTH_URL = "https://gfzzuxzrvysuodehjkyq.supabase.co";
+const TEACHER_AUTH_PUBLISHABLE_KEY = "sb_publishable_rb8JsRCgD3ry78YabOfDkQ_G4VCKFko";
 const cors = {
   "Content-Type": "application/json; charset=utf-8",
   "Cache-Control": "no-store, max-age=0",
@@ -45,9 +47,9 @@ async function authorized(req: Request) {
   const token = authorization.toLowerCase().startsWith("bearer ") ? authorization.slice(7).trim() : "";
   if (token && token.length <= 12000) {
     try {
-      const response = await fetch((Deno.env.get("SUPABASE_URL") || "") + "/auth/v1/user", {
+      const response = await fetch(TEACHER_AUTH_URL + "/auth/v1/user", {
         method: "GET",
-        headers: { apikey: SUPABASE_PUBLISHABLE_KEY, authorization: "Bearer " + token, accept: "application/json" },
+        headers: { apikey: TEACHER_AUTH_PUBLISHABLE_KEY, authorization: "Bearer " + token, accept: "application/json" },
         cache: "no-store",
         signal: AbortSignal.timeout(6000)
       });
