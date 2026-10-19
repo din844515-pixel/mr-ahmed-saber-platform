@@ -18,6 +18,8 @@ class ApiError extends Error { status: number; constructor(message: string, stat
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
 const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+const TEACHER_AUTH_URL = "https://gfzzuxzrvysuodehjkyq.supabase.co";
+const TEACHER_AUTH_PUBLISHABLE_KEY = "sb_publishable_rb8JsRCgD3ry78YabOfDkQ_G4VCKFko";
 
 async function db(path: string, opts: { method?: string; body?: unknown; prefer?: string } = {}) {
   if (!supabaseUrl || !serviceKey) throw new ApiError("إعدادات قاعدة البيانات غير مكتملة في الخدمة.", 500);
@@ -324,11 +326,11 @@ const TEACHER_ACTIONS = new Set(["listExams","getExam","saveExam","deleteExam","
 async function authorizedTeacherSession(req: Request): Promise<boolean> {
   const authorization = String(req.headers.get("authorization") || "");
   const token = authorization.toLowerCase().startsWith("bearer ") ? authorization.slice(7).trim() : "";
-  if (!token || token.length > 12000 || !supabaseUrl) return false;
+  if (!token || token.length > 12000) return false;
   try {
-    const response = await fetch(supabaseUrl + "/auth/v1/user", {
+    const response = await fetch(TEACHER_AUTH_URL + "/auth/v1/user", {
       method: "GET",
-      headers: { apikey: SUPABASE_PUBLISHABLE_KEY, authorization: "Bearer " + token, accept: "application/json" },
+      headers: { apikey: TEACHER_AUTH_PUBLISHABLE_KEY, authorization: "Bearer " + token, accept: "application/json" },
       cache: "no-store",
       signal: AbortSignal.timeout(6000)
     });
