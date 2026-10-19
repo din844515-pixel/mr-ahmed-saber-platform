@@ -1,0 +1,9 @@
+{
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/new-platform/index.html",
+      "permanent": true
+    }
+  ]
+}
