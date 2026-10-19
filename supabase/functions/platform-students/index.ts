@@ -118,5 +118,5 @@ Deno.serve(async (req: Request) => {
     const { data: saved, error: finalError } = await db.from(TABLE).select("*").order("created_at", { ascending: true }).limit(50000);
     if (finalError) throw finalError;
     return json({ ok: true, students: (saved || []).map(rowToClient), skippedDuplicates });
-  } catch (e) { console.error("student registry save failed", e?.message || e); return json({ error: "تعذر حفظ قائمة الطلاب المشتركة. حاولي مرة أخرى." }, 500); }
+  } catch (e) { console.error("student registry save failed", e?.message || e); return json({ error: "تعذر حفظ قائمة الطلاب المشتركة. حاول مرة أخرى." }, 500); }
 });
