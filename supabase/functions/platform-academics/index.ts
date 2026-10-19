@@ -11,8 +11,15 @@ async function sha256(value: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", enc.encode(value));
   return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, "0")).join("");
 }
+const RESPONSE_CORS_HEADERS: Record<string, string> = {
+  "access-control-allow-origin": "https://mr-ahmed-saber-new.vercel.app",
+  "access-control-allow-headers": "authorization,content-type,x-teacher-key,apikey",
+  "access-control-allow-methods": "POST,OPTIONS",
+  "access-control-max-age": "86400",
+  "vary": "Origin"
+};
 function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" } });
+  return new Response(JSON.stringify(data), { status, headers: { ...RESPONSE_CORS_HEADERS, "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" } });
 }
 function escFilter(value: string) { return value.replace(/[^0-9a-f-]/gi, ""); }
 class ApiError extends Error { status: number; constructor(message: string, status = 400) { super(message); this.status = status; } }
@@ -489,7 +496,7 @@ async function getAttemptReview(body:any){const id=escFilter(String(body.attempt
 async function gradeAttempt(body:any){const id=escFilter(String(body.attempt_id||"")),ats=await db("platform_exam_attempts?select=*&id=eq."+id+"&limit=1") as any[],attempt=ats[0];if(!attempt||!attempt.submitted_at)throw new ApiError("يجب أن يسلّم الطالب الامتحان أولًا.");const qs=await db("platform_exam_questions?select=id,points&exam_id=eq."+escFilter(String(attempt.exam_id))) as any[],valid:Record<string,number>={};for(const q of qs)valid[q.id]=Number(q.points)||0;for(const a of (Array.isArray(body.answers)?body.answers:[])){const qid=escFilter(String(a.question_id||""));if(!(qid in valid))throw new ApiError("سؤال غير صحيح.");const pts=Number(a.awarded_points);if(!Number.isFinite(pts)||pts<0||pts>valid[qid])throw new ApiError("الدرجة خارج حدود السؤال.");const answerId=escFilter(String(a.id||""));if(!answerId)throw new ApiError("الإجابة غير صحيحة.");await db("platform_exam_answers?id=eq."+answerId+"&attempt_id=eq."+id,{method:"PATCH",body:{awarded_points:pts,teacher_feedback:String(a.teacher_feedback||"").slice(0,5000),reviewed_at:new Date().toISOString()}})}const ans=await db("platform_exam_answers?select=id,awarded_points&attempt_id=eq."+id) as any[],score=ans.reduce((n,a)=>n+(a.awarded_points==null?0:Number(a.awarded_points)||0),0),max=qs.reduce((n,q)=>n+(Number(q.points)||0),0),pending=ans.some(a=>a.awarded_points==null),old=await db("platform_exam_results?select=score,published_at&attempt_id=eq."+id+"&limit=1") as any[];await db("platform_exam_results?on_conflict=attempt_id",{method:"POST",body:{attempt_id:id,score,max_score:max,published_at:old[0]?.published_at||null,updated_at:new Date().toISOString()},prefer:"resolution=merge-duplicates,return=minimal"});if(old.length&&Number(old[0].score)!==score)await db("platform_grade_change_log",{method:"POST",body:{student_registry_id:attempt.student_registry_id,attempt_id:id,old_score:Number(old[0].score)||0,new_score:score,reason:String(body.reason||"تعديل درجة من لوحة المستر").slice(0,1000)},prefer:"return=minimal"});await db("platform_exam_attempts?id=eq."+id,{method:"PATCH",body:{status:pending?"awaiting_review":"graded"}});return {ok:true,score,max_score:max,status:pending?"awaiting_review":"graded"}}
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: { "access-control-allow-origin": "*", "access-control-allow-headers": "authorization,content-type,x-teacher-key,apikey", "access-control-allow-methods": "POST,OPTIONS", "cache-control": "no-store" } });
+  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: { ...RESPONSE_CORS_HEADERS, "cache-control": "no-store" } });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
   try {
     const contentType = String(req.headers.get("content-type") || "").toLowerCase();
