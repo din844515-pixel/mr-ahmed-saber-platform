@@ -14,9 +14,16 @@ module.exports = async function handler(req, res) {
   if (req.method === 'GET') {
     if (!(await isTeacherRequest(req))) return res.status(401).json({ ok: false, error: 'سجّل الدخول بحساب المستر لعرض نتائج اختبار المستوى.' });
     try {
+      const teacherKey = process.env.TEACHER_UPLOAD_KEY || '';
+      const upstreamHeaders = { apikey: PUBLISHABLE_KEY, 'content-type': 'application/json', accept: 'application/json' };
+      // The teacher account is authenticated by the platform's teacher-auth project.
+      // The academic Edge Function uses a separate Supabase project, so do not forward
+      // a JWT from the first project as if it belonged to the second one.
+      if (teacherKey) upstreamHeaders['x-teacher-key'] = teacherKey;
+      else upstreamHeaders.authorization = String(req.headers.authorization || '');
       const upstream = await fetch(FUNCTION_URL, {
         method: 'POST',
-        headers: { apikey: PUBLISHABLE_KEY, authorization: String(req.headers.authorization || ''), 'content-type': 'application/json', accept: 'application/json' },
+        headers: upstreamHeaders,
         body: JSON.stringify({ action: 'listPlacementTests' }),
         cache: 'no-store'
       });
