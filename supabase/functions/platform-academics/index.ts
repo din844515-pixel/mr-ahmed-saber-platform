@@ -45,6 +45,109 @@ function needStage(v: unknown) {
   return s;
 }
 async function listPlacementTests(){return await db("platform_placement_tests?select=id,student_name,education_stage,guardian_phone,email,score,total_questions,level_band,answers,contact_consent,created_at&order=created_at.desc&limit=500")}
+const REGISTRATION_RECEIPT_BUCKET = "platform-registration-receipts";
+const REGISTRATION_RECEIPT_TYPES = new Set(["image/jpeg","image/png","image/webp","image/heic","image/heif"]);
+async function registrationUploadReceipt(file: File): Promise<string> {
+  const mime = String(file.type || "").toLowerCase().split(";")[0].trim();
+  if (!REGISTRATION_RECEIPT_TYPES.has(mime)) throw new ApiError("صيغة إيصال الدفع غير مدعومة. ارفع صورة JPG أو PNG أو WebP أو HEIC.");
+  if (file.size < 1 || file.size > 5 * 1024 * 1024) throw new ApiError("حجم إيصال الدفع يجب ألا يتجاوز 5 ميجابايت.");
+  const ext = fileExt(file.name || "receipt", mime);
+  const path = "receipts/" + crypto.randomUUID() + "." + ext;
+  const response = await fetch(supabaseUrl.replace(/\/$/,"") + "/storage/v1/object/" + REGISTRATION_RECEIPT_BUCKET + "/" + safePath(path), {
+    method: "POST",
+    headers: { apikey: serviceKey, authorization: "Bearer " + serviceKey, "content-type": mime, "x-upsert": "false", "cache-control": "3600" },
+    body: new Uint8Array(await file.arrayBuffer())
+  });
+  if (!response.ok) {
+    const detail = (await response.text()).slice(0,300);
+    console.error("registration receipt upload failed", response.status, detail);
+    throw new ApiError("تعذر حفظ إيصال الدفع بأمان. حاول مرة أخرى.", 502);
+  }
+  return path;
+}
+async function removeRegistrationReceipt(path: string) {
+  try {
+    await fetch(supabaseUrl.replace(/\/$/,"") + "/storage/v1/object/" + REGISTRATION_RECEIPT_BUCKET, {
+      method: "DELETE",
+      headers: { apikey: serviceKey, authorization: "Bearer " + serviceKey, "content-type": "application/json" },
+      body: JSON.stringify({ prefixes: [path] })
+    });
+  } catch (_) {}
+}
+async function submitRegistrationRequest(form: FormData) {
+  const studentName = String(form.get("student_name") || "").trim().replace(/\s+/g," ");
+  const stage = String(form.get("education_stage") || "").trim();
+  const guardianPhone = normPhone(form.get("guardian_phone"));
+  const studentPhone = normPhone(form.get("student_phone"));
+  const email = String(form.get("email") || "").trim().toLowerCase();
+  const confirmation = String(form.get("payment_confirmed") || "");
+  const upload = form.get("receipt");
+  if (studentName.length < 2 || studentName.length > 120 || !STAGES.includes(stage) ||
+      guardianPhone.length < 8 || guardianPhone.length > 16 ||
+      studentPhone.length < 8 || studentPhone.length > 16 ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || confirmation !== "yes") {
+    throw new ApiError("راجع بيانات الطالب ورقم ولي الأمر والبريد الإلكتروني وموافقة تأكيد الدفع.");
+  }
+  if (!(upload instanceof File)) throw new ApiError("أرفق صورة إيصال الدفع قبل إرسال الطلب.");
+  const pending = await db("platform_registration_requests?select=id&student_phone=eq." + encodeURIComponent(studentPhone) + "&status=eq.pending_review&limit=1") as any[];
+  if (pending.length) throw new ApiError("يوجد طلب تسجيل قيد المراجعة بنفس رقم موبايل الطالب. انتظر مراجعة المستر.");
+  const recentSince = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+  const recent = await db("platform_registration_requests?select=id&student_phone=eq." + encodeURIComponent(studentPhone) + "&created_at=gte." + encodeURIComponent(recentSince) + "&limit=3") as any[];
+  if (recent.length >= 3) throw new ApiError("تم إرسال عدة طلبات بهذا الرقم خلال وقت قصير. انتظر قليلًا ثم حاول مرة أخرى.", 429);
+  const receiptPath = await registrationUploadReceipt(upload);
+  try {
+    const rows = await db("platform_registration_requests", {
+      method: "POST",
+      prefer: "return=representation",
+      body: { student_name: studentName, education_stage: stage, guardian_phone: guardianPhone, student_phone: studentPhone, email,
+        receipt_path: receiptPath, receipt_mime_type: String(upload.type || "").toLowerCase().split(";")[0].trim(),
+        receipt_size: upload.size, status: "pending_review" }
+    }) as any[];
+    const saved = Array.isArray(rows) ? rows[0] : null;
+    if (!saved?.id) throw new ApiError("تعذر حفظ طلب التسجيل بعد رفع الإيصال.", 502);
+    return { ok: true, requestId: saved.id, status: "pending_review", message: "تم إرسال طلب التسجيل وإيصال الدفع. سيظهر للمستر للمراجعة، ولن يتفعّل الحساب إلا بعد الموافقة." };
+  } catch (error) {
+    await removeRegistrationReceipt(receiptPath);
+    throw error;
+  }
+}
+async function signedRegistrationReceipt(path: string) {
+  if (!path || !path.startsWith("receipts/")) return "";
+  const data = await storageReq("object/sign/" + REGISTRATION_RECEIPT_BUCKET + "/" + safePath(path), { expiresIn: 900 });
+  return fullStorageUrl(data.signedURL || data.signedUrl || data.url);
+}
+async function listRegistrationRequests() {
+  const rows = await db("platform_registration_requests?select=*&order=created_at.desc&limit=150") as any[];
+  return { ok: true, requests: await Promise.all((rows || []).map(async (r:any) => {
+    let receiptUrl = "";
+    try { receiptUrl = await signedRegistrationReceipt(String(r.receipt_path || "")); } catch (error) { console.error("receipt signing failed", error); }
+    return { id: r.id, studentName: r.student_name, stage: r.education_stage, guardianPhone: r.guardian_phone,
+      studentPhone: r.student_phone, email: r.email, status: r.status, reviewNote: r.review_note || "",
+      studentCode: r.student_code || "", createdAt: r.created_at, reviewedAt: r.reviewed_at, receiptUrl };
+  })) };
+}
+async function reviewRegistrationRequest(body: any) {
+  const id = escFilter(String(body.requestId || ""));
+  const decision = String(body.decision || "");
+  const note = String(body.note || "").trim().slice(0,500);
+  if (!id || !/^[0-9a-f-]{36}$/i.test(id)) throw new ApiError("معرّف طلب التسجيل غير صحيح.");
+  if (decision !== "approve" && decision !== "reject") throw new ApiError("اختر قرارًا صحيحًا للطلب.");
+  const found = await db("platform_registration_requests?select=id,status,student_code& id=eq.".replace(" ", "") + id + "&limit=1") as any[];
+  const request = found[0];
+  if (!request) throw new ApiError("طلب التسجيل غير موجود.",404);
+  if (request.status === "approved") return { ok:true, status:"approved", studentCode:request.student_code || "" };
+  if (request.status === "rejected" && decision === "reject") return { ok:true, status:"rejected" };
+  if (request.status !== "pending_review") throw new ApiError("تمت مراجعة هذا الطلب بالفعل.");
+  if (decision === "reject") {
+    await db("platform_registration_requests?id=eq." + id, { method:"PATCH", prefer:"return=minimal", body:{ status:"rejected", review_note:note, reviewed_at:new Date().toISOString(), updated_at:new Date().toISOString() } });
+    return { ok:true, status:"rejected" };
+  }
+  const approved = await db("rpc/platform_approve_registration_request", { method:"POST", body:{ p_request_id:id } }) as any;
+  const row = Array.isArray(approved) ? approved[0] : approved;
+  if (!row?.student_code || !row?.student_registry_id) throw new ApiError("تعذر تفعيل حساب الطالب بعد الموافقة.",502);
+  if (note) await db("platform_registration_requests?id=eq." + id, { method:"PATCH", prefer:"return=minimal", body:{ review_note:note, updated_at:new Date().toISOString() } });
+  return { ok:true, status:"approved", studentCode:String(row.student_code), studentId:String(row.student_registry_id), message:"تم اعتماد الطلب وإنشاء كود الطالب وتفعيل اشتراكه لمدة شهر." };
+}
 async function listExams() {
   const exams = await db("platform_exams?select=*&order=created_at.desc") as any[];
   if (!exams.length) return { ok: true, exams: [] };
@@ -217,7 +320,7 @@ async function reviewSubmission(body: any) {
 
 
 const ACADEMIC_BUCKET = "platform-academic-media";
-const TEACHER_ACTIONS = new Set(["listExams","getExam","saveExam","deleteExam","setExamPublished","setResultsPublished","listPricing","savePricing","setPricingActive","listAssignments","saveAssignment","deleteAssignment","setAssignmentPublished","listSubmissions","reviewSubmission","listAttempts","getAttemptReview","gradeAttempt","allowExamRetake","listPlacementTests","teacherListLessonComments","teacherReplyLessonComment"]);
+const TEACHER_ACTIONS = new Set(["listExams","getExam","saveExam","deleteExam","setExamPublished","setResultsPublished","listPricing","savePricing","setPricingActive","listAssignments","saveAssignment","deleteAssignment","setAssignmentPublished","listSubmissions","reviewSubmission","listAttempts","getAttemptReview","gradeAttempt","allowExamRetake","listPlacementTests","teacherListLessonComments","teacherReplyLessonComment","listRegistrationRequests","reviewRegistrationRequest"]);
 async function authorizedTeacherSession(req: Request): Promise<boolean> {
   const authorization = String(req.headers.get("authorization") || "");
   const token = authorization.toLowerCase().startsWith("bearer ") ? authorization.slice(7).trim() : "";
@@ -361,6 +464,13 @@ Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: { "access-control-allow-origin": "*", "access-control-allow-headers": "authorization,content-type,x-teacher-key,apikey", "access-control-allow-methods": "POST,OPTIONS", "cache-control": "no-store" } });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
   try {
+    const contentType = String(req.headers.get("content-type") || "").toLowerCase();
+    if (contentType.includes("multipart/form-data")) {
+      const form = await req.formData();
+      if (String(form.get("action") || "") !== "submitRegistrationRequest") return json({ error:"العملية غير مدعومة." },400);
+      const result = await submitRegistrationRequest(form);
+      return json(result,201);
+    }
     const body = await req.json();
     const action = String(body?.action || "");
     let student:any=null;
@@ -375,6 +485,8 @@ Deno.serve(async (req: Request) => {
     let result: unknown;
     switch (action) {
       case "listPlacementTests": result = await listPlacementTests(); break;
+      case "listRegistrationRequests": result = await listRegistrationRequests(); break;
+      case "reviewRegistrationRequest": result = await reviewRegistrationRequest(body); break;
       case "listExams": result = await listExams(); break;
       case "getExam": result = await getExam(body.id); break;
       case "saveExam": result = await saveExam(body); break;
