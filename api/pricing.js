@@ -25,7 +25,7 @@ module.exports = async function handler(req, res) {
   }
   const key = String(req.headers['x-teacher-key'] || '');
   const tokenAuthorized = await isTeacherRequest(req);
-  if (!tokenAuthorized && !key) return res.status(401).json({ error: 'سجّلي الدخول بحساب المستر لإدارة الأسعار.' });
+  if (!tokenAuthorized && !key) return res.status(401).json({ error: 'سجّل الدخول بحساب المستر لإدارة الأسعار.' });
   try {
     const upstream = await fetch(FUNCTION_URL, {
       method: 'POST',
