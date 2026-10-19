@@ -4,6 +4,7 @@ const EXPECTED_KEY_HASH = "5c23b5f970c3d551469c8c917e1a53b0d2a2e19d8635311708989
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_bbmAuU_9UGd1IrJXBS8Bkg_BI5lpSXV";
 const STAGES = ["تأسيس","أولى إعدادي","ثانية إعدادي","ثالثة إعدادي","أولى ثانوي","ثانية ثانوي","ثالثة ثانوي","كورسات شاملة"];
 const TYPES = ["single_choice","multiple_choice","true_false","short_text","fill_blanks","long_answer","listening","speaking"];
+const PLACEMENT_ANSWER_KEY = [1,1,1,1,2,1,1,0,2,2,1,2,1,1,2];
 const enc = new TextEncoder();
 
 async function sha256(value: string): Promise<string> {
@@ -47,6 +48,31 @@ function needStage(v: unknown) {
   return s;
 }
 async function listPlacementTests(){return await db("platform_placement_tests?select=id,student_name,education_stage,guardian_phone,email,score,total_questions,level_band,answers,contact_consent,created_at&order=created_at.desc&limit=500")}
+async function savePlacementTest(body:any) {
+  const studentName = String(body.student_name || "").trim().replace(/\s+/g," ");
+  const stage = String(body.education_stage || "").trim();
+  const guardianPhone = normPhone(body.guardian_phone);
+  const email = String(body.email || "").trim().toLowerCase();
+  const answers = Array.isArray(body.answers) ? body.answers : null;
+  if (studentName.length < 2 || studentName.length > 120 || !STAGES.includes(stage) ||
+      guardianPhone.length < 8 || guardianPhone.length > 16 ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
+      body.contact_consent !== true || !answers || answers.length !== PLACEMENT_ANSWER_KEY.length ||
+      answers.some((value:any) => !Number.isInteger(value) || value < 0 || value > 3)) {
+    throw new ApiError("راجع البيانات والإجابات ووافق على حفظ النتيجة والتواصل قبل إرسال الاختبار.");
+  }
+  const score = answers.reduce((sum:number, answer:number, index:number) => sum + (answer === PLACEMENT_ANSWER_KEY[index] ? 1 : 0), 0);
+  const levelBand = score >= 12 ? "مستوى متقدم نسبيًا" : score >= 8 ? "مستوى متوسط" : "يحتاج إلى تقوية الأساسيات";
+  const rows = await db("platform_placement_tests", {
+    method: "POST",
+    prefer: "return=representation",
+    body: { student_name: studentName, education_stage: stage, guardian_phone: guardianPhone, email,
+      score, total_questions: PLACEMENT_ANSWER_KEY.length, level_band: levelBand, answers, contact_consent: true }
+  }) as any[];
+  const saved = Array.isArray(rows) ? rows[0] : null;
+  if (!saved?.id) throw new ApiError("تعذر حفظ نتيجة الاختبار في قاعدة البيانات.", 502);
+  return { ok: true, id: saved.id, score, total_questions: PLACEMENT_ANSWER_KEY.length, level_band: levelBand, message: "تم حفظ نتيجة اختبار المستوى بنجاح." };
+}
 const REGISTRATION_RECEIPT_BUCKET = "platform-registration-receipts";
 const REGISTRATION_RECEIPT_TYPES = new Set(["image/jpeg","image/png","image/webp","image/heic","image/heif"]);
 async function registrationUploadReceipt(file: File): Promise<string> {
@@ -477,6 +503,7 @@ Deno.serve(async (req: Request) => {
     const action = String(body?.action || "");
     let student:any=null;
     if(action==="studentLogin"){return json(await studentLogin(body))}
+    if(action==="submitPlacementTest"){return json(await savePlacementTest(body),201)}
     const teacherUpload=action==="createUploadUrl"&&(body.file_kind==="exam_audio"||body.file_kind==="assignment_resource");
     if(TEACHER_ACTIONS.has(action)||teacherUpload){
       const supplied=String(req.headers.get("x-teacher-key")||"");
