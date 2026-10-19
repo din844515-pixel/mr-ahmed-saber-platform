@@ -29,7 +29,7 @@ module.exports = async function handler(req, res) {
       request: req,
       onBeforeGenerateToken: async (pathname, clientPayload) => {
         if (!(await authorizedClientPayload(clientPayload))) {
-          throw new Error('رمز الرفع غير صحيح. اكتبيه من جديد.');
+          throw new Error('رمز الرفع غير صحيح. اكتبه من جديد.');
         }
         if (!String(pathname || '').startsWith('course-videos/')) {
           throw new Error('مسار رفع الفيديو غير صالح.');
