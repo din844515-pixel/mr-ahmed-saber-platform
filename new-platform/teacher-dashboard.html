@@ -677,7 +677,7 @@ $('#studentRegistryConnect').addEventListener('click',async function(){const val
  }
  if(!window.supabase||!window.supabase.createClient){showGate('تعذر تحميل خدمة تسجيل الدخول. حدّث الصفحة وحاول مرة أخرى.');return;}
  client=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storage:window.localStorage}});
- window.getTeacherAccessToken=async function(){if(!client)return '';const {data,error}=await client.auth.getSession();if(error)throw error;return data.session&&data.session.access_token?data.session.access_token:'';};
+ window.getTeacherAccessToken=async function(){if(!client)return '';let result=await client.auth.getSession();if(result.error)throw result.error;let session=result.data&&result.data.session;if(session&&session.access_token)return session.access_token;if(session&&session.refresh_token){const refreshed=await client.auth.refreshSession({refresh_token:session.refresh_token});if(!refreshed.error&&refreshed.data&&refreshed.data.session)return refreshed.data.session.access_token||'';}return '';};
  form.addEventListener('submit',async function(e){
   e.preventDefault();message.textContent='جاري التحقق من البيانات…';submit.disabled=true;
   try{
