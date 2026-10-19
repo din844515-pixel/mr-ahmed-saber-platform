@@ -438,4 +438,26 @@ $('#placementForm').addEventListener('submit',e=>{e.preventDefault();const unans
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bootPlacementTest);else bootPlacementTest();
 })();
 </script>
+<script>
+/* Load only a video explicitly saved and published by the teacher. */
+(async function loadPublishedHomepagePromo(){
+ const frame=document.querySelector('#intro-video .intro-video-frame');
+ if(!frame)return;
+ try{
+  const response=await fetch('/api/promo-video',{cache:'no-store'});
+  const data=await response.json().catch(()=>({}));
+  const url=data&&data.ok&&data.active&&data.video&&typeof data.video.videoUrl==='string'?data.video.videoUrl:'';
+  if(!response.ok||!url)return;
+  const parsed=new URL(url,location.href);
+  if(parsed.protocol!=='https:'||!parsed.hostname.endsWith('public.blob.vercel-storage.com'))return;
+  frame.replaceChildren();
+  frame.classList.remove('intro-video-empty');
+  const video=document.createElement('video');
+  video.controls=true;video.playsInline=true;video.preload='metadata';
+  video.setAttribute('aria-label','الفيديو التعريفي لمنصة مستر أحمد صابر');
+  video.src=parsed.href;
+  frame.appendChild(video);
+ }catch(error){console.error('تعذر تحميل الفيديو التعريفي المنشور',error)}
+})();
+</script>
 </body></html>
