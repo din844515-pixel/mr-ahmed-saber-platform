@@ -39,7 +39,7 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
   const tokenAuthorized = await isTeacherRequest(req);
-  if (!tokenAuthorized && !authorized(req)) return res.status(401).json({ error: 'سجّلي الدخول بحساب المستر لنشر الكورسات.' });
+  if (!tokenAuthorized && !authorized(req)) return res.status(401).json({ error: 'سجّل الدخول بحساب المستر لنشر الكورسات.' });
 
   try {
     const body = req.body && typeof req.body === 'object' ? req.body : {};
@@ -59,6 +59,6 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({ ok: true, updatedAt: new Date().toISOString() });
   } catch (error) {
     console.error('course index write failed', error && error.message);
-    return res.status(500).json({ error: 'تعذر نشر الكورسات. حاولي مرة أخرى.' });
+    return res.status(500).json({ error: 'تعذر نشر الكورسات. حاول مرة أخرى.' });
   }
 };
