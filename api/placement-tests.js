@@ -38,28 +38,23 @@ module.exports = async function handler(req, res) {
   const education_stage = clean(body.education_stage, 80);
   const guardian_phone = clean(body.guardian_phone, 24);
   const email = clean(body.email, 254).toLowerCase();
-  const level_band = clean(body.level_band, 100);
-  const score = Number(body.score);
   const answers = Array.isArray(body.answers) ? body.answers : null;
   if (student_name.length < 2 || !education_stage || !/^[+0-9 ()-]{8,24}$/.test(guardian_phone) ||
-      !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || !Number.isInteger(score) || score < 0 || score > 15 ||
-      !level_band || !answers || answers.length !== 15 || body.contact_consent !== true ||
-      answers.some(v => !Number.isInteger(v) || v < 0 || v > 3)) {
-    return res.status(400).json({ ok: false, error: 'تأكد من البيانات والإجابات والموافقة على التواصل.' });
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !answers || answers.length !== 15 ||
+      body.contact_consent !== true || answers.some(v => !Number.isInteger(v) || v < 0 || v > 3)) {
+    return res.status(400).json({ ok: false, error: 'راجع البيانات والإجابات ووافق على حفظ النتيجة والتواصل قبل الإرسال.' });
   }
   try {
-    const response = await fetch(TABLE_URL, {
+    const upstream = await fetch(FUNCTION_URL, {
       method: 'POST',
-      headers: { apikey: PUBLISHABLE_KEY, authorization: 'Bearer ' + PUBLISHABLE_KEY, 'content-type': 'application/json', prefer: 'return=minimal' },
-      body: JSON.stringify({ student_name, education_stage, guardian_phone, email, score, total_questions: 15, level_band, answers, contact_consent: true }),
+      headers: { apikey: PUBLISHABLE_KEY, authorization: 'Bearer ' + PUBLISHABLE_KEY, 'content-type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify({ action: 'submitPlacementTest', student_name, education_stage, guardian_phone, email, answers, contact_consent: true }),
       cache: 'no-store'
     });
-    if (!response.ok) {
-      const text = await response.text();
-      console.error('placement test save failed', response.status, text.slice(0, 300));
-      return res.status(502).json({ ok: false, error: 'تعذر حفظ النتيجة الآن. حاول مرة أخرى.' });
-    }
-    return res.status(201).json({ ok: true, message: 'تم حفظ نتيجة الاختبار.' });
+    const raw = await upstream.text(); let data = {};
+    try { data = raw ? JSON.parse(raw) : {}; } catch (_) { data = {}; }
+    if (!upstream.ok || !data.ok) return res.status(upstream.status || 502).json({ ok: false, error: data.error || 'تعذر حفظ نتيجة الاختبار. حاول مرة أخرى.' });
+    return res.status(201).json(data);
   } catch (error) {
     console.error('placement test save failed', error && error.message);
     return res.status(502).json({ ok: false, error: 'تعذر الاتصال لحفظ النتيجة.' });
