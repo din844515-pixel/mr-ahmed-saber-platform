@@ -29,7 +29,7 @@ module.exports = async function handler(req, res) {
   const tokenAuthorized = await isTeacherRequest(req);
   const legacyAuthorized = !!supplied && safeEqual(expectedHash, actualHash);
   if (!tokenAuthorized && !legacyAuthorized) {
-    return res.status(401).json({ error: 'سجّلي الدخول بحساب المستر لإكمال العملية.' });
+    return res.status(401).json({ error: 'سجّل الدخول بحساب المستر لإكمال العملية.' });
   }
 
   try {
@@ -51,6 +51,6 @@ module.exports = async function handler(req, res) {
     return res.status(upstream.status).json(parsed);
   } catch (error) {
     console.error('academic service proxy failed', error && error.message);
-    return res.status(502).json({ error: 'تعذر الاتصال بخدمة الامتحانات. حاولي مرة أخرى.' });
+    return res.status(502).json({ error: 'تعذر الاتصال بخدمة الامتحانات. حاول مرة أخرى.' });
   }
 };
