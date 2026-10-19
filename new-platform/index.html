@@ -245,7 +245,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 <div class="field"><label for="regReceipt">2 — إرفاق صورة إيصال الدفع (إجباري)</label><input id="regReceipt" name="receipt" type="file" accept="image/*" required><small style="font-size:11px;color:#747b84">اختر صورة الإيصال من معرض الصور في الموبايل أو من ملف محفوظ، مع التأكد من وضوحها.</small></div>
 <label class="register-confirm" style="display:flex;gap:9px;align-items:flex-start;font-size:12px;color:#364152;margin:13px 0 16px"><input type="checkbox" id="regConfirm" required style="margin-top:5px;accent-color:#a77a2f"><span>أؤكد أنني دفعت الاشتراك وأرفقت صورة الإيصال الصحيحة، وأفهم أن الحساب سيظل قيد المراجعة حتى موافقة المستر.</span></label>
 <button class="btn btn-dark" type="submit" style="width:100%">3 — إرسال طلب التسجيل والإيصال</button></form>
-<div class="notice"><b>مهم:</b> الطلب والإيصال لن يُرسلا أو يُحفظا فعليًا في هذه المعاينة؛ يلزم ربط قاعدة البيانات والتخزين أولًا. عند التشغيل، ستكون حالة الطلب «قيد المراجعة» ولن يتفعّل الحساب قبل مراجعة الدفع وموافقة المستر.</div></div></div>
+<div class="notice"><b>مهم:</b> سيُحفظ الطلب وإيصال الدفع بشكل آمن، وسيظهر للمستر في قائمة «طلبات التسجيل وإيصالات الدفع». لن يتفعّل الحساب إلا بعد مراجعة الإيصال وموافقة المستر.</div></div></div>
 <div class="modal hidden" id="teacherLogin" role="dialog" aria-modal="true" aria-labelledby="teacherLoginTitle"><div class="modal-card"><button class="modal-close" data-close aria-label="إغلاق">×</button><span class="pill">بوابة الإدارة</span><h2 id="teacherLoginTitle">دخول المستر</h2><p>منطقة مخصصة لإدارة الطلاب والكورسات والامتحانات والاشتراكات.</p><form class="demo-form" data-kind="teacher"><div class="field"><label for="teacherEmail">البريد الإلكتروني</label><input id="teacherEmail" type="email" required></div><div class="field"><label for="teacherPassword">كلمة المرور</label><input id="teacherPassword" type="password" required></div><button class="btn btn-dark" type="submit" style="width:100%">دخول لوحة المستر</button></form><div class="notice">لن يتم تفعيل دخول الإدارة قبل إعداد المصادقة والصلاحيات الآمنة.</div></div></div>
 <div class="modal hidden" id="searchModal" role="dialog" aria-modal="true" aria-labelledby="searchTitle"><div class="modal-card"><button class="modal-close" data-close aria-label="إغلاق">×</button><h2 id="searchTitle">ابحث في المنصة</h2><p>اكتب اسم قسم أو مرحلة للوصول إليه.</p><form id="searchForm" class="searchbox"><input id="searchInput" placeholder="مثال: الكورسات أو أولى إعدادي" aria-label="عبارة البحث"><button class="btn btn-dark" type="submit">بحث</button></form><div class="notice hidden" id="searchNotice"></div></div></div>
 <div class="modal hidden" id="infoModal" role="dialog" aria-modal="true" aria-labelledby="infoTitle"><div class="modal-card"><button class="modal-close" data-close aria-label="إغلاق">×</button><h2 id="infoTitle">تنبيه</h2><p id="infoMessage"></p><button class="btn btn-dark" data-close>حسنًا</button></div></div>
@@ -297,8 +297,39 @@ $('.demo-form').forEach(f=>f.addEventListener('submit',async e=>{
   finally{button.disabled=false;button.textContent='دخول الطالب'}
   return;
  }
- if(f.dataset.kind==='register'){const receipt=$('#regReceipt')?.files?.[0];if(!receipt){$('#regReceipt')?.focus();return}$('#infoMessage').textContent='هذه معاينة للنموذج فقط: لم يتم إرسال طلب التسجيل أو رفع الإيصال أو حفظ بياناتك. بعد ربط نظام التسجيل، سيظل الطلب قيد المراجعة حتى موافقة المستر.';}
- else{$('#infoMessage').textContent='دخول الإدارة يُدار من لوحة المستر باستخدام صلاحيات المزامنة المعتمدة.';}
+ if(f.dataset.kind==='register'){
+  const receipt=$('#regReceipt')?.files?.[0];
+  if(!receipt){$('#regReceipt')?.focus();return;}
+  const button=f.querySelector('button[type="submit"]');
+  if(receipt.size>5*1024*1024){$('#infoMessage').textContent='حجم إيصال الدفع يجب ألا يتجاوز 5 ميجابايت. اختر صورة أصغر ثم أعد الإرسال.';openModal('infoModal');return;}
+  const oldLabel=button.textContent;button.disabled=true;button.textContent='جاري إرسال طلب التسجيل…';
+  try{
+   const formData=new FormData();
+   formData.append('action','submitRegistrationRequest');
+   formData.append('student_name',$('#regName').value.trim());
+   formData.append('education_stage',$('#regStage').value);
+   formData.append('guardian_phone',$('#regGuardian').value.trim());
+   formData.append('student_phone',$('#regPhone').value.trim());
+   formData.append('email',$('#regEmail').value.trim());
+   formData.append('payment_confirmed',$('#regConfirm').checked?'yes':'no');
+   formData.append('receipt',receipt,receipt.name);
+   const response=await fetch('https://umffvtnujqjmgrrfmsdk.supabase.co/functions/v1/platform-academics',{
+    method:'POST',
+    headers:{apikey:'sb_publishable_bbmAuU_9UGd1IrJXBS8Bkg_BI5lpSXV',authorization:'Bearer sb_publishable_bbmAuU_9UGd1IrJXBS8Bkg_BI5lpSXV'},
+    body:formData,cache:'no-store'
+   });
+   const data=await response.json().catch(()=>({}));
+   if(!response.ok||!data.ok)throw new Error(data.error||'تعذر إرسال طلب التسجيل.');
+   f.reset();
+   $('#infoMessage').textContent='تم إرسال طلب التسجيل وإيصال الدفع بنجاح. الطلب الآن قيد المراجعة، ولن يتفعّل الحساب إلا بعد موافقة المستر.';
+   openModal('infoModal');
+  }catch(error){
+   $('#infoMessage').textContent=error.message||'تعذر إرسال الطلب. تحقق من الاتصال وحاول مرة أخرى.';
+   openModal('infoModal');
+  }finally{button.disabled=false;button.textContent=oldLabel;}
+  return;
+ }
+ $('#infoMessage').textContent='دخول الإدارة يُدار من لوحة المستر باستخدام صلاحيات المزامنة المعتمدة.';
  openModal('infoModal')
 }));
 const questions=[
