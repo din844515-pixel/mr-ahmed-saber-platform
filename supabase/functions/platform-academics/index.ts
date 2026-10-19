@@ -160,7 +160,7 @@ async function reviewRegistrationRequest(body: any) {
   const note = String(body.note || "").trim().slice(0,500);
   if (!id || !/^[0-9a-f-]{36}$/i.test(id)) throw new ApiError("معرّف طلب التسجيل غير صحيح.");
   if (decision !== "approve" && decision !== "reject") throw new ApiError("اختر قرارًا صحيحًا للطلب.");
-  const found = await db("platform_registration_requests?select=id,status,student_code& id=eq.".replace(" ", "") + id + "&limit=1") as any[];
+  const found = await db("platform_registration_requests?select=id,status,student_code&id=eq." + id + "&limit=1") as any[];
   const request = found[0];
   if (!request) throw new ApiError("طلب التسجيل غير موجود.",404);
   if (request.status === "approved") return { ok:true, status:"approved", studentCode:request.student_code || "" };
