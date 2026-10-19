@@ -33,16 +33,12 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const teacherKey = process.env.TEACHER_UPLOAD_KEY || supplied;
-    if (tokenAuthorized && !teacherKey) {
-      return res.status(503).json({ error: 'إعدادات صلاحية المستر غير مكتملة في الخادم.' });
-    }
     const upstream = await fetch(FUNCTION_URL, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
         'apikey': PUBLISHABLE_KEY,
-        'x-teacher-key': tokenAuthorized ? teacherKey : supplied,
+        ...(tokenAuthorized ? { 'authorization': String(req.headers.authorization || '') } : { 'x-teacher-key': supplied }),
         'accept': 'application/json'
       },
       body: JSON.stringify(req.body && typeof req.body === 'object' ? req.body : {}),
