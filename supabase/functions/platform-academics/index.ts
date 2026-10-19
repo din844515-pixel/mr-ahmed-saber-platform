@@ -41,7 +41,7 @@ function needString(v: unknown, label: string, max = 180) {
 }
 function needStage(v: unknown) {
   const s = String(v ?? "");
-  if (!STAGES.includes(s)) throw new ApiError("اختاري مرحلة دراسية صحيحة.");
+  if (!STAGES.includes(s)) throw new ApiError("اختر مرحلة دراسية صحيحة.");
   return s;
 }
 async function listPlacementTests(){return await db("platform_placement_tests?select=id,student_name,education_stage,guardian_phone,email,score,total_questions,level_band,answers,contact_consent,created_at&order=created_at.desc&limit=500")}
@@ -110,7 +110,7 @@ async function setExamFlag(body: any, field: "is_published" | "results_published
     const attempts = await db("platform_exam_attempts?select=id,status,submitted_at&exam_id=eq." + id) as any[];
     if (!attempts.length) throw new ApiError("لا توجد محاولات أو درجات لهذا الامتحان حتى الآن.");
     if (attempts.some((a: any) => !a.submitted_at || a.status !== "graded")) {
-      throw new ApiError("لا يمكن نشر النتائج قبل تسليم وتصحيح جميع المحاولات. راجعي قسم محاولات الطلاب.");
+      throw new ApiError("لا يمكن نشر النتائج قبل تسليم وتصحيح جميع المحاولات. راجع قسم محاولات الطلاب.");
     }
     const ids = attempts.map((a: any) => escFilter(String(a.id || ""))).filter(Boolean);
     const grades = ids.length ? await db("platform_exam_results?select=attempt_id,max_score,published_at&attempt_id=in.(" + ids.join(",") + ")") as any[] : [];
@@ -265,8 +265,8 @@ function toB64Utf8(s:string){let b="";for(const c of enc.encode(s))b+=String.fro
 function fromB64Utf8(s:string){s=s.replace(/-/g,"+").replace(/_/g,"/");const b=atob(s+"=".repeat((4-s.length%4)%4)),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return new TextDecoder().decode(u)}
 async function signToken(s:string){const k=await crypto.subtle.importKey("raw",enc.encode(serviceKey),{name:"HMAC",hash:"SHA-256"},false,["sign"]),v=await crypto.subtle.sign("HMAC",k,enc.encode(s));let b="";for(const c of new Uint8Array(v))b+=String.fromCharCode(c);return b64url(b)}
 async function issueToken(s:any){const p=toB64Utf8(JSON.stringify({sid:s.id,exp:Math.floor(Date.now()/1000)+43200,nonce:crypto.randomUUID()}));return p+"."+await signToken(p)}
-async function currentStudent(req:Request){const t=String(req.headers.get("authorization")||"").replace(/^Bearer\s+/i,"").trim(),parts=t.split(".");if(parts.length!==2||!parts[0]||!serviceKey)throw new ApiError("سجلي الدخول من جديد لفتح هذه الصفحة.",401);if(await signToken(parts[0])!==parts[1])throw new ApiError("جلسة الطالب غير صالحة. سجلي الدخول مرة أخرى.",401);let claims:any;try{claims=JSON.parse(fromB64Utf8(parts[0]))}catch{throw new ApiError("جلسة الطالب غير صالحة.",401)}if(!claims.sid||Number(claims.exp)<=Math.floor(Date.now()/1000))throw new ApiError("انتهت صلاحية جلسة الطالب. سجلي الدخول مرة أخرى.",401);const rows=await db("platform_student_registry?select=*&id=eq."+escFilter(String(claims.sid))+"&limit=1") as any[];if(!rows.length)throw new ApiError("حساب الطالب غير موجود.",401);assertStudentActive(rows[0]);return rows[0]}
-async function studentLogin(body:any){const code=String(body.student_code||"").trim().toUpperCase(),phone=normPhone(body.student_phone);if(!code||!phone)throw new ApiError("اكتبي كود الطالب ورقم الموبايل المسجل.");const rows=await db("platform_student_registry?select=*&student_code=eq."+encodeURIComponent(code)+"&limit=1") as any[];if(!rows.length||normPhone(rows[0].student_phone)!==phone||rows[0].archived)throw new ApiError("كود الطالب أو رقم الموبايل غير صحيح.",401);assertStudentActive(rows[0]);return {ok:true,token:await issueToken(rows[0]),student:{id:rows[0].id,code:rows[0].student_code,name:rows[0].full_name,stage:rows[0].education_stage,subscription_end:rows[0].subscription_end,payment_status:rows[0].payment_status},expires_in:43200}}
+async function currentStudent(req:Request){const t=String(req.headers.get("authorization")||"").replace(/^Bearer\s+/i,"").trim(),parts=t.split(".");if(parts.length!==2||!parts[0]||!serviceKey)throw new ApiError("سجّل الدخول من جديد لفتح هذه الصفحة.",401);if(await signToken(parts[0])!==parts[1])throw new ApiError("جلسة الطالب غير صالحة. سجّل الدخول مرة أخرى.",401);let claims:any;try{claims=JSON.parse(fromB64Utf8(parts[0]))}catch{throw new ApiError("جلسة الطالب غير صالحة.",401)}if(!claims.sid||Number(claims.exp)<=Math.floor(Date.now()/1000))throw new ApiError("انتهت صلاحية جلسة الطالب. سجّل الدخول مرة أخرى.",401);const rows=await db("platform_student_registry?select=*&id=eq."+escFilter(String(claims.sid))+"&limit=1") as any[];if(!rows.length)throw new ApiError("حساب الطالب غير موجود.",401);assertStudentActive(rows[0]);return rows[0]}
+async function studentLogin(body:any){const code=String(body.student_code||"").trim().toUpperCase(),phone=normPhone(body.student_phone);if(!code||!phone)throw new ApiError("اكتب كود الطالب ورقم الموبايل المسجل.");const rows=await db("platform_student_registry?select=*&student_code=eq."+encodeURIComponent(code)+"&limit=1") as any[];if(!rows.length||normPhone(rows[0].student_phone)!==phone||rows[0].archived)throw new ApiError("كود الطالب أو رقم الموبايل غير صحيح.",401);assertStudentActive(rows[0]);return {ok:true,token:await issueToken(rows[0]),student:{id:rows[0].id,code:rows[0].student_code,name:rows[0].full_name,stage:rows[0].education_stage,subscription_end:rows[0].subscription_end,payment_status:rows[0].payment_status},expires_in:43200}}
 function studentStageOk(s:any,stage:string){return stage===s.education_stage||stage==="كورسات شاملة"||s.education_stage==="كورسات شاملة"}
 const SHARED_COURSE_INDEX_URL = "https://mr-ahmed-saber-new.vercel.app/api/courses";
 async function getSharedLessonContext(s:any, body:any) {
@@ -370,7 +370,7 @@ Deno.serve(async (req: Request) => {
       const supplied=String(req.headers.get("x-teacher-key")||"");
       const tokenAuthorized = await authorizedTeacherSession(req);
       const legacyAuthorized = !!supplied && await sha256(supplied)===EXPECTED_KEY_HASH;
-      if(!tokenAuthorized&&!legacyAuthorized)return json({error:"سجّلي الدخول بحساب المستر لإكمال العملية."},401);
+      if(!tokenAuthorized&&!legacyAuthorized)return json({error:"سجّل الدخول بحساب المستر لإكمال العملية."},401);
     } else { student=await currentStudent(req); }
     let result: unknown;
     switch (action) {
