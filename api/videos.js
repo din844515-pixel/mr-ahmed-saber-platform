@@ -31,7 +31,10 @@ module.exports = async function handler(req, res) {
         if (!(await authorizedClientPayload(clientPayload))) {
           throw new Error('رمز الرفع غير صحيح. اكتبه من جديد.');
         }
-        if (!String(pathname || '').startsWith('course-videos/')) {
+        const safePath = String(pathname || '');
+        const isCourseVideo = safePath.startsWith('course-videos/');
+        const isPromoVideo = safePath.startsWith('promo-videos/');
+        if (!isCourseVideo && !isPromoVideo) {
           throw new Error('مسار رفع الفيديو غير صالح.');
         }
         return {
@@ -42,14 +45,14 @@ module.exports = async function handler(req, res) {
           ],
           maximumSizeInBytes: 2 * 1024 * 1024 * 1024,
           addRandomSuffix: true,
-          tokenPayload: JSON.stringify({ purpose: 'course-lesson-video' })
+          tokenPayload: JSON.stringify({ purpose: isPromoVideo ? 'homepage-promo-video' : 'course-lesson-video' })
         };
       },
       onUploadCompleted: async ({ blob, tokenPayload }) => {
         let info = {};
         try { info = JSON.parse(tokenPayload || '{}'); } catch (error) {}
-        if (info.purpose === 'course-lesson-video') {
-          console.log('Course lesson video uploaded', blob.pathname);
+        if (info.purpose === 'course-lesson-video' || info.purpose === 'homepage-promo-video') {
+          console.log('Platform video uploaded', info.purpose, blob.pathname);
         }
       }
     });
