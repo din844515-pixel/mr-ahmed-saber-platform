@@ -12,7 +12,7 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
   const authorization = String(req.headers.authorization || '');
-  if (!/^Bearer\\s+[^\\s]+$/i.test(authorization)) {
+  if (!/^Bearer\s+[^\s]+$/i.test(authorization)) {
     return res.status(401).json({ error: 'سجّل الدخول أولًا لعرض التعليقات.' });
   }
   try {
