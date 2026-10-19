@@ -180,7 +180,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
       </div>
       <div class="notice hidden" id="testStartError" role="status" aria-live="polite"></div><button class="btn btn-dark" id="startPlacementTest" type="button" style="width:100%">ابدأ الاختبار <span aria-hidden="true">←</span></button>
      </form>
-     <div class="hint">الاختبار الحالي نموذج تجريبي داخل المتصفح؛ النتيجة لا تُضاف لسجل الطالب قبل ربط قاعدة البيانات.</div>
+     <div class="hint">النتيجة إرشادية لتحديد المستوى، وسيتم حفظها عند إنهاء الاختبار وإرسالها للمستر بعد موافقتك.</div>
     </div>
     <div id="testArea" class="test-area hidden">
      <div class="test-head"><span id="testProgressText">0 من 15 سؤالًا</span><span id="testAnswered">تمت الإجابة على 0</span></div>
@@ -433,7 +433,7 @@ $('#placementForm').addEventListener('submit',e=>{e.preventDefault();const unans
     result.append(title,scoreText,description,reset);result.classList.remove('hidden');result.scrollIntoView({behavior:'smooth',block:'center'});
    }catch(err){showError(err.message||'تعذر حفظ النتيجة. حاول مرة أخرى.');}
    finally{submit.disabled=false;submit.textContent='إنهاء الاختبار وعرض النتيجة';}
-  };
+  });
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bootPlacementTest);else bootPlacementTest();
 })();
