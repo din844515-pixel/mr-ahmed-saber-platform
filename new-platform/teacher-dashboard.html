@@ -186,7 +186,7 @@ async function loadPlacementLeads(){
  }catch(error){status.textContent=error.message||'تعذر تحميل النتائج.';list.innerHTML='<div class="empty">تعذر تحميل البيانات. تأكد من تسجيل الدخول وحاول مرة أخرى.</div>';}
 }
 function showView(id){$$('.view').forEach(v=>v.classList.toggle('active',v.id==='view-'+id));$$('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===id));if(id==='results')loadPlacementLeads();const names={home:'الرئيسية',students:'الطلاب والأكواد',courses:'الكورسات والمحاضرات',exams:'الامتحانات والواجبات',files:'الملفات والمذكرات',results:'النتائج والتقارير',subscriptions:'الاشتراكات والمدفوعات',settings:'الإعدادات'};$('#pageTitle').textContent=names[id]||'الرئيسية';window.scrollTo({top:0,behavior:'smooth'})}
-$('[data-view]').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.view)));
+$$('[data-view]').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.view)));
 $('#refreshPlacementLeads')?.addEventListener('click',loadPlacementLeads);
 function modal(title,msg){$('#modalTitle').textContent=title;$('#modalMessage').textContent=msg;$('#actionModal').classList.remove('hidden')}
 // Local-only management preview until a separate backend is approved and connected.
