@@ -321,6 +321,7 @@ $('.demo-form').forEach(f=>f.addEventListener('submit',async e=>{
    const data=await response.json().catch(()=>({}));
    if(!response.ok||!data.ok||!data.requestId||data.status!=='pending_review')
     throw new Error(data.error||'لم يصل تأكيد حفظ الطلب في قائمة المستر. لم نعتبر الطلب مرسلًا؛ حاول مرة أخرى.');
+   const submittedStudentName=$('#regName').value.trim(),submittedStage=$('#regStage').value;
    f.reset();
    $('#infoMessage').textContent='تم حفظ طلبك وإيصال الدفع بنجاح، ورقم الطلب: '+data.requestId+'. الطلب الآن قيد المراجعة ولن يتفعّل الحساب إلا بعد موافقة المستر.';
    const infoMessage=$('#infoMessage');
@@ -334,7 +335,7 @@ $('.demo-form').forEach(f=>f.addEventListener('submit',async e=>{
     waLink.style.cssText='display:flex;justify-content:center;align-items:center;width:100%;margin-top:14px;text-decoration:none';
     infoMessage.insertAdjacentElement('afterend',waLink);
    }
-   const whatsappText='السلام عليكم، أنا أرسلت طلب اشتراك جديد على منصة Mr. Ahmed Saber. رقم الطلب: '+data.requestId+'، اسم الطالب: '+$('#regName').value.trim()+'، المرحلة: '+$('#regStage').value+'. برجاء متابعة الطلب.';
+   const whatsappText='السلام عليكم، أنا أرسلت طلب اشتراك جديد على منصة Mr. Ahmed Saber. رقم الطلب: '+data.requestId+'، اسم الطالب: '+submittedStudentName+'، المرحلة: '+submittedStage+'. برجاء متابعة الطلب.';
    waLink.href='https://wa.me/201553438138?text='+encodeURIComponent(whatsappText);
    waLink.textContent='تابع طلبك من خلال واتساب';
    waLink.hidden=false;
