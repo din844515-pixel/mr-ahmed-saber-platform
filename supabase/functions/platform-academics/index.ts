@@ -361,7 +361,7 @@ async function reviewSubmission(body: any) {
 
 
 const ACADEMIC_BUCKET = "platform-academic-media";
-const TEACHER_ACTIONS = new Set(["listExams","getExam","saveExam","deleteExam","setExamPublished","setResultsPublished","listPricing","savePricing","setPricingActive","listAssignments","saveAssignment","deleteAssignment","setAssignmentPublished","listSubmissions","reviewSubmission","listAttempts","getAttemptReview","gradeAttempt","allowExamRetake","listPlacementTests","teacherListLessonComments","teacherReplyLessonComment","listRegistrationRequests","reviewRegistrationRequest"]);
+const TEACHER_ACTIONS = new Set(["listExams","getExam","saveExam","deleteExam","setExamPublished","setResultsPublished","listPricing","savePricing","setPricingActive","listAssignments","saveAssignment","deleteAssignment","setAssignmentPublished","listSubmissions","reviewSubmission","listAttempts","getAttemptReview","gradeAttempt","allowExamRetake","listPlacementTests","teacherListLessonComments","teacherReplyLessonComment","teacherDeleteLessonComment","listTeacherResults","listRegistrationRequests","reviewRegistrationRequest"]);
 async function authorizedTeacherSession(req: Request): Promise<boolean> {
   const authorization = String(req.headers.get("authorization") || "");
   const token = authorization.toLowerCase().startsWith("bearer ") ? authorization.slice(7).trim() : "";
@@ -440,7 +440,16 @@ function lessonCommentDto(row:any) {
 async function studentListLessonComments(body:any,s:any) {
   const ctx=await getSharedLessonContext(s,body);
   const rows=await db("platform_lesson_comments?select=*&course_id=eq."+encodeURIComponent(ctx.courseId)+"&unit_id=eq."+encodeURIComponent(ctx.unitId)+"&lesson_id=eq."+encodeURIComponent(ctx.lessonId)+"&order=created_at.asc") as any[];
-  return {ok:true,comments:rows.map(lessonCommentDto)};
+  return {ok:true,comments:rows.map((row:any)=>({...lessonCommentDto(row),canDelete:String(row.student_registry_id)===String(s.id)}))};
+}
+async function studentDeleteLessonComment(body:any,s:any) {
+  const id=String(body.comment_id||"").trim();
+  if(!/^[0-9a-f-]{36}$/i.test(id))throw new ApiError("معرّف التعليق غير صحيح.");
+  const found=await db("platform_lesson_comments?select=id,student_registry_id&id=eq."+escFilter(id)+"&limit=1") as any[];
+  if(!found.length)throw new ApiError("التعليق غير موجود.",404);
+  if(String(found[0].student_registry_id)!==String(s.id))throw new ApiError("يمكنك حذف تعليقاتك أنت فقط.",403);
+  await db("platform_lesson_comments?id=eq."+escFilter(id),{method:"DELETE"});
+  return {ok:true,deletedId:id};
 }
 async function studentCreateLessonComment(body:any,s:any) {
   const ctx=await getSharedLessonContext(s,body),text=needString(body.body,"نص التعليق",2000);
@@ -472,7 +481,15 @@ async function studentMarkLessonComplete(body:any,s:any) {
 }
 async function teacherListLessonComments() {
   const rows=await db("platform_lesson_comments?select=*&order=created_at.desc&limit=500") as any[];
-  return {ok:true,comments:rows.map(lessonCommentDto)};
+  return {ok:true,comments:rows.map((row:any)=>({...lessonCommentDto(row),canDelete:true}))};
+}
+async function teacherDeleteLessonComment(body:any) {
+  const id=String(body.comment_id||"").trim();
+  if(!/^[0-9a-f-]{36}$/i.test(id))throw new ApiError("معرّف التعليق غير صحيح.");
+  const found=await db("platform_lesson_comments?select=id&id=eq."+escFilter(id)+"&limit=1") as any[];
+  if(!found.length)throw new ApiError("التعليق غير موجود.",404);
+  await db("platform_lesson_comments?id=eq."+escFilter(id),{method:"DELETE"});
+  return {ok:true,deletedId:id};
 }
 async function teacherReplyLessonComment(body:any) {
   const id=String(body.comment_id||"").trim(),reply=needString(body.body,"نص الرد",2000);
@@ -496,6 +513,21 @@ async function studentSubmitExam(body:any,s:any){const id=escFilter(String(body.
 async function studentListAssignments(s:any){const all=await db("platform_assignments?select=*&is_published=eq.true&order=created_at.desc") as any[],rows=all.filter(a=>studentStageOk(s,String(a.stage))),ids=rows.map(a=>escFilter(String(a.id))),subs=ids.length?await db("platform_assignment_submissions?select=*&student_registry_id=eq."+escFilter(String(s.id))+"&assignment_id=in.("+ids.join(",")+")") as any[]:[],by:Record<string,any>={};for(const x of subs)by[x.assignment_id]=x;const mapped=[];for(const a of rows){const sub=by[a.id]||null;mapped.push({...a,resource_url:await signAcademicReadUrl(a.resource_path),submission:sub?{...sub,attachment_url:await signAcademicReadUrl(sub.attachment_path)}:null})}return {ok:true,assignments:mapped}}
 async function studentSubmitAssignment(body:any,s:any){const id=escFilter(String(body.assignment_id||"")),aRows=await db("platform_assignments?select=*&id=eq."+id+"&is_published=eq.true&limit=1") as any[],a=aRows[0];if(!a||!studentStageOk(s,String(a.stage)))throw new ApiError("الواجب غير متاح لحسابك.",404);if(a.due_at&&new Date(a.due_at).getTime()<Date.now())throw new ApiError("انتهى موعد تسليم الواجب.");const exist=await db("platform_assignment_submissions?select=id&assignment_id=eq."+id+"&student_registry_id=eq."+escFilter(String(s.id))+"&limit=1") as any[];if(exist.length)throw new ApiError("تم تسليم هذا الواجب من قبل؛ لا يسمح بإعادة الإرسال.",409);const text=String(body.response_text||"").trim().slice(0,20000),path=String(body.attachment_path||"");if(!text&&!path)throw new ApiError("اكتب الإجابة أو أرفقي ملف الواجب.");if(path&&!path.startsWith("assignment-submissions/"+s.id+"/"))throw new ApiError("الملف المرفق لا يخص حسابك.");const v=await db("platform_assignment_submissions",{method:"POST",body:{assignment_id:id,student_registry_id:s.id,response_text:text,attachment_path:path||null,attachment_name:String(body.attachment_name||"").slice(0,240),status:"not_reviewed"},prefer:"return=representation"}) as any[];return {ok:true,submission:v?.[0]||{status:"not_reviewed",submitted_at:new Date().toISOString()}}}
 async function studentListResults(s:any){const ats=await db("platform_exam_attempts?select=id,exam_id,started_at,submitted_at,status&student_registry_id=eq."+escFilter(String(s.id))+"&submitted_at=not.is.null&order=submitted_at.desc") as any[];if(!ats.length)return {ok:true,results:[]};const ids=[...new Set(ats.map(a=>escFilter(String(a.exam_id))))],exs=await db("platform_exams?select=id,title,stage,results_published&id=in.("+ids.join(",")+")") as any[],by:Record<string,any>={};for(const e of exs)by[e.id]=e;const shown=ats.filter(a=>by[a.exam_id]?.results_published);if(!shown.length)return {ok:true,results:[]};const aids=shown.map(a=>escFilter(String(a.id))),grades=await db("platform_exam_results?select=*&attempt_id=in.("+aids.join(",")+")&published_at=not.is.null") as any[],g:Record<string,any>={};for(const x of grades)g[x.attempt_id]=x;return {ok:true,results:shown.filter(a=>g[a.id]).map(a=>({attempt:a,exam:by[a.exam_id],result:g[a.id]}))}}
+async function listTeacherResults(){
+  const attempts=await db("platform_exam_attempts?select=id,exam_id,student_registry_id,started_at,submitted_at,status,created_at&submitted_at=not.is.null&order=submitted_at.desc&limit=1000") as any[];
+  const grades=await db("platform_exam_results?select=*&limit=1000") as any[];
+  const logs=await db("platform_grade_change_log?select=*&order=changed_at.desc&limit=500") as any[];
+  const examIds=[...new Set(attempts.map((a:any)=>escFilter(String(a.exam_id))).filter(Boolean))];
+  const studentIds=[...new Set(attempts.map((a:any)=>escFilter(String(a.student_registry_id))).filter(Boolean))];
+  const exams=examIds.length?await db("platform_exams?select=id,title,stage,course_title,results_published&id=in.("+examIds.join(",")+")") as any[]:[];
+  const students=studentIds.length?await db("platform_student_registry?select=id,student_code,full_name,guardian_phone,education_stage&id=in.("+studentIds.join(",")+")") as any[]:[];
+  const examMap:Record<string,any>={},studentMap:Record<string,any>={},gradeMap:Record<string,any>={};
+  for(const e of exams)examMap[e.id]=e;
+  for(const s of students)studentMap[s.id]=s;
+  for(const g of grades)gradeMap[g.attempt_id]=g;
+  const mapped=attempts.map((a:any)=>({attempt:a,exam:examMap[a.exam_id]||null,student:studentMap[a.student_registry_id]||null,result:gradeMap[a.id]||null}));
+  return {ok:true,results:mapped,gradeChanges:logs.map((g:any)=>({...g,student:studentMap[g.student_registry_id]||null,exam:attempts.find((a:any)=>a.id===g.attempt_id)?examMap[attempts.find((a:any)=>a.id===g.attempt_id).exam_id]||null:null}))};
+}
 async function listAttempts(body:any){const id=escFilter(String(body.exam_id||""));if(!id)throw new ApiError("اختر الامتحان أولًا.");const ats=await db("platform_exam_attempts?select=*&exam_id=eq."+id+"&order=created_at.desc") as any[];if(!ats.length)return {ok:true,attempts:[]};const ids=ats.map(a=>escFilter(String(a.student_registry_id))),ss=await db("platform_student_registry?select=id,student_code,full_name,guardian_phone,education_stage&id=in.("+ids.join(",")+")") as any[],students:Record<string,any>={};for(const s of ss)students[s.id]=s;const aids=ats.map(a=>escFilter(String(a.id))),gs=await db("platform_exam_results?select=*&attempt_id=in.("+aids.join(",")+")") as any[],results:Record<string,any>={};for(const g of gs)results[g.attempt_id]=g;return {ok:true,attempts:ats.map(a=>({...a,student:students[a.student_registry_id]||null,result:results[a.id]||null}))}}
 async function allowExamRetake(body:any){const id=escFilter(String(body.attempt_id||""));if(!id)throw new ApiError("اختر محاولة صحيحة لإعادة الامتحان.");const found=await db("platform_exam_attempts?select=id,exam_id,student_registry_id&id=eq."+id+"&limit=1") as any[];if(!found.length)throw new ApiError("المحاولة غير موجودة أو تم حذفها بالفعل.",404);await db("platform_exam_attempts?id=eq."+id,{method:"DELETE"});return {ok:true,exam_id:found[0].exam_id,student_registry_id:found[0].student_registry_id}}
 async function getAttemptReview(body:any){const id=escFilter(String(body.attempt_id||"")),ats=await db("platform_exam_attempts?select=*&id=eq."+id+"&limit=1") as any[],attempt=ats[0];if(!attempt)throw new ApiError("المحاولة غير موجودة.",404);const ss=await db("platform_student_registry?select=id,student_code,full_name,guardian_phone,education_stage&id=eq."+escFilter(String(attempt.student_registry_id))+"&limit=1") as any[],ee=await db("platform_exams?select=id,title,stage,duration_minutes&id=eq."+escFilter(String(attempt.exam_id))+"&limit=1") as any[],qs=await db("platform_exam_questions?select=*&exam_id=eq."+escFilter(String(attempt.exam_id))+"&order=sort_order.asc") as any[],ids=qs.map(q=>escFilter(String(q.id))),as=await db("platform_exam_answers?select=*&attempt_id=eq."+id) as any[],ks=ids.length?await db("platform_exam_answer_keys?select=question_id,answer_key,scoring_notes&question_id=in.("+ids.join(",")+")") as any[]:[],keyMap:Record<string,any>={},ansMap:Record<string,any>={};for(const k of ks)keyMap[k.question_id]=k;for(const a of as)ansMap[a.question_id]=a;const mapped=[];for(const q of qs){const a=ansMap[q.id]||null;mapped.push({...q,media_preview_url:await signAcademicReadUrl(q.media_url),answer_key:keyMap[q.id]?.answer_key??null,scoring_notes:keyMap[q.id]?.scoring_notes||"",answer:a?{...a,audio_url:await signAcademicReadUrl(a.audio_path)}:null})}const gs=await db("platform_exam_results?select=*&attempt_id=eq."+id+"&limit=1") as any[];return {ok:true,attempt,student:ss[0]||null,exam:ee[0]||null,questions:mapped,result:gs[0]||null}}
@@ -548,10 +580,13 @@ Deno.serve(async (req: Request) => {
       case "createUploadUrl": result = await createUploadUrl(body,student); break;
       case "studentListLessonComments": result = await studentListLessonComments(body,student); break;
       case "studentCreateLessonComment": result = await studentCreateLessonComment(body,student); break;
+      case "studentDeleteLessonComment": result = await studentDeleteLessonComment(body,student); break;
       case "studentListLessonProgress": result = await studentListLessonProgress(body,student); break;
       case "studentMarkLessonComplete": result = await studentMarkLessonComplete(body,student); break;
       case "teacherListLessonComments": result = await teacherListLessonComments(); break;
       case "teacherReplyLessonComment": result = await teacherReplyLessonComment(body); break;
+      case "teacherDeleteLessonComment": result = await teacherDeleteLessonComment(body); break;
+      case "listTeacherResults": result = await listTeacherResults(); break;
       case "studentListExams": result = await studentListExams(student); break;
       case "studentStartExam": result = await studentStartExam(body,student); break;
       case "studentSaveAnswer": result = await studentSaveAnswer(body,student); break;
