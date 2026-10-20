@@ -534,7 +534,7 @@ The following decisions are also locked unless the user explicitly requests a ch
 ## Repair checkpoint — 20 Oct 2026 (promo publish verification)
 
 - Kept the agreed design and exam builder untouched.
-- Updated `api/promo-video.js` so if video upload to the public Blob prefix succeeded but the metadata record was never created, GET can recover the newest valid uploaded promo clip. A deliberate `active:false` metadata record still takes precedence, so explicitly unpublishing a video remains respected.
+- Updated `api/promo-video.js` so if video upload to the public Blob prefix succeeded but the metadata record was never created, GET can recover the newest valid uploaded promo clip. A deliberate `active:false` metadata record remains effective unless a valid upload has a newer `uploadedAt` timestamp than that record's `updatedAt`; older clips are not republished after an unpublish action.
 - Updated `new-platform/teacher-dashboard.html` to verify the publish response and re-read `/api/promo-video` before showing a success message. The UI must now report an error if the page cannot confirm the same video URL as active.
 - Teacher video/course upload now sends both the session bearer token and the upload key when available, allowing the server's existing upload-key fallback to work if a stale/invalid session token is also present. Publish/unpublish requests send both available credentials too.
 - These changes are committed on `rebuild/new-platform-from-note-2026-10-13`. A Preview build completed and the homepage, teacher dashboard, and `/api/promo-video` endpoints returned HTTP 200.
