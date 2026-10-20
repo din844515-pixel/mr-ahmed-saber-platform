@@ -7,8 +7,8 @@ function clean(v, max = 180) { return String(v == null ? '' : v).trim().slice(0,
 module.exports = async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store, max-age=0');
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  if (!['GET', 'POST', 'PATCH'].includes(req.method)) {
-    res.setHeader('Allow', 'GET, POST, PATCH');
+  if (!['GET', 'POST', 'PATCH', 'DELETE'].includes(req.method)) {
+    res.setHeader('Allow', 'GET, POST, PATCH, DELETE');
     return res.status(405).json({ error: 'Method not allowed' });
   }
   const authorization = String(req.headers.authorization || '');
@@ -37,12 +37,17 @@ module.exports = async function handler(req, res) {
         lesson_id: clean(body.lessonId),
         body: clean(body.body, 2000)
       };
-    } else {
+    } else if (req.method === 'PATCH') {
       if (!teacher) return res.status(403).json({ error: 'ردود المحاضرات متاحة لحساب المستر فقط.' });
       payload = {
         action: 'teacherReplyLessonComment',
         comment_id: clean(body.commentId, 64),
         body: clean(body.body, 2000)
+      };
+    } else {
+      payload = {
+        action: teacher ? 'teacherDeleteLessonComment' : 'studentDeleteLessonComment',
+        comment_id: clean(body.commentId, 64)
       };
     }
     const upstreamHeaders = {
