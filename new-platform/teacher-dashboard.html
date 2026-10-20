@@ -289,7 +289,12 @@ async function loadTeacherPromoVideo(){
   const data=await response.json().catch(()=>({}));
   if(!response.ok||!data.ok)throw new Error(data.error||"تعذر تحميل حالة الفيديو المنشور.");
   applyPublishedPromo(data.active?data.video:null);
-  if(!promoSelectedFile)promoNoticeSet(data.active?"يوجد فيديو منشور على الصفحة الرئيسية. عند رفع فيديو جديد ونشره سيحل محل الفيديو الحالي.":"لا يوجد فيديو منشور حاليًا. ارفع الفيديو واحفظه لنشره للطلاب.",false);
+  if(!promoSelectedFile)promoNoticeSet(
+   data.active&&data.video&&data.video.recoveredUpload
+    ?"تم استرجاع فيديو سبق رفعه، وكانت بيانات نشره غير محفوظة. تم إظهاره على الصفحة الرئيسية."
+    :data.active
+     ?"يوجد فيديو منشور على الصفحة الرئيسية. عند رفع فيديو جديد ونشره سيحل محل الفيديو الحالي."
+     :"لا يوجد فيديو منشور حاليًا. ارفع الفيديو واحفظه لنشره للطلاب.",false);
  }catch(error){promoNoticeSet(error.message||"تعذر تحميل حالة الفيديو المنشور.",true)}
 }
 promoInput.addEventListener("change",()=>{
@@ -327,10 +332,18 @@ promoPublish.addEventListener("click",async()=>{
   const headers={"content-type":"application/json"};if(token)headers.authorization="Bearer "+token;else headers["x-teacher-key"]=key;
   const response=await fetch("/api/promo-video",{method:"POST",headers,body:JSON.stringify({action:"publish",videoUrl:uploaded.url,filename:file.name,size:file.size,mimeType}),cache:"no-store"});
   const data=await response.json().catch(()=>({}));
-  if(!response.ok||!data.ok)throw new Error(data.error||"تعذر حفظ الفيديو على الصفحة الرئيسية.");
+  if(!response.ok||!data.ok||data.active!==true||!data.video||data.video.videoUrl!==uploaded.url)
+   throw new Error(data.error||"تم رفع الملف، لكن تعذر تأكيد حفظ بيانات نشره. لا تغلقي الصفحة؛ حاولي النشر مرة أخرى.");
+  const confirmResponse=await fetch("/api/promo-video?verify="+Date.now(),{cache:"no-store"});
+  const confirmData=await confirmResponse.json().catch(()=>({}));
+  if(!confirmResponse.ok||!confirmData.ok||confirmData.active!==true||!confirmData.video||confirmData.video.videoUrl!==uploaded.url)
+   throw new Error("تم رفع الملف، لكن المنصة لم تؤكد ظهوره على الصفحة الرئيسية. حاولي النشر مرة أخرى.");
   if(promoObjectUrl){URL.revokeObjectURL(promoObjectUrl);promoObjectUrl=""}
   promoSelectedFile=null;promoInput.value="";
-  applyPublishedPromo(data.video);promoNoticeSet("تم رفع الفيديو وحفظه ونشره بنجاح على الصفحة الرئيسية للطلاب.",false);
+  applyPublishedPromo(confirmData.video);
+  promoNoticeSet(confirmData.video.recoveredUpload
+   ?"تم رفع الفيديو والعثور على ملفه المحفوظ، وتم تأكيد ظهوره للطلاب."
+   :"تم رفع الفيديو وحفظه والتحقق من ظهوره على الصفحة الرئيسية للطلاب.",false);
  }catch(error){promoNoticeSet(error.message||"تعذر رفع الفيديو أو نشره. حاول مرة أخرى.",true)}
  finally{promoPublish.disabled=false;promoPublish.textContent=oldLabel}
 });
