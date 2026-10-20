@@ -188,7 +188,7 @@ async function loadPlacementLeads(){
    const phone=String(t.guardian_phone||'').replace(/[^0-9]/g,'');const intl=phone.startsWith('0')?'20'+phone.slice(1):phone;
    link.href='https://wa.me/'+intl+'?text='+encodeURIComponent('أهلًا، مع حضرتك فريق منصة Mr. Ahmed Saber. لاحظنا إنك جرّبت اختبار تحديد المستوى، وحابين نساعدك تعرف أنسب كورس ليك ونعرّفك بالعروض المتاحة.');link.target='_blank';link.rel='noopener noreferrer';contact.appendChild(link);tr.appendChild(contact);tbody.appendChild(tr);
   });
-  table.appendChild(tbody);list.replaceChildren(table);
+  table.appendChild(tbody);const scroll=document.createElement('div');scroll.className='student-table-scroll';scroll.appendChild(table);list.replaceChildren(scroll);
  }catch(error){status.textContent=error.message||'تعذر تحميل النتائج.';list.innerHTML='<div class="empty">تعذر تحميل البيانات. تأكد من تسجيل الدخول وحاول مرة أخرى.</div>';}
 }
 function showView(id){$('.view').forEach(v=>v.classList.toggle('active',v.id==='view-'+id));$('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===id));if(id==='results'){loadPlacementLeads();loadTeacherExamResults();}const names={home:'الرئيسية',students:'الطلاب والأكواد',courses:'الكورسات والمحاضرات',exams:'الامتحانات والواجبات',files:'الملفات والمذكرات',results:'النتائج والتقارير',subscriptions:'الاشتراكات والمدفوعات',settings:'الإعدادات'};$('#pageTitle').textContent=names[id]||'الرئيسية';window.scrollTo({top:0,behavior:'smooth'})}
@@ -214,7 +214,7 @@ async function loadTeacherExamResults(){
     [st.full_name||'طالب',st.student_code||'—',ex.title||'امتحان',ex.stage||st.education_stage||'—',score,state,a.submitted_at?new Date(a.submitted_at).toLocaleString('ar-EG'):'—'].forEach(v=>{const td=document.createElement('td');td.textContent=String(v);tr.appendChild(td)});
     tbody.appendChild(tr);
    });
-   table.appendChild(tbody);list.replaceChildren(table);
+   table.appendChild(tbody);const scroll=document.createElement('div');scroll.className='student-table-scroll';scroll.appendChild(table);list.replaceChildren(scroll);
   }
   const logs=Array.isArray(data.gradeChanges)?data.gradeChanges:[];
   if(!logs.length)changes.innerHTML='<div class="empty">لا توجد تعديلات درجات مسجلة حتى الآن.</div>';
@@ -223,7 +223,7 @@ async function loadTeacherExamResults(){
    table.innerHTML='<thead><tr><th>الطالب</th><th>الامتحان</th><th>الدرجة القديمة</th><th>الجديدة</th><th>السبب</th><th>التوقيت</th></tr></thead>';
    const tbody=document.createElement('tbody');
    logs.forEach(x=>{const tr=document.createElement('tr');[x.student?.full_name||'طالب',x.exam?.title||'امتحان',x.old_score,x.new_score,x.reason||'—',x.changed_at?new Date(x.changed_at).toLocaleString('ar-EG'):'—'].forEach(v=>{const td=document.createElement('td');td.textContent=String(v==null?'—':v);tr.appendChild(td)});tbody.appendChild(tr)});
-   table.appendChild(tbody);changes.replaceChildren(table);
+   table.appendChild(tbody);const scroll=document.createElement('div');scroll.className='student-table-scroll';scroll.appendChild(table);changes.replaceChildren(scroll);
   }
  }catch(error){status.textContent=error.message||'تعذر تحميل نتائج الامتحانات.';list.innerHTML='<div class="empty">تعذر تحميل النتائج. تأكد من تسجيل الدخول ثم اضغط تحديث.</div>';changes.innerHTML='<div class="empty">تعذر تحميل سجل التعديلات.</div>'}
 }
