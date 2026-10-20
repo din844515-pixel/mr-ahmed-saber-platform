@@ -12,14 +12,20 @@ async function sha256(value: string): Promise<string> {
   return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, "0")).join("");
 }
 const RESPONSE_CORS_HEADERS: Record<string, string> = {
-  "access-control-allow-origin": "https://mr-ahmed-saber-new.vercel.app",
   "access-control-allow-headers": "authorization,content-type,x-teacher-key,apikey",
   "access-control-allow-methods": "POST,OPTIONS",
   "access-control-max-age": "86400",
   "vary": "Origin"
 };
-function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), { status, headers: { ...RESPONSE_CORS_HEADERS, "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" } });
+function corsForOrigin(origin: string) {
+  const allowed = origin === "https://mr-ahmed-saber-new.vercel.app" ||
+    origin === "https://saber.vercel.app" ||
+    /^https:\/\/mr-ahmed-saber-[a-z0-9-]+-mr-ahmed-saber\.vercel\.app$/i.test(origin) ||
+    /^https:\/\/mr-ahmed-saber-new-git-[a-z0-9-]+-mr-ahmed-saber\.vercel\.app$/i.test(origin);
+  return allowed ? { "access-control-allow-origin": origin } : {};
+}
+function json(data: unknown, status = 200, origin = "") {
+  return new Response(JSON.stringify(data), { status, headers: { ...RESPONSE_CORS_HEADERS, ...corsForOrigin(origin), "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" } });
 }
 function escFilter(value: string) { return value.replace(/[^0-9a-f-]/gi, ""); }
 class ApiError extends Error { status: number; constructor(message: string, status = 400) { super(message); this.status = status; } }
@@ -496,27 +502,28 @@ async function getAttemptReview(body:any){const id=escFilter(String(body.attempt
 async function gradeAttempt(body:any){const id=escFilter(String(body.attempt_id||"")),ats=await db("platform_exam_attempts?select=*&id=eq."+id+"&limit=1") as any[],attempt=ats[0];if(!attempt||!attempt.submitted_at)throw new ApiError("يجب أن يسلّم الطالب الامتحان أولًا.");const qs=await db("platform_exam_questions?select=id,points&exam_id=eq."+escFilter(String(attempt.exam_id))) as any[],valid:Record<string,number>={};for(const q of qs)valid[q.id]=Number(q.points)||0;for(const a of (Array.isArray(body.answers)?body.answers:[])){const qid=escFilter(String(a.question_id||""));if(!(qid in valid))throw new ApiError("سؤال غير صحيح.");const pts=Number(a.awarded_points);if(!Number.isFinite(pts)||pts<0||pts>valid[qid])throw new ApiError("الدرجة خارج حدود السؤال.");const answerId=escFilter(String(a.id||""));if(!answerId)throw new ApiError("الإجابة غير صحيحة.");await db("platform_exam_answers?id=eq."+answerId+"&attempt_id=eq."+id,{method:"PATCH",body:{awarded_points:pts,teacher_feedback:String(a.teacher_feedback||"").slice(0,5000),reviewed_at:new Date().toISOString()}})}const ans=await db("platform_exam_answers?select=id,awarded_points&attempt_id=eq."+id) as any[],score=ans.reduce((n,a)=>n+(a.awarded_points==null?0:Number(a.awarded_points)||0),0),max=qs.reduce((n,q)=>n+(Number(q.points)||0),0),pending=ans.some(a=>a.awarded_points==null),old=await db("platform_exam_results?select=score,published_at&attempt_id=eq."+id+"&limit=1") as any[];await db("platform_exam_results?on_conflict=attempt_id",{method:"POST",body:{attempt_id:id,score,max_score:max,published_at:old[0]?.published_at||null,updated_at:new Date().toISOString()},prefer:"resolution=merge-duplicates,return=minimal"});if(old.length&&Number(old[0].score)!==score)await db("platform_grade_change_log",{method:"POST",body:{student_registry_id:attempt.student_registry_id,attempt_id:id,old_score:Number(old[0].score)||0,new_score:score,reason:String(body.reason||"تعديل درجة من لوحة المستر").slice(0,1000)},prefer:"return=minimal"});await db("platform_exam_attempts?id=eq."+id,{method:"PATCH",body:{status:pending?"awaiting_review":"graded"}});return {ok:true,score,max_score:max,status:pending?"awaiting_review":"graded"}}
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: { ...RESPONSE_CORS_HEADERS, "cache-control": "no-store" } });
-  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+  const origin = String(req.headers.get("origin") || "");
+  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: { ...RESPONSE_CORS_HEADERS, ...corsForOrigin(origin), "cache-control": "no-store" } });
+  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405, origin);
   try {
     const contentType = String(req.headers.get("content-type") || "").toLowerCase();
     if (contentType.includes("multipart/form-data")) {
       const form = await req.formData();
-      if (String(form.get("action") || "") !== "submitRegistrationRequest") return json({ error:"العملية غير مدعومة." },400);
+      if (String(form.get("action") || "") !== "submitRegistrationRequest") return json({ error:"العملية غير مدعومة." },400,origin);
       const result = await submitRegistrationRequest(form);
-      return json(result,201);
+      return json(result,201,origin);
     }
     const body = await req.json();
     const action = String(body?.action || "");
     let student:any=null;
-    if(action==="studentLogin"){return json(await studentLogin(body))}
-    if(action==="submitPlacementTest"){return json(await savePlacementTest(body),201)}
+    if(action==="studentLogin"){return json(await studentLogin(body),200,origin)}
+    if(action==="submitPlacementTest"){return json(await savePlacementTest(body),201,origin)}
     const teacherUpload=action==="createUploadUrl"&&(body.file_kind==="exam_audio"||body.file_kind==="assignment_resource");
     if(TEACHER_ACTIONS.has(action)||teacherUpload){
       const supplied=String(req.headers.get("x-teacher-key")||"");
       const tokenAuthorized = await authorizedTeacherSession(req);
       const legacyAuthorized = !!supplied && await sha256(supplied)===EXPECTED_KEY_HASH;
-      if(!tokenAuthorized&&!legacyAuthorized)return json({error:"سجّل الدخول بحساب المستر لإكمال العملية."},401);
+      if(!tokenAuthorized&&!legacyAuthorized)return json({error:"سجّل الدخول بحساب المستر لإكمال العملية."},401,origin);
     } else { student=await currentStudent(req); }
     let result: unknown;
     switch (action) {
@@ -558,11 +565,11 @@ Deno.serve(async (req: Request) => {
       case "allowExamRetake": result = await allowExamRetake(body); break;
       default: throw new ApiError("العملية المطلوبة غير مدعومة.");
     }
-    return json(result);
+    return json(result,200,origin);
   } catch (error) {
     const e = error as Error;
     console.error("platform-academics error", e.message);
     const status = error instanceof ApiError ? error.status : 500;
-    return json({ error: e.message || "تعذر تنفيذ العملية." }, status);
+    return json({ error: e.message || "تعذر تنفيذ العملية." }, status, origin);
   }
 });
