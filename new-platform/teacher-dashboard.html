@@ -327,9 +327,9 @@ promoPublish.addEventListener("click",async()=>{
   const guessed=ext?({".mp4":"video/mp4",".webm":"video/webm",".mov":"video/quicktime",".m4v":"video/x-m4v",".3gp":"video/3gpp",".mpeg":"video/mpeg",".mpg":"video/mpeg",".ogg":"video/ogg",".mkv":"video/x-matroska",".avi":"video/avi"})[ext[0]]:"video/mp4";
   const mimeType=file.type||guessed;
   promoNoticeSet("جاري رفع الفيديو إلى التخزين الآمن…",false);
-  const uploaded=await sdk.upload("promo-videos/"+Date.now()+"-"+safeName,file,{access:"public",handleUploadUrl:"/api/videos",clientPayload:JSON.stringify(token?{accessToken:token}:{teacherKey:key}),contentType:mimeType,multipart:file.size>4500000,onUploadProgress:function(progress){promoNoticeSet("جاري رفع الفيديو "+Math.round(progress.percentage)+"%…",false)}});
+  const uploaded=await sdk.upload("promo-videos/"+Date.now()+"-"+safeName,file,{access:"public",handleUploadUrl:"/api/videos",clientPayload:JSON.stringify({accessToken:token||undefined,teacherKey:key||undefined}),contentType:mimeType,multipart:file.size>4500000,onUploadProgress:function(progress){promoNoticeSet("جاري رفع الفيديو "+Math.round(progress.percentage)+"%…",false)}});
   promoNoticeSet("تم رفع الملف. جاري حفظه ونشره على الصفحة الرئيسية…",false);
-  const headers={"content-type":"application/json"};if(token)headers.authorization="Bearer "+token;else headers["x-teacher-key"]=key;
+  const headers={"content-type":"application/json"};if(token)headers.authorization="Bearer "+token;if(key)headers["x-teacher-key"]=key;
   const response=await fetch("/api/promo-video",{method:"POST",headers,body:JSON.stringify({action:"publish",videoUrl:uploaded.url,filename:file.name,size:file.size,mimeType}),cache:"no-store"});
   const data=await response.json().catch(()=>({}));
   if(!response.ok||!data.ok||data.active!==true||!data.video||data.video.videoUrl!==uploaded.url)
@@ -351,7 +351,7 @@ promoUnpublish.addEventListener("click",async()=>{
  if(!promoPublishedVideo)return;
  if(!confirm("هل تريد إلغاء نشر الفيديو الإعلاني من الصفحة الرئيسية؟"))return;
  let token="",key="";try{if(typeof window.getTeacherAccessToken==="function")token=await window.getTeacherAccessToken()}catch(_){}try{key=typeof getTeacherUploadKey==="function"?String(getTeacherUploadKey()||"").trim():""}catch(_){}
- const headers={"content-type":"application/json"};if(token)headers.authorization="Bearer "+token;else headers["x-teacher-key"]=key;
+ const headers={"content-type":"application/json"};if(token)headers.authorization="Bearer "+token;if(key)headers["x-teacher-key"]=key;
  promoUnpublish.disabled=true;
  try{const response=await fetch("/api/promo-video",{method:"POST",headers,body:JSON.stringify({action:"unpublish"}),cache:"no-store"});const data=await response.json().catch(()=>({}));if(!response.ok||!data.ok)throw new Error(data.error||"تعذر إلغاء النشر.");promoPublishedVideo=null;applyPublishedPromo(null);if(promoObjectUrl){URL.revokeObjectURL(promoObjectUrl);promoObjectUrl=""}promoSelectedFile=null;promoInput.value="";promoPreview.removeAttribute("src");promoPreview.load();promoWrap.classList.add("hidden");promoNoticeSet("تم إلغاء نشر الفيديو من الصفحة الرئيسية.",false)}catch(error){promoNoticeSet(error.message||"تعذر إلغاء النشر.",true)}finally{promoUnpublish.disabled=false}
 });
@@ -466,7 +466,7 @@ $('#lessonForm').addEventListener('submit',async e=>{e.preventDefault();const er
    const blobSdk=await import('https://esm.sh/@vercel/blob@2.8.2/client?bundle');
    const safeName=String(pickedVideo.name||'lesson-video').replace(/[^a-zA-Z0-9._-]+/g,'_').slice(-120)||'lesson-video.mp4';
    const ext=safeName.toLowerCase().match(/\.(mp4|webm|mov|m4v|3gp|mpeg|mpg|ogg|mkv)$/);const guessed=ext?({'.mp4':'video/mp4','.webm':'video/webm','.mov':'video/quicktime','.m4v':'video/x-m4v','.3gp':'video/3gpp','.mpeg':'video/mpeg','.mpg':'video/mpeg','.ogg':'video/ogg','.mkv':'video/x-matroska'})[ext[0]]:'video/mp4';
-   const uploaded=await blobSdk.upload('course-videos/'+Date.now()+'-'+safeName,pickedVideo,{access:'public',handleUploadUrl:'/api/videos',clientPayload:JSON.stringify(authToken?{accessToken:authToken}:{teacherKey:key}),contentType:pickedVideo.type||guessed,multipart:pickedVideo.size>4_500_000,onUploadProgress:function(progress){status.textContent='جاري رفع الفيديو '+Math.round(progress.percentage)+'%'}});
+   const uploaded=await blobSdk.upload('course-videos/'+Date.now()+'-'+safeName,pickedVideo,{access:'public',handleUploadUrl:'/api/videos',clientPayload:JSON.stringify({accessToken:authToken||undefined,teacherKey:key||undefined}),contentType:pickedVideo.type||guessed,multipart:pickedVideo.size>4_500_000,onUploadProgress:function(progress){status.textContent='جاري رفع الفيديو '+Math.round(progress.percentage)+'%'}});
    videoUrl=uploaded.url;status.textContent='تم رفع الفيديو. جاري نشر بيانات الكورس للطلاب...';
   }catch(uploadError){status.textContent='';err.textContent='فشل رفع الفيديو: '+(uploadError&&uploadError.message?uploadError.message:'تحقق من الاتصال ورمز الرفع.');err.classList.remove('hidden');return}
  }
