@@ -540,3 +540,11 @@ The following decisions are also locked unless the user explicitly requests a ch
 - These changes are committed on `rebuild/new-platform-from-note-2026-10-13`. A Preview build completed and the homepage, teacher dashboard, and `/api/promo-video` endpoints returned HTTP 200.
 - **Not yet end-to-end verified:** the Preview API currently returns `active:false` and `video:null`, so there is no published clip or recovered upload available to confirm automatically. A real teacher sign-in and actual video upload from the phone are still required to verify the full flow. Do not promote to production based only on HTTP 200 or build success.
 - Pronunciation recording still needs an actual Android microphone permission/start/stop/submit test. Do not refactor the exam/question-builder while doing that verification.
+
+## Image repair checkpoint — approved teacher portrait
+
+- The currently committed `new-platform/teacher.png` is only 1,506 bytes and does not match the approved original.
+- The approved Library image `الصورة المعتمدة للمستر - لندن وبيج بن.png` is 1,037,820 bytes, 736×1307, SHA-256 `369c4b2fbbab181f5204d4d10f40484b1e69a38c70930e2643ed021844f4f7eb`; the prior immutable Vercel asset has the same MD5 `702d29fb56a5ee9c87f5b74445b94e3f` and byte length, confirming it is the exact file.
+- Updated the public homepage (hero, about section and social preview), student dashboard, and teacher dashboard to reference that verified original asset without compressing or altering it.
+- The exact image currently remains hosted on this immutable existing deployment URL: `https://mr-ahmed-saber-m1v4la1d9-mr-ahmed-saber.vercel.app/new-platform/teacher.png`. Do not delete that deployment while these references are in use. For long-term self-contained hosting, mirror the original bytes into the project/storage when a binary asset write path is available.
+- A Preview smoke test must still confirm the image loads in the signed-in phone browser along with the video-publish and pronunciation flows; do not promote to Production until those real user flows pass.
