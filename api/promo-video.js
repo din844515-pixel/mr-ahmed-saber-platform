@@ -83,8 +83,15 @@ async function readPromo() {
   const response = await fetch(blob.url, { cache: 'no-store' });
   if (!response.ok) throw new Error('Unable to read promotional video metadata');
   const value = await response.json();
-  // An explicit unpublish is respected; recovery only applies when metadata is missing.
-  if (!value || value.active !== true || !value.videoUrl) return { active: false, video: null };
+  if (!value || value.active !== true || !value.videoUrl) {
+    // A prior unpublish must remain effective unless a newer promo upload exists.
+    // This also recovers when uploading the new clip succeeded but saving metadata failed.
+    const latest = await readLatestUploadedPromo();
+    const uploadedAt = Date.parse(latest.video && latest.video.publishedAt || '') || 0;
+    const unpublishedAt = Date.parse(value && value.updatedAt || '') || 0;
+    if (latest.active && uploadedAt > unpublishedAt) return latest;
+    return { active: false, video: null };
+  }
   return {
     active: true,
     video: {
