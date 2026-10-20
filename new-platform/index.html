@@ -319,9 +319,25 @@ $('.demo-form').forEach(f=>f.addEventListener('submit',async e=>{
     body:formData,cache:'no-store'
    });
    const data=await response.json().catch(()=>({}));
-   if(!response.ok||!data.ok)throw new Error(data.error||'تعذر إرسال طلب التسجيل.');
+   if(!response.ok||!data.ok||!data.requestId||data.status!=='pending_review')
+    throw new Error(data.error||'لم يصل تأكيد حفظ الطلب في قائمة المستر. لم نعتبر الطلب مرسلًا؛ حاول مرة أخرى.');
    f.reset();
-   $('#infoMessage').textContent='تم إرسال طلب التسجيل وإيصال الدفع بنجاح. الطلب الآن قيد المراجعة، ولن يتفعّل الحساب إلا بعد موافقة المستر.';
+   $('#infoMessage').textContent='تم حفظ طلبك وإيصال الدفع بنجاح، ورقم الطلب: '+data.requestId+'. الطلب الآن قيد المراجعة ولن يتفعّل الحساب إلا بعد موافقة المستر.';
+   const infoMessage=$('#infoMessage');
+   let waLink=$('#registrationWhatsAppFollowup');
+   if(!waLink){
+    waLink=document.createElement('a');
+    waLink.id='registrationWhatsAppFollowup';
+    waLink.className='btn btn-gold';
+    waLink.target='_blank';
+    waLink.rel='noopener noreferrer';
+    waLink.style.cssText='display:flex;justify-content:center;align-items:center;width:100%;margin-top:14px;text-decoration:none';
+    infoMessage.insertAdjacentElement('afterend',waLink);
+   }
+   const whatsappText='السلام عليكم، أنا أرسلت طلب اشتراك جديد على منصة Mr. Ahmed Saber. رقم الطلب: '+data.requestId+'، اسم الطالب: '+$('#regName').value.trim()+'، المرحلة: '+$('#regStage').value+'. برجاء متابعة الطلب.';
+   waLink.href='https://wa.me/201553438138?text='+encodeURIComponent(whatsappText);
+   waLink.textContent='تابع طلبك من خلال واتساب';
+   waLink.hidden=false;
    openModal('infoModal');
   }catch(error){
    $('#infoMessage').textContent=error.message||'تعذر إرسال الطلب. تحقق من الاتصال وحاول مرة أخرى.';
