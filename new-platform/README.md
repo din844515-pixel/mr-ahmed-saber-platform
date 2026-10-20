@@ -548,3 +548,12 @@ The following decisions are also locked unless the user explicitly requests a ch
 - Updated the public homepage (hero, about section and social preview), student dashboard, and teacher dashboard to reference that verified original asset without compressing or altering it.
 - The exact image currently remains hosted on this immutable existing deployment URL: `https://mr-ahmed-saber-m1v4la1d9-mr-ahmed-saber.vercel.app/new-platform/teacher.png`. Do not delete that deployment while these references are in use. For long-term self-contained hosting, mirror the original bytes into the project/storage when a binary asset write path is available.
 - A Preview smoke test must still confirm the image loads in the signed-in phone browser along with the video-publish and pronunciation flows; do not promote to Production until those real user flows pass.
+
+## Registration request repair — 20 Oct 2026
+
+- Confirmed the registration request table had no saved rows during the review, and the receipt bucket `platform-registration-receipts` exists and is private.
+- Found that the deployed `platform-academics` Edge Function's CORS response allowed only `https://mr-ahmed-saber-new.vercel.app`. Preview links and the user's `saber.vercel.app` host could therefore be blocked by the browser before a registration request reached storage.
+- Updated `supabase/functions/platform-academics/index.ts` to reflect the origin only for the canonical host and this project's Vercel preview-host patterns; other origins are not reflected. Deployed to Supabase project `umffvtnujqjmgrrfmsdk` as Edge Function version 21.
+- Updated `new-platform/index.html`: only treat registration as successful when the API returns `ok`, a `requestId`, and `status=pending_review`. The success dialog now displays the request ID and a WhatsApp follow-up link to `01553438138` with the request ID, student name and stage prefilled.
+- Vercel Preview for the frontend is READY at `https://mr-ahmed-saber-g157zgvoo-mr-ahmed-saber.vercel.app/new-platform/index.html` (commit `5a2d570fe472d5eba39da7f90aa006179b46d246`). The homepage response includes the new request-ID validation and WhatsApp follow-up button; the teacher dashboard includes the registration-request loader.
+- **End-to-end still needs a real form submission with an actual receipt from the browser.** Do not claim a request has been saved until a returned request ID appears and the same row is visible in the teacher dashboard. After a real test, verify the request row in `platform_registration_requests`.
