@@ -4,6 +4,19 @@ const isTeacherRequest = require('../lib/teacher-auth');
 
 const PROMO_PATH = 'platform/homepage-promo-video-v1.json';
 const PROMO_PREFIX = 'promo-videos/';
+const MAX_VIDEO_SIZE = 2 * 1024 * 1024 * 1024;
+const VIDEO_TYPES = {
+  '.mp4': 'video/mp4',
+  '.webm': 'video/webm',
+  '.mov': 'video/quicktime',
+  '.m4v': 'video/x-m4v',
+  '.3gp': 'video/3gpp',
+  '.mpeg': 'video/mpeg',
+  '.mpg': 'video/mpeg',
+  '.ogg': 'video/ogg',
+  '.mkv': 'video/x-matroska',
+  '.avi': 'video/avi'
+};
 
 function authorizedByUploadKey(req) {
   const expected = process.env.TEACHER_UPLOAD_KEY || '';
@@ -14,13 +27,63 @@ function authorizedByUploadKey(req) {
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
+function publicPromoBlob(blob) {
+  if (!blob || typeof blob.url !== 'string' || !blob.pathname ||
+      !String(blob.pathname).startsWith(PROMO_PREFIX) ||
+      !Number.isFinite(Number(blob.size)) || Number(blob.size) <= 0 ||
+      Number(blob.size) > MAX_VIDEO_SIZE) return false;
+  try {
+    const url = new URL(blob.url);
+    if (url.protocol !== 'https:' || !url.hostname.endsWith('public.blob.vercel-storage.com')) return false;
+    const pathname = String(blob.pathname);
+    const filename = pathname.slice(PROMO_PREFIX.length).split('/').pop() || '';
+    const dot = filename.lastIndexOf('.');
+    const ext = dot >= 0 ? filename.slice(dot).toLowerCase() : '';
+    return Boolean(VIDEO_TYPES[ext]);
+  } catch (_) {
+    return false;
+  }
+}
+
+function asPromoVideo(blob, recoveredUpload) {
+  const pathname = String(blob.pathname || '');
+  const filename = pathname.slice(PROMO_PREFIX.length).split('/').pop() || 'homepage-promo-video';
+  const dot = filename.lastIndexOf('.');
+  const ext = dot >= 0 ? filename.slice(dot).toLowerCase() : '';
+  return {
+    videoUrl: String(blob.url),
+    filename,
+    size: Number(blob.size) || 0,
+    mimeType: VIDEO_TYPES[ext] || 'video/mp4',
+    publishedAt: blob.uploadedAt || null,
+    ...(recoveredUpload ? { recoveredUpload: true } : {})
+  };
+}
+
+async function readLatestUploadedPromo() {
+  const result = await list({ prefix: PROMO_PREFIX, limit: 100 });
+  const candidates = (result.blobs || []).filter(publicPromoBlob);
+  candidates.sort((a, b) => {
+    const dateB = Date.parse(b.uploadedAt || '') || 0;
+    const dateA = Date.parse(a.uploadedAt || '') || 0;
+    return dateB - dateA;
+  });
+  if (!candidates.length) return { active: false, video: null };
+  return { active: true, video: asPromoVideo(candidates[0], true) };
+}
+
 async function readPromo() {
   const result = await list({ prefix: PROMO_PATH, limit: 20 });
   const blob = (result.blobs || []).find(item => item.pathname === PROMO_PATH);
-  if (!blob) return { active: false, video: null };
+  if (!blob) {
+    // If file upload succeeded but saving its publish metadata failed, recover
+    // the newest valid promotional upload instead of leaving the homepage empty.
+    return await readLatestUploadedPromo();
+  }
   const response = await fetch(blob.url, { cache: 'no-store' });
   if (!response.ok) throw new Error('Unable to read promotional video metadata');
   const value = await response.json();
+  // An explicit unpublish is respected; recovery only applies when metadata is missing.
   if (!value || value.active !== true || !value.videoUrl) return { active: false, video: null };
   return {
     active: true,
@@ -81,7 +144,7 @@ module.exports = async function handler(req, res) {
     if (!parsed || parsed.protocol !== 'https:' ||
         !parsed.hostname.endsWith('public.blob.vercel-storage.com') ||
         !parsed.pathname.includes('/promo-videos/') ||
-        !mimeType.startsWith('video/') || size <= 0 || size > 2 * 1024 * 1024 * 1024) {
+        !mimeType.startsWith('video/') || size <= 0 || size > MAX_VIDEO_SIZE) {
       return res.status(400).json({ ok: false, error: 'بيانات الفيديو غير صالحة. ارفع ملف الفيديو من المعرض ثم أعد الحفظ.' });
     }
 
