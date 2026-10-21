@@ -256,8 +256,8 @@ $('#menuToggle').addEventListener('click',()=>{const open=$('#navLinks').classLi
 $('#navLinks').addEventListener('click',e=>{if(e.target.closest('a')){$('#navLinks').classList.remove('open');$('#menuToggle').setAttribute('aria-expanded','false')}});
 function openModal(id){$$('.modal').forEach(m=>m.classList.add('hidden'));const m=document.getElementById(id);if(m){m.classList.remove('hidden');const f=m.querySelector('input');if(f)setTimeout(()=>f.focus(),40)}}
 function closeModals(){$$('.modal').forEach(m=>m.classList.add('hidden'))}
-$('[data-modal]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();openModal(el.dataset.modal)}));
-$('[data-close]').forEach(el=>el.addEventListener('click',closeModals));
+document.querySelectorAll('[data-modal]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();openModal(el.dataset.modal)}));
+document.querySelectorAll('[data-close]').forEach(el=>el.addEventListener('click',closeModals));
 $$('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)closeModals()}));
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModals()});
 $('#searchOpen').addEventListener('click',()=>openModal('searchModal'));
