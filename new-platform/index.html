@@ -254,11 +254,11 @@ const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 $('#year').textContent=new Date().getFullYear();
 $('#menuToggle').addEventListener('click',()=>{const open=$('#navLinks').classList.toggle('open');$('#menuToggle').setAttribute('aria-expanded',String(open))});
 $('#navLinks').addEventListener('click',e=>{if(e.target.closest('a')){$('#navLinks').classList.remove('open');$('#menuToggle').setAttribute('aria-expanded','false')}});
-function openModal(id){$$$('.modal').forEach(m=>m.classList.add('hidden'));const m=document.getElementById(id);if(m){m.classList.remove('hidden');const f=m.querySelector('input');if(f)setTimeout(()=>f.focus(),40)}}
-function closeModals(){$$$('.modal').forEach(m=>m.classList.add('hidden'))}
-$$$('[data-modal]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();openModal(el.dataset.modal)}));
-$$$('[data-close]').forEach(el=>el.addEventListener('click',closeModals));
-$$$('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)closeModals()}));
+function openModal(id){$('.modal').forEach(m=>m.classList.add('hidden'));const m=document.getElementById(id);if(m){m.classList.remove('hidden');const f=m.querySelector('input');if(f)setTimeout(()=>f.focus(),40)}}
+function closeModals(){$('.modal').forEach(m=>m.classList.add('hidden'))}
+$('[data-modal]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();openModal(el.dataset.modal)}));
+$('[data-close]').forEach(el=>el.addEventListener('click',closeModals));
+$('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)closeModals()}));
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModals()});
 $('#searchOpen').addEventListener('click',()=>openModal('searchModal'));
 $('#searchForm').addEventListener('submit',e=>{e.preventDefault();const q=$('#searchInput').value.trim().toLocaleLowerCase('ar');const notice=$('#searchNotice');if(!q){notice.textContent='اكتب كلمة للبحث أولًا.';notice.classList.remove('hidden');return}const matches=[...document.querySelectorAll('main section[id]')].filter(s=>(s.innerText||'').toLocaleLowerCase('ar').includes(q));if(matches.length){notice.textContent='تم العثور على القسم: '+(matches[0].querySelector('h2')?.textContent||matches[0].id);notice.classList.remove('hidden');matches[0].scrollIntoView({behavior:'smooth'});setTimeout(closeModals,550)}else{notice.textContent='لم يتم العثور على قسم مطابق. جرّب اسم مرحلة أو قسم آخر.';notice.classList.remove('hidden')}});
