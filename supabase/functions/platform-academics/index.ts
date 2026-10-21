@@ -116,7 +116,7 @@ async function removeRegistrationReceipt(path: string) {
   } catch (_) {}
 }
 async function submitRegistrationRequest(form: FormData) {
-  const studentName = String(form.get("student_name") || "").trim().replace(/\s+/g," ");
+  const studentName = String(form.get("student_name") || "").trim().replace(/\\s+/g," ");
   const stage = String(form.get("education_stage") || "").trim();
   const guardianPhone = normPhone(form.get("guardian_phone"));
   const studentPhone = normPhone(form.get("student_phone"));
@@ -126,12 +126,30 @@ async function submitRegistrationRequest(form: FormData) {
   if (studentName.length < 2 || studentName.length > 120 || !STAGES.includes(stage) ||
       guardianPhone.length < 8 || guardianPhone.length > 16 ||
       studentPhone.length < 8 || studentPhone.length > 16 ||
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || confirmation !== "yes") {
+      !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || confirmation !== "yes") {
     throw new ApiError("راجع بيانات الطالب ورقم ولي الأمر والبريد الإلكتروني وموافقة تأكيد الدفع.");
   }
   if (!(upload instanceof File)) throw new ApiError("أرفق صورة إيصال الدفع قبل إرسال الطلب.");
-  const pending = await db("platform_registration_requests?select=id&student_phone=eq." + encodeURIComponent(studentPhone) + "&status=eq.pending_review&limit=1") as any[];
-  if (pending.length) throw new ApiError("يوجد طلب تسجيل قيد المراجعة بنفس رقم موبايل الطالب. انتظر مراجعة المستر.");
+
+  // Reserve a maximum of three accounts per phone/email, counting pending requests too.
+  // Phone numbers count regardless of whether they are entered as student or guardian phone.
+  const phoneValues = Array.from(new Set([studentPhone, guardianPhone]));
+  for (const phoneValue of phoneValues) {
+    const phoneFilter = "or=(student_phone.eq." + phoneValue + ",guardian_phone.eq." + phoneValue + ")";
+    const accounts = await db("platform_student_registry?select=id&" + phoneFilter + "&limit=1000") as any[];
+    const pending = await db("platform_registration_requests?select=id&status=eq.pending_review&" + phoneFilter + "&limit=1000") as any[];
+    if (accounts.length + pending.length >= 3) {
+      throw new ApiError("رقم الهاتف مستخدم في 3 حسابات بالفعل أو توجد 3 طلبات قيد المراجعة. الحد الأقصى 3 حسابات لكل رقم.");
+    }
+  }
+
+  const encodedEmail = encodeURIComponent(email);
+  const emailAccounts = await db("platform_student_registry?select=id&email=eq." + encodedEmail + "&limit=1000") as any[];
+  const pendingEmails = await db("platform_registration_requests?select=id&email=eq." + encodedEmail + "&status=eq.pending_review&limit=1000") as any[];
+  if (emailAccounts.length + pendingEmails.length >= 3) {
+    throw new ApiError("البريد الإلكتروني مستخدم في 3 حسابات بالفعل أو توجد 3 طلبات قيد المراجعة. الحد الأقصى 3 حسابات لكل بريد إلكتروني.");
+  }
+
   const recentSince = new Date(Date.now() - 10 * 60 * 1000).toISOString();
   const recent = await db("platform_registration_requests?select=id&student_phone=eq." + encodeURIComponent(studentPhone) + "&created_at=gte." + encodeURIComponent(recentSince) + "&limit=3") as any[];
   if (recent.length >= 3) throw new ApiError("تم إرسال عدة طلبات بهذا الرقم خلال وقت قصير. انتظر قليلًا ثم حاول مرة أخرى.", 429);
