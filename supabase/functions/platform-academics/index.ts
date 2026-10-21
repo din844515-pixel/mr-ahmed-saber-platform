@@ -520,7 +520,23 @@ async function teacherReplyLessonComment(body:any) {
   return {ok:true,comment:saved[0]?lessonCommentDto(saved[0]):null};
 }
 
-async function studentListExams(s:any){const all=await db("platform_exams?select=id,title,instructions,stage,course_title,duration_minutes,is_published,created_at&is_published=eq.true&order=created_at.desc") as any[];const exams=all.filter(e=>studentStageOk(s,String(e.stage)));const attempts=await db("platform_exam_attempts?select=id,exam_id,started_at,expires_at,submitted_at,status&student_registry_id=eq."+escFilter(String(s.id))) as any[];const byId:Record<string,any>={};for(const a of attempts)byId[a.exam_id]=a;const mapped=[];for(const e of exams){const qs=await db("platform_exam_questions?select=id,points&exam_id=eq."+escFilter(String(e.id))) as any[];mapped.push({...e,question_count:qs.length,total_points:qs.reduce((n,q)=>n+(Number(q.points)||0),0),attempt:byId[e.id]||null})}return {ok:true,student:{name:s.full_name,stage:s.education_stage},exams:mapped}}
+async function studentListExams(s:any){
+  const all=await db("platform_exams?select=id,title,instructions,stage,course_title,duration_minutes,is_published,created_at&is_published=eq.true&order=created_at.desc") as any[];
+  const exams=all.filter(e=>studentStageOk(s,String(e.stage)));
+  const attempts=await db("platform_exam_attempts?select=id,exam_id,started_at,expires_at,submitted_at,status&student_registry_id=eq."+escFilter(String(s.id))) as any[];
+  // Strict single-attempt rule: returning to the exam list closes any unfinished attempt.
+  // This prevents leaving the exam and later resuming it with extra time.
+  for(const attempt of attempts){
+    if(!attempt.submitted_at && attempt.status==="in_progress"){
+      await finalizeAttempt(attempt);
+      attempt.submitted_at=new Date().toISOString();
+      attempt.status="submitted";
+    }
+  }
+  const byId:Record<string,any>={};for(const a of attempts)byId[a.exam_id]=a;
+  const mapped=[];for(const e of exams){const qs=await db("platform_exam_questions?select=id,points&exam_id=eq."+escFilter(String(e.id))) as any[];mapped.push({...e,question_count:qs.length,total_points:qs.reduce((n,q)=>n+(Number(q.points)||0),0),attempt:byId[e.id]||null})}
+  return {ok:true,student:{name:s.full_name,stage:s.education_stage},exams:mapped}
+}
 async function studentQuestions(examId:string){const qs=await db("platform_exam_questions?select=id,exam_id,question_type,prompt,options,points,media_url,sort_order&exam_id=eq."+escFilter(examId)+"&order=sort_order.asc") as any[];const out=[];for(const q of qs)out.push({...q,media_url:await signAcademicReadUrl(q.media_url)});return out}
 async function studentStartExam(body:any,s:any){const id=escFilter(String(body.exam_id||""));if(!id)throw new ApiError("الامتحان غير صحيح.");const exams=await db("platform_exams?select=*&id=eq."+id+"&is_published=eq.true&limit=1") as any[];const exam=exams[0];if(!exam||!studentStageOk(s,String(exam.stage)))throw new ApiError("الامتحان غير متاح لمرحلتك.",404);let old=await db("platform_exam_attempts?select=*&exam_id=eq."+id+"&student_registry_id=eq."+escFilter(String(s.id))+"&limit=1") as any[];let attempt=old[0];if(attempt&&attempt.submitted_at)throw new ApiError("تم تسليم هذا الامتحان من قبل، ولا يمكن إعادته.",409);if(attempt&&new Date(attempt.expires_at).getTime()<=Date.now()){await finalizeAttempt(attempt);throw new ApiError("انتهى وقت المحاولة السابقة ولا يمكن إعادة الامتحان.",409)}if(!attempt){const v=await db("platform_exam_attempts",{method:"POST",body:{exam_id:id,student_registry_id:s.id,expires_at:new Date(Date.now()+Number(exam.duration_minutes)*60000).toISOString(),status:"in_progress"},prefer:"return=representation"}) as any[];attempt=v?.[0];if(!attempt){old=await db("platform_exam_attempts?select=*&exam_id=eq."+id+"&student_registry_id=eq."+escFilter(String(s.id))+"&limit=1") as any[];attempt=old[0]}if(!attempt)throw new ApiError("تعذر بدء المحاولة. حدّث الصفحة وحاول مرة أخرى.",409)}const answers=await db("platform_exam_answers?select=question_id,answer_value,audio_path,answer_audio_name&attempt_id=eq."+escFilter(String(attempt.id))) as any[];const mappedAnswers=[];for(const a of answers)mappedAnswers.push({...a,audio_url:await signAcademicReadUrl(a.audio_path)});return {ok:true,exam,attempt,questions:await studentQuestions(id),answers:mappedAnswers}}
 function normAnswer(v:any):string{if(v==null)return "";if(typeof v==="object"&&"value" in v)return String(v.value??"").trim().toLocaleLowerCase("en").replace(/\s+/g," ");if(typeof v==="object"&&"index" in v)return String(v.index);return String(v).trim().toLocaleLowerCase("en").replace(/\s+/g," ")}
